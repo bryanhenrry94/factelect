@@ -1,0 +1,246 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id           String            @id @default(uuid())
+  name         String            @map("name")
+  subdomain    String            @unique
+  legalName    String?           @map("legal_name")
+  ruc          String?
+  phone        String?           @map("phone")
+  contactEmail String?           @map("contact_email")
+  address      String?           @map("address")
+  logoUrl      String?           @map("logo_url")
+  sriConfig    SRIConfiguration?
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  users     User[]
+  products  Product[]
+  clients   Client[]
+  invoices  Invoice[]
+
+  @@map("tenant")
+}
+
+model SRIConfiguration {
+  id                  String          @id @default(uuid())
+  tenantId            String          @unique @map("tenant_id")
+  sriEnvironment      String          @default("1") @map("sri_environment") // 1 Sandbox | 2 Producción
+  p12CertificatePath  String?         @map("p12_certificate_path") // Ruta o nombre del archivo subido (.p12)
+  p12CertificateUrl   String?         @map("p12_certificate_url") // URL pública del archivo .p12
+  certificatePassword String?         @map("certificate_password") // Password para el archivo .p12
+  establishments      Establishment[]
+  emissionPoints      EmissionPoint[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("sri_configuration")
+}
+
+model Establishment {
+  id             String           @id @default(cuid())
+  sriConfigId    String           @map("sri_configuration_id")
+  code           String           @map("code") // 3 dígitos, ej: '001'
+  address        String           @map("address")
+  sriConfig      SRIConfiguration @relation(fields: [sriConfigId], references: [id])
+  emissionPoints EmissionPoint[]
+
+  @@map("establishment")
+}
+
+model EmissionPoint {
+  id                     String           @id @default(cuid())
+  sriConfigId            String           @map("sri_configuration_id")
+  establishmentId        String           @map("establishment_id")
+  code                   String           @map("code") // 3 dígitos, ej: '002'
+  description            String?          @map("description")
+  currentInvoiceSequence Int              @default(1)
+  isActive               Boolean          @default(true)
+  sriConfig              SRIConfiguration @relation(fields: [sriConfigId], references: [id])
+  establishment          Establishment    @relation(fields: [establishmentId], references: [id])
+  invoices               Invoice[]
+
+  @@map("emission_point")
+}
+
+model User {
+  id                  String               @id @default(cuid()) @map("id")
+  email               String               @unique @map("email")
+  password            String               @map("password")
+  name                String?              @map("name")
+  tenantId            String               @map("tenant_id")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  tenant              Tenant               @relation(fields: [tenantId], references: [id])
+  passwordResetTokens PasswordResetToken[]
+
+  @@map("user")
+}
+
+model Client {
+  id                 String             @id @default(cuid()) @map("id")
+  identificationType IdentificationType @map("identification_type")
+  identification     String             @unique @map("identification")
+  name               String             @map("name")
+  email              String             @unique @map("email")
+  phone              String?            @map("phone")
+  address            String?            @map("address")
+  notes              String?            @map("notes")
+  tenantId           String             @map("tenant_id")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  tenant             Tenant             @relation(fields: [tenantId], references: [id])
+  Invoice            Invoice[]
+
+  @@map("client")
+}
+
+model Product {
+  id          String        @id @default(cuid()) @map("id")
+  code        String        @unique @map("code")
+  description String        @map("description")
+  price       Float         @map("price")
+  tax         taxEnum       @default(IVA_0) @map("tax")
+  tenantId    String        @map("tenant_id")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  tenant      Tenant        @relation(fields: [tenantId], references: [id])
+  InvoiceItem InvoiceItem[]
+
+  @@map("product")
+}
+
+model Invoice {
+  id       String @id @default(cuid()) @map("id")
+  clientId String @map("client_id")
+  tenantId String @map("tenant_id")
+
+  // Datos de emisión  
+  emissionPointId String  @map("emission_point_id") // 🔹 Nuevo campo
+  sequential      Int     @map("sequential")
+  accessKey       String? @unique @map("access_key") // Clave de acceso generada para el SRI
+  authorization   String? @map("authorization") // Número de autorización del SRI
+  status          String  @default("PENDING") @map("status") // PENDING | AUTHORIZED | REJECTED | CANCELED
+
+  // Fechas
+  issueDate DateTime @map("issue_date") // Fecha de emisión
+  term      Int      @default(0) @map("term") // Plazo en días para el pago
+  dueDate   DateTime @map("due_date") // Fecha de vencimiento
+
+  // Totales  
+  total Float @default(0)
+
+  // Descripción o observaciones
+  description String? @map("description")
+
+  // Archivos electrónicos
+  xmlFilePath String? @map("xml_file_path") // Ruta o URL del XML firmado
+  xmlFileUrl  String? @map("xml_file_url") // URL pública del XML firmado
+  pdfFilePath String? @map("pdf_file_path") // Ruta o URL del PDF generado
+  pdfFileUrl  String? @map("pdf_file_url") // URL pública del PDF generado
+  sriResponse Json?   @map("sri_response") // Guarda respuesta completa del SRI (estado, mensajes, etc.)
+
+  // Auditoría
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  canceledAt DateTime? @map("canceled_at")
+
+  // Relaciones
+  tenant         Tenant                 @relation(fields: [tenantId], references: [id])
+  emissionPoint  EmissionPoint          @relation(fields: [emissionPointId], references: [id])
+  client         Client                 @relation(fields: [clientId], references: [id])
+  items          InvoiceItem[] // Productos o servicios
+  taxes          InvoiceTax[] // 🔹 relación con impuestos
+  paymentMethods InvoicePaymentMethod[] // Formas de pago
+
+  @@index([tenantId])
+  @@index([clientId])
+  @@map("invoice")
+}
+
+model InvoiceTax {
+  id              String @id @default(cuid())
+  invoiceId       String @map("invoice_id")
+  code            String @map("code")
+  percentage_code String @map("percentage_code")
+  base            Float  @default(0) @map("base")
+  amount          Float  @default(0) @map("amount")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("invoice_tax")
+}
+
+model InvoiceItem {
+  id             String  @id @default(cuid())
+  invoiceId      String  @map("invoice_id")
+  productId      String  @map("product_id")
+  quantity       Float   @default(1) @map("quantity")
+  unitPrice      Float   @map("unit_price")
+  tax            taxEnum @default(IVA_0) @map("tax")
+  taxAmount      Float   @default(0) @map("tax_amount")
+  discountRate   Float   @default(0) @map("discount_rate") // Ej: 0%, 5%, 10%
+  discountAmount Float   @default(0) @map("discount_amount")
+  subtotal       Float   @map("subtotal")
+
+  product Product @relation(fields: [productId], references: [id])
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("invoice_item")
+}
+
+model InvoicePaymentMethod {
+  id            String  @id @default(cuid())
+  invoiceId     String  @map("invoice_id")
+  paymentMethod String  @map("payment_method") // Ej: "EFECTIVO", "TRANSFERENCIA", "TARJETA"
+  term          Int?    @map("term")
+  timeUnit      String? @map("time_unit") // Ej: "DIAS"
+  amount        Float   @map("amount")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("invoice_payment")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid()) @map("id")
+  token     String   @unique @map("token")
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_token")
+}
+
+enum IdentificationType {
+  RUC
+  CEDULA
+  PASAPORTE
+  VENTA_A_CONSUMIDOR_FINAL
+  IDENTIFICACION_DE_EXTERIOR
+  PLACA
+}
+
+enum taxEnum {
+  IVA_0
+  IVA_5
+  IVA_12
+  IVA_14
+  IVA_15
+  NO_IVA
+  EXENTO_IVA
+}

@@ -1,0 +1,33 @@
+facturacion/
+ ├── tenant_001/
+ │   ├── xml/
+ │   │   ├── generados/
+ │   │   │   └── factura_001.xml
+ │   │   ├── firmados/
+ │   │   │   └── factura_001_firmado.xml
+ │   │   └── autorizados/
+ │   │       └── factura_001_autorizado.xml
+ │   ├── pdf/
+ │   │   └── factura_001.pdf
+ │   ├── certificados/
+ │   │   └── firma.p12
+ │   └── logs/
+ │       └── 2025-11-04.txt
+ ├── tenant_002/
+ │   ├── xml/
+ │   ├── pdf/
+ │   └── certificados/
+ └── tenant_003/
+     ├── xml/
+     ├── pdf/
+     └── certificados/
+
+
+| Carpeta             | Contenido                                       | Acceso recomendado          | Notas                                                 |
+| ------------------- | ----------------------------------------------- | --------------------------- | ----------------------------------------------------- |
+| **xml/generados**   | XML sin firmar (recién generados)               | Privado                     | Son temporales; se eliminan tras la firma             |
+| **xml/firmados**    | XML ya firmados con el certificado digital      | Privado                     | Solo el backend debe poder acceder                    |
+| **xml/autorizados** | XML autorizados por el SRI                      | Público o presigned URL     | Estos son válidos legalmente, puedes ofrecer descarga |
+| **pdf/**            | PDF de representación gráfica (factura impresa) | Público o presigned URL     | Se puede compartir al cliente                         |
+| **certificados/**   | Archivos `.p12` de cada tenant                  | **Privado (nunca público)** | Solo accesibles desde el backend                      |
+| **logs/**           | Archivos o reportes de ejecución o errores      | Privado                     | Útiles para auditorías o depuración                   |

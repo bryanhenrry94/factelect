@@ -1,0 +1,221 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  IconButton,
+  Container,
+  Pagination,
+  TextField,
+} from "@mui/material";
+import { Plus, Eye, Trash2, Files } from "lucide-react";
+import { InvoiceResponse } from "@/lib/validations/invoice";
+import { useSession } from "next-auth/react";
+import { deleteInvoice, getInvoices } from "@/app/actions/invoice";
+import { AlertService } from "@/lib/alerts";
+
+export default function InvoicesPage() {
+  const { data: session } = useSession();
+  const [invoices, setInvoices] = useState<InvoiceResponse[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  useEffect(() => {
+    if (!session?.user?.tenantId) return;
+
+    loadData();
+  }, [session?.user?.tenantId]);
+
+  const loadData = async () => {
+    const response = await getInvoices(session?.user?.tenantId || "");
+
+    if (response.success && response.data) {
+      setInvoices(response.data);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    const confirm = await AlertService.showConfirm(
+      "¿Eliminar factura?",
+      "Esta acción no se puede deshacer."
+    );
+
+    if (confirm) {
+      const response = await deleteInvoice(id);
+
+      if (response.success) {
+        AlertService.showSuccess("Factura eliminada correctamente");
+        loadData();
+      } else {
+        AlertService.showError(
+          response.error || "Error al eliminar la factura"
+        );
+      }
+    }
+  };
+
+  const handlePageChange = (
+    _event: React.ChangeEvent<unknown>,
+    value: number
+  ) => {
+    setCurrentPage(value);
+  };
+
+  const paginatedInvoices = invoices.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  console.log("invoices", invoices);
+
+  return (
+    <Container maxWidth="lg">
+      <Box>
+        <Box
+          sx={{
+            mb: { xs: 3, md: 4 },
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            gap: 2,
+            alignItems: { sm: "center" },
+            justifyContent: "space-between",
+          }}
+        >
+          <Box>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Facturas
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Crea y gestiona tus facturas
+            </Typography>
+          </Box>
+          <Link href="/facturas/nueva" style={{ textDecoration: "none" }}>
+            <Button
+              variant="contained"
+              startIcon={<Plus size={16} />}
+              sx={{ width: { xs: "100%", sm: "auto" } }}
+            >
+              Crear Factura
+            </Button>
+          </Link>
+        </Box>
+
+        <Card>
+          <CardContent sx={{ p: 3 }}>
+            {invoices.length === 0 ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  py: 6,
+                  textAlign: "center",
+                }}
+              >
+                <Files />
+                <Typography variant="h6" gutterBottom>
+                  No hay facturas aún
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Agrega tu primera factura
+                </Typography>
+              </Box>
+            ) : (
+              <TableContainer component={Paper} variant="outlined">
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell># Documento</TableCell>
+                      <TableCell>Cliente</TableCell>
+                      <TableCell>Fecha de Emisión</TableCell>
+                      <TableCell>Fecha de Vencimiento</TableCell>
+                      <TableCell>Importe</TableCell>
+                      <TableCell>Estado</TableCell>
+                      <TableCell align="right">Acciones</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {paginatedInvoices.map((invoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell sx={{ fontWeight: "medium" }}>
+                          {invoice.document}
+                        </TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: "normal" }}
+                            >
+                              {invoice.client?.name || "N/A"}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {invoice.client?.identification || "N/A"}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(invoice.issueDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(invoice.dueDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>${invoice.total.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={invoice.status}
+                            color="primary"
+                            size="small"
+                            sx={{ textTransform: "capitalize" }}
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Link
+                            href={`/facturas/${invoice.id}`}
+                            style={{ textDecoration: "none" }}
+                          >
+                            <IconButton size="small">
+                              <Eye size={16} />
+                            </IconButton>
+                          </Link>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDelete(invoice.id || "")}
+                          >
+                            <Trash2 size={16} />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <Pagination
+                  sx={{ p: 2 }}
+                  count={Math.ceil(invoices.length / itemsPerPage)}
+                  page={currentPage}
+                  onChange={handlePageChange}
+                />
+              </TableContainer>
+            )}
+          </CardContent>
+        </Card>
+      </Box>
+    </Container>
+  );
+}

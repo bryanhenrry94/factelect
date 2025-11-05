@@ -1,0 +1,38 @@
+import { z } from "zod";
+
+export const tenantSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1, "Name is required"),
+  subdomain: z
+    .string()
+    .min(1, "Subdomain is required")
+    .regex(
+      /^[a-z0-9-]+$/,
+      "Subdomain must contain only lowercase letters, numbers, and hyphens"
+    ),
+  legalName: z.string().optional(),
+  ruc: z.string().optional(),
+  phone: z.string().optional(),
+  contactEmail: z.string().email().optional(),
+  address: z.string().optional(),
+  logoUrl: z.string().url().optional(),
+  sriConfig: z.any().optional(), // Replace with specific schema if needed
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+export const createTenantSchema = tenantSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateTenantSchema = tenantSchema.partial().omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Tenant = z.infer<typeof tenantSchema>;
+export type CreateTenant = z.infer<typeof createTenantSchema>;
+export type UpdateTenant = z.infer<typeof updateTenantSchema>;
