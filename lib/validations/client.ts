@@ -17,14 +17,14 @@ export const ClientBaseSchema = z
     identificationType: IdentificationTypeSchema,
 
     identification: z
-      .string({ message: "Identification is required" })
-      .min(1, "Identification is required"),
+      .string({ message: "La identificación es obligatoria" })
+      .min(1, "La identificación es obligatoria"),
 
-    name: z.string({ message: "Name is required" }).min(1, "Name is required"),
+    name: z.string({ message: "El nombre es obligatorio" }).min(1, "El nombre es obligatorio"),
 
     email: z
-      .string({ message: "Email is required" })
-      .email("Invalid email format"),
+      .string({ message: "El correo electrónico es obligatorio" })
+      .email("Formato de correo electrónico no válido"),
 
     phone: z
       .string()
