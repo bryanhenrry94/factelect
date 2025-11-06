@@ -2,18 +2,16 @@
 import { Grid, Box } from "@mui/material";
 import PageContainer from "@/components/container/PageContainer";
 // components
-// import SalesOverview from "@/app/(DashboardLayout)/components/dashboard/SalesOverview";
-// import YearlyBreakup from "@/app/(DashboardLayout)/components/dashboard/YearlyBreakup";
-// import RecentTransactions from "@/app/(DashboardLayout)/components/dashboard/RecentTransactions";
-// import ProductPerformance from "@/app/(DashboardLayout)/components/dashboard/ProductPerformance";
-// import Blog from "@/app/(DashboardLayout)/components/dashboard/Blog";
-// import MonthlyEarnings from "@/app/(DashboardLayout)/components/dashboard/MonthlyEarnings";
+import SalesOverview from "@/components/dashboard/SalesOverview";
+import YearlyBreakup from "@/components/dashboard/YearlyBreakup";
+import MonthlyEarnings from "@/components/dashboard/MonthlyEarnings";
+import MonthlySalesTrend from "@/components/dashboard/MonthlySalesTrend";
 
 const Dashboard = () => {
   return (
     <PageContainer title="Dashboard" description="this is Dashboard">
       <Box>
-        {/* <Grid container spacing={3}>
+        <Grid container spacing={3}>
           <Grid
             size={{
               xs: 12,
@@ -37,26 +35,10 @@ const Dashboard = () => {
               </Grid>
             </Grid>
           </Grid>
-          <Grid
-            size={{
-              xs: 12,
-              lg: 4,
-            }}
-          >
-            <RecentTransactions />
-          </Grid>
-          <Grid
-            size={{
-              xs: 12,
-              lg: 8,
-            }}
-          >
-            <ProductPerformance />
-          </Grid>
           <Grid size={12}>
-            <Blog />
+            <MonthlySalesTrend />
           </Grid>
-        </Grid> */}
+        </Grid>
       </Box>
     </PageContainer>
   );
