@@ -1,12 +1,12 @@
 "use client";
 
-import { sendPasswordResetEmail } from "@/app/actions/auth";
+import { identifyTenantAction } from "@/app/actions/auth";
 import PageContainer from "@/components/container/PageContainer";
 import Logo from "@/components/layout/shared/logo/Logo";
 import CustomTextField from "@/components/ui/CustomTextField";
+import { protocol, rootDomain } from "@/lib/config";
 import { Alert, Box, Button, Card, Grid, Typography } from "@mui/material";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 
@@ -14,11 +14,12 @@ type FormValues = {
   email: string;
 };
 
-export default function ForgotPasswordPage() {
+export default function IdentifyTenant() {
+  const router = useRouter();
+
   const {
     handleSubmit,
     control,
-    reset,
     formState: { errors },
   } = useForm<FormValues>({
     defaultValues: { email: "" },
@@ -34,18 +35,19 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
 
     try {
-      const result = await sendPasswordResetEmail(data.email);
+      const result = await identifyTenantAction(data.email);
 
       if (!result.success) {
-        setError(result.message || "Error al enviar el correo de recuperación");
+        setError(result.message || "Error por favor intenta de nuevo.");
         return;
       }
 
-      setMessage(
-        result.message ||
-          "Si el correo existe, se enviará un enlace de restablecimiento."
-      );
-      reset(); // Limpia el formulario tras enviar
+      // Redirect to the tenant's subdomain signin page
+      const redirectUrl = `${protocol}://${
+        result.subdomain
+      }.${rootDomain}/auth/signin?email=${encodeURIComponent(data.email)}`;
+
+      router.push(redirectUrl);
     } catch {
       setError("Ha ocurrido un error inesperado. Por favor intenta de nuevo.");
     } finally {
@@ -55,8 +57,8 @@ export default function ForgotPasswordPage() {
 
   return (
     <PageContainer
-      title="Recuperar contraseña"
-      description="this is Forgot Password page"
+      title="Verificar Subdominio"
+      description="this is Verify Tenant page"
     >
       <Box
         sx={{
@@ -109,7 +111,7 @@ export default function ForgotPasswordPage() {
                   color="textSecondary"
                   mb={1}
                 >
-                  Recupera el acceso a tu cuenta ingresando tu correo
+                  Ingresa el correo asociado a tu cuenta.
                 </Typography>
                 <Box>
                   <Typography
@@ -158,21 +160,8 @@ export default function ForgotPasswordPage() {
                   disabled={isLoading}
                   sx={{ mt: 2 }}
                 >
-                  {isLoading ? "Enviando..." : "Enviar correo"}
+                  {isLoading ? "Cargando..." : "Continuar"}
                 </Button>
-
-                <Box sx={{ mt: 2, textAlign: "center" }}>
-                  <Link href="/auth/signin" style={{ textDecoration: "none" }}>
-                    <Button
-                      variant="text"
-                      color="primary"
-                      sx={{ textTransform: "none" }}
-                      startIcon={<ArrowLeft />}
-                    >
-                      Regresar al inicio de sesión
-                    </Button>
-                  </Link>
-                </Box>
               </Box>
             </Card>
           </Grid>

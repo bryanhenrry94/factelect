@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Box, Typography, Button, Stack, Alert } from "@mui/material";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,7 @@ import { useForm, Controller } from "react-hook-form";
 
 import CustomTextField from "@/components/ui/CustomTextField";
 import useTenant from "@/hooks/useTenant";
+import { useSearchParams } from "next/navigation";
 
 interface LoginFormInputs {
   username: string;
@@ -23,13 +24,21 @@ interface LoginProps {
 
 const AuthLogin = ({ title, subtitle, subtext }: LoginProps) => {
   const router = useRouter();
+
   const { tenant } = useTenant();
   const [error, setError] = React.useState<string | null>(null);
+
+  const searchParams = useSearchParams();
+  const rawEmail = searchParams?.get("email") ?? undefined;
+  const email = rawEmail
+    ? decodeURIComponent(rawEmail).trim().toLowerCase()
+    : undefined;
 
   const {
     control,
     handleSubmit,
     formState: { isSubmitting, errors },
+    reset,
   } = useForm<LoginFormInputs>({
     defaultValues: {
       username: "",
@@ -58,6 +67,12 @@ const AuthLogin = ({ title, subtitle, subtext }: LoginProps) => {
 
     router.push("/");
   };
+
+  useEffect(() => {
+    if (!email) return;
+
+    reset({ username: email });
+  }, [email, reset]);
 
   return (
     <>

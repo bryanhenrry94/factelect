@@ -76,10 +76,11 @@ model EmissionPoint {
 }
 
 model User {
-  id                  String               @id @default(cuid()) @map("id")
-  email               String               @unique @map("email")
-  password            String               @map("password")
-  name                String?              @map("name")
+  id       String  @id @default(cuid()) @map("id")
+  email    String  @unique @map("email")
+  password String  @map("password")
+  name     String? @map("name")
+
   tenantId            String               @map("tenant_id")
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
@@ -87,6 +88,11 @@ model User {
   passwordResetTokens PasswordResetToken[]
 
   @@map("user")
+}
+
+enum UserRole {
+  ADMIN
+  USER
 }
 
 model Client {

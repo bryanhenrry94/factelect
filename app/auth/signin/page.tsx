@@ -6,9 +6,14 @@ import PageContainer from "@/components/container/PageContainer";
 import Logo from "@/components/layout/shared/logo/Logo";
 import AuthLogin from "@/components/auth/AuthLogin";
 import useTenant from "@/hooks/useTenant";
+import IdentifyTenant from "@/components/auth/IdentifyTenant";
 
-const Login2 = () => {
+const Signin = () => {
   const { tenant } = useTenant();
+
+  if (!tenant) {
+    return <IdentifyTenant />;
+  }
 
   return (
     <PageContainer title="Login" description="this is Login page">
@@ -97,4 +102,4 @@ const Login2 = () => {
     </PageContainer>
   );
 };
-export default Login2;
+export default Signin;
