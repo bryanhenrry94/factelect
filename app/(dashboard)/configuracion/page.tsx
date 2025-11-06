@@ -2,16 +2,15 @@
 
 import type React from "react";
 import { useEffect, useState } from "react";
-import { Tabs, Tab, Box, Card, Typography, Container } from "@mui/material";
-import { Building2, FileText, Lock, CreditCard } from "lucide-react";
+import { Tabs, Tab, Box, Card } from "@mui/material";
+import { Building2, FileText } from "lucide-react";
 import CompanyForm from "@/components/setting/company-form";
 import SRIConfigForm from "@/components/setting/sri-config-form";
-import ChangePasswordForm from "@/components/setting/change-password-form";
 import { getTenantById } from "@/app/actions/tenant";
 import { useSession } from "next-auth/react";
 import { Tenant } from "@/lib/validations/tenant";
-import { TenantSriConfig } from "@/lib/validations/tenant-sri-config";
-import { getTenantSriConfig } from "@/app/actions/tenant-sri-config";
+import { PageHeader } from "@/components/ui/PageHeader";
+import PageContainer from "@/components/container/PageContainer";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -61,47 +60,34 @@ export default function SettingsPage() {
   };
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="h3" component="h1" fontWeight="bold" gutterBottom>
-          Configuración
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Administra la configuración de tu empresa y facturación
-        </Typography>
-      </Box>
-
-      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          variant="scrollable"
-          scrollButtons="auto"
-        >
-          <Tab
-            icon={<Building2 className="w-5 h-5" />}
-            iconPosition="start"
-            label="Empresa"
-          />
-          <Tab
-            icon={<FileText className="w-5 h-5" />}
-            iconPosition="start"
-            label="Facturación Electrónica"
-          />
-          <Tab
-            icon={<Lock className="w-5 h-5" />}
-            iconPosition="start"
-            label="Seguridad"
-          />
-          <Tab
-            icon={<CreditCard className="w-5 h-5" />}
-            iconPosition="start"
-            label="Facturación y Suscripción"
-          />
-        </Tabs>
-      </Box>
+    <PageContainer
+      title="Configuración"
+      description="Configuración de la cuenta"
+    >
+      {/* HEADER */}
+      <PageHeader title="Configuración" />
 
       <Card>
+        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+          >
+            <Tab
+              icon={<Building2 className="w-5 h-5" />}
+              iconPosition="start"
+              label="Empresa"
+            />
+            <Tab
+              icon={<FileText className="w-5 h-5" />}
+              iconPosition="start"
+              label="Facturación Electrónica"
+            />
+          </Tabs>
+        </Box>
+
         {/* Company Profile Tab */}
         <TabPanel value={tabValue} index={0}>
           {tenant && <CompanyForm initialData={tenant} />}
@@ -111,14 +97,7 @@ export default function SettingsPage() {
         <TabPanel value={tabValue} index={1}>
           <SRIConfigForm tenantId={tenant?.id || ""} />
         </TabPanel>
-
-        {/* Security Tab */}
-        <TabPanel value={tabValue} index={2}>
-          {session?.user?.id && (
-            <ChangePasswordForm userId={session?.user?.id} />
-          )}
-        </TabPanel>
       </Card>
-    </Container>
+    </PageContainer>
   );
 }

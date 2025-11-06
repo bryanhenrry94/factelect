@@ -76,14 +76,13 @@ const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ userId }) => {
   };
 
   return (
-    <Box sx={{ p: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        Cambiar Contraseña
+    <Box>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Cambiar la Contraseña
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        Actualiza tu contraseña para mantener la seguridad de tu cuenta.
+        Para cambiar tu contraseña, confirma aquí.
       </Typography>
-
       <Box
         component="form"
         onSubmit={handleSubmit(onSubmit)}

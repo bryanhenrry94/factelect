@@ -17,6 +17,17 @@ export async function createProduct(
       return { success: false, error: "Tenant ID is required" };
     }
 
+    const codeExists = await prisma.product.findUnique({
+      where: { code: parsed.code },
+    });
+
+    if (codeExists) {
+      return {
+        success: false,
+        error: `Producto con codigo ${parsed.code} ya existe`,
+      };
+    }
+
     const product = await prisma.product.create({
       data: {
         ...parsed,

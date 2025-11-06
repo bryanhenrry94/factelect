@@ -67,8 +67,6 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
 
   const handleFormSubmit = async (data: CreateProduct) => {
     await onSubmit(data);
-    reset();
-    handleCloseDialog();
   };
 
   return (
@@ -91,7 +89,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
 
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}>
             <TextField
-              label="Código *"
+              label="Código"
               fullWidth
               {...register("code")}
               error={!!errors.code}
@@ -109,7 +107,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
             />
 
             <TextField
-              label="Precio *"
+              label="Precio"
               type="number"
               fullWidth
               inputProps={{ step: "0.01", min: 0 }}

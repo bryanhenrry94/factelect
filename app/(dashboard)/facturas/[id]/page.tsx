@@ -33,6 +33,8 @@ import {
 import { AlertService } from "@/lib/alerts";
 import { InvoiceItemResponse } from "@/lib/validations/invoice-item";
 import InvoiceTotals from "@/components/invoice/totals";
+import PageContainer from "@/components/container/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const InvoiceViewPage = () => {
   const { data: session } = useSession();
@@ -119,8 +121,16 @@ const InvoiceViewPage = () => {
   }
 
   return (
-    <Container maxWidth="lg">
-      <Box>
+    <PageContainer
+      title={`Factura ${invoice.document}`}
+      description="Detalles de la factura"
+    >
+      <PageHeader
+        title={"Ver Factura"}
+        routes={[{ name: "Facturas", href: "/facturas" }]}
+      />
+
+      <Paper elevation={1} sx={{ p: 3, mb: 4 }}>
         {/* Header */}
         <Box
           sx={{
@@ -129,22 +139,9 @@ const InvoiceViewPage = () => {
             flexDirection: { xs: "column", sm: "row" },
             gap: 2,
             alignItems: { sm: "center" },
-            justifyContent: "space-between",
+            justifyContent: "flex-end",
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <IconButton onClick={() => router.push("/facturas")} sx={{ mr: 1 }}>
-              <ArrowLeft size={20} />
-            </IconButton>
-            <Box>
-              <Typography variant="h4" component="h1" gutterBottom>
-                Factura {invoice.document}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Detalles de la factura
-              </Typography>
-            </Box>
-          </Box>
           <Box sx={{ display: "flex", gap: 1 }}>
             <Button
               variant="contained"
@@ -156,142 +153,138 @@ const InvoiceViewPage = () => {
           </Box>
         </Box>
 
+        <Divider sx={{ mb: 4 }} />
+
         {/* Invoice Details */}
         <Grid container spacing={3}>
           {/* Basic Info */}
           <Grid size={{ xs: 12, md: 8 }}>
-            <Card sx={{ height: "100%" }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Información de la Factura
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Número de Documento
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: "medium" }}>
-                      {invoice.document}
-                    </Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Estado
-                    </Typography>
-                    <Chip
-                      label={invoice.status}
-                      color="primary"
-                      size="small"
-                      sx={{ textTransform: "capitalize", mt: 0.5 }}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Fecha de Emisión
-                    </Typography>
-                    <Typography variant="body1">
-                      {new Date(invoice.issueDate).toLocaleDateString()}
-                    </Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Fecha de Vencimiento
-                    </Typography>
-                    <Typography variant="body1">
-                      {new Date(invoice.dueDate).toLocaleDateString()}
-                    </Typography>
-                  </Grid>
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Información de la Factura
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Número de Documento
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: "medium" }}>
+                    {invoice.document}
+                  </Typography>
                 </Grid>
-              </CardContent>
-            </Card>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Estado
+                  </Typography>
+                  <Chip
+                    label={invoice.status}
+                    color="primary"
+                    size="small"
+                    sx={{ textTransform: "capitalize", mt: 0.5 }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Fecha de Emisión
+                  </Typography>
+                  <Typography variant="body1">
+                    {new Date(invoice.issueDate).toLocaleDateString()}
+                  </Typography>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Fecha de Vencimiento
+                  </Typography>
+                  <Typography variant="body1">
+                    {new Date(invoice.dueDate).toLocaleDateString()}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
           </Grid>
 
           {/* Client Info */}
           <Grid size={{ xs: 12, md: 4 }}>
-            <Card sx={{ height: "100%" }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Cliente
-                </Typography>
-                <Typography variant="body1" sx={{ fontWeight: "medium" }}>
-                  {invoice.client?.name || "N/A"}
-                </Typography>
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Cliente
+              </Typography>
+              <Typography variant="body1" sx={{ fontWeight: "medium" }}>
+                {invoice.client?.name || "N/A"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {invoice.client?.identification || "N/A"}
+              </Typography>
+              {invoice.client?.email && (
                 <Typography variant="body2" color="text.secondary">
-                  {invoice.client?.identification || "N/A"}
+                  {invoice.client.email}
                 </Typography>
-                {invoice.client?.email && (
-                  <Typography variant="body2" color="text.secondary">
-                    {invoice.client.email}
-                  </Typography>
-                )}
-                {invoice.client?.phone && (
-                  <Typography variant="body2" color="text.secondary">
-                    {invoice.client.phone}
-                  </Typography>
-                )}
-              </CardContent>
-            </Card>
+              )}
+              {invoice.client?.phone && (
+                <Typography variant="body2" color="text.secondary">
+                  {invoice.client.phone}
+                </Typography>
+              )}
+            </Box>
           </Grid>
 
           {/* Items */}
           <Grid size={{ xs: 12 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Artículos
-                </Typography>
-                <TableContainer component={Paper} variant="outlined">
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Descripción</TableCell>
-                        <TableCell align="right">Cantidad</TableCell>
-                        <TableCell align="right">Precio Unitario</TableCell>
-                        <TableCell align="right">Descuento</TableCell>
-                        <TableCell align="right">Subtotal</TableCell>
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Productos
+              </Typography>
+              <TableContainer component={Paper} variant="outlined">
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Descripción</TableCell>
+                      <TableCell align="right">Cantidad</TableCell>
+                      <TableCell align="right">Precio Unitario</TableCell>
+                      <TableCell align="right">Descuento</TableCell>
+                      <TableCell align="right">Subtotal</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {items.map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{item.product.description}</TableCell>
+                        <TableCell align="right">{item.quantity}</TableCell>
+                        <TableCell align="right">
+                          ${item.unitPrice.toFixed(2)}
+                        </TableCell>
+                        <TableCell align="right">
+                          {item.discountAmount ? item.discountAmount : 0}
+                        </TableCell>
+                        <TableCell align="right">
+                          ${(item.quantity * item.unitPrice).toFixed(2)}
+                        </TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {items.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{item.product.description}</TableCell>
-                          <TableCell align="right">{item.quantity}</TableCell>
-                          <TableCell align="right">
-                            ${item.unitPrice.toFixed(2)}
-                          </TableCell>
-                          <TableCell align="right">
-                            {item.discountAmount ? item.discountAmount : 0}
-                          </TableCell>
-                          <TableCell align="right">
-                            ${(item.quantity * item.unitPrice).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
-                <Divider sx={{ my: 3 }} />
+              <Divider sx={{ my: 3 }} />
 
-                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                  <Box>
-                    <Typography variant="h6" gutterBottom>
-                      Descripcion
-                    </Typography>
-                    <Typography variant="body1">
-                      {invoice.description || "N/A"}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ minWidth: 200 }}>
-                    <InvoiceTotals items={items} />
-                  </Box>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Box>
+                  <Typography variant="h6" gutterBottom>
+                    Descripcion
+                  </Typography>
+                  <Typography variant="body1">
+                    {invoice.description || "N/A"}
+                  </Typography>
                 </Box>
-              </CardContent>
-            </Card>
+                <Box sx={{ minWidth: 200 }}>
+                  <InvoiceTotals items={items} />
+                </Box>
+              </Box>
+            </Box>
           </Grid>
         </Grid>
-      </Box>
-    </Container>
+      </Paper>
+    </PageContainer>
   );
 };
 

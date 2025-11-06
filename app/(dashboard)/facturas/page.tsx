@@ -26,6 +26,8 @@ import { InvoiceResponse } from "@/lib/validations/invoice";
 import { useSession } from "next-auth/react";
 import { deleteInvoice, getInvoices } from "@/app/actions/invoice";
 import { AlertService } from "@/lib/alerts";
+import PageContainer from "@/components/container/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function InvoicesPage() {
   const { data: session } = useSession();
@@ -82,37 +84,10 @@ export default function InvoicesPage() {
   console.log("invoices", invoices);
 
   return (
-    <Container maxWidth="lg">
-      <Box>
-        <Box
-          sx={{
-            mb: { xs: 3, md: 4 },
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            gap: 2,
-            alignItems: { sm: "center" },
-            justifyContent: "space-between",
-          }}
-        >
-          <Box>
-            <Typography variant="h4" component="h1" gutterBottom>
-              Facturas
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Crea y gestiona tus facturas
-            </Typography>
-          </Box>
-          <Link href="/facturas/nueva" style={{ textDecoration: "none" }}>
-            <Button
-              variant="contained"
-              startIcon={<Plus size={16} />}
-              sx={{ width: { xs: "100%", sm: "auto" } }}
-            >
-              Crear Factura
-            </Button>
-          </Link>
-        </Box>
+    <PageContainer title="Facturas" description="Crea y gestiona tus facturas">
+      <PageHeader title="Facturas" />
 
+      <Box>
         <Card>
           <CardContent sx={{ p: 3 }}>
             {invoices.length === 0 ? (
@@ -135,7 +110,35 @@ export default function InvoicesPage() {
                 </Typography>
               </Box>
             ) : (
-              <TableContainer component={Paper} variant="outlined">
+              <Box>
+                <Box
+                  sx={{
+                    mb: 2,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    flexDirection: { xs: "column", sm: "row" },
+                    gap: 2,
+                  }}
+                >
+                  <TextField
+                    label="Buscar facturas"
+                    variant="outlined"
+                    size="small"
+                  />
+                  <Link
+                    href="/facturas/nueva"
+                    style={{ textDecoration: "none" }}
+                  >
+                    <Button
+                      variant="contained"
+                      startIcon={<Plus size={16} />}
+                      sx={{ width: { xs: "100%", sm: "auto" } }}
+                    >
+                      Crear Factura
+                    </Button>
+                  </Link>
+                </Box>
+
                 <Table>
                   <TableHead>
                     <TableRow>
@@ -211,11 +214,11 @@ export default function InvoicesPage() {
                   page={currentPage}
                   onChange={handlePageChange}
                 />
-              </TableContainer>
+              </Box>
             )}
           </CardContent>
         </Card>
       </Box>
-    </Container>
+    </PageContainer>
   );
 }

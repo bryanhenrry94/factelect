@@ -50,6 +50,12 @@ const Menuitems = [
     icon: Settings,
     href: "/configuracion",
   },
+  {
+    id: uniqueId(),
+    title: "Cuenta",
+    icon: Settings,
+    href: "/cuenta",
+  },
 ];
 
 export default Menuitems;

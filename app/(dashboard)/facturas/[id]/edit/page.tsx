@@ -24,6 +24,7 @@ import {
   TableRow,
   IconButton,
   Autocomplete,
+  Divider,
 } from "@mui/material";
 import {
   Save,
@@ -36,6 +37,7 @@ import {
   Trash2,
   CodeXml,
   FileText,
+  Divide,
 } from "lucide-react";
 import CustomRow from "@/components/invoice/custom-row";
 import { taxOptions } from "@/constants/tax";
@@ -74,6 +76,8 @@ import { CreateProduct } from "@/lib/validations/product";
 import { useTransition } from "react";
 import { firmarFactura } from "@/app/actions/firmarFactura";
 import { uploadInvoiceXML } from "@/app/actions/supabase";
+import PageContainer from "@/components/container/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 interface InvoiceFormInputs {
   establishmentId: string;
@@ -467,379 +471,387 @@ export default function InvoiceEditPage() {
   };
 
   return (
-    <Container maxWidth="xl">
-      <Box component="form" onSubmit={handleSubmit(onSubmit)}>
-        {/* Header */}
-        <Box
-          sx={{
-            mb: 4,
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 2,
-          }}
-        >
-          <Box>
-            <Typography variant="h4" component="h1" gutterBottom>
-              Editar Factura
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Editar los detalles de la factura y sus elementos.
-            </Typography>
-          </Box>
+    <PageContainer
+      title="Editar Factura"
+      description="Editar los detalles de la factura y sus elementos."
+    >
+      <PageHeader
+        title="Editar Factura"
+        routes={[{ name: "Facturas", href: "/facturas" }]}
+      />
 
-          <Stack direction="row" spacing={2}>
-            <Button
-              type="submit"
-              variant="contained"
-              startIcon={<Save size={18} />}
-              disabled={isSubmitting}
-            >
-              Actualizar
-            </Button>
-            <Tooltip title="Enviar al SRI">
-              <Button
-                variant="outlined"
-                startIcon={<Send size={18} />}
-                onClick={handleFirmar}
-                disabled={isPending}
-                // disabled={items.length === 0}
-              >
-                {isPending ? "Firmando..." : "Firmar XML"}
-              </Button>
-            </Tooltip>
-            <Button
-              color="primary"
-              variant="outlined"
-              startIcon={<CodeXml size={16} />}
-              onClick={DownLoadXML}
-            >
-              Xml
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<FileText size={16} />}
-              onClick={handleDownloadPDF}
-            >
-              Ride
-            </Button>
-          </Stack>
-        </Box>
-
-        {error && <Alert severity="error">{error}</Alert>}
-        {/* Información del Documento */}
-        <Paper sx={{ p: 2, mb: 2 }}>
-          <Typography fontWeight={600}>Información del Documento</Typography>
+      <Paper elevation={1} sx={{ p: 3, mb: 4 }}>
+        <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+          {/* Header */}
           <Box
             sx={{
-              mt: 2,
+              mb: 4,
               display: "flex",
-              flexDirection: "column",
+              flexDirection: { xs: "column", sm: "row" },
+              justifyContent: "flex-end",
+              alignItems: "center",
               gap: 2,
-              maxWidth: 400,
             }}
           >
-            <Controller
-              name="issueDate"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Fecha de Emisión"
-                  type="date"
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                  required
-                  inputProps={{ readOnly: true }}
-                />
-              )}
-            />
-            <Stack spacing={2} direction={"row"}>
-              <Controller
-                name="establishmentId"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Establecimiento"
-                    size="small"
-                    fullWidth
-                    required
-                    value={serie1}
-                    inputProps={{ readOnly: true }}
-                  />
-                )}
-              />
-
-              <Controller
-                name="emissionPointId"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Punto de Emisión"
-                    size="small"
-                    fullWidth
-                    required
-                    value={serie2}
-                    inputProps={{ readOnly: true }}
-                  />
-                )}
-              />
-            </Stack>
-
-            <Controller
-              name="numDocumento"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Número de Documento"
-                  size="small"
-                  fullWidth
-                  inputProps={{ readOnly: true }}
-                  required
-                />
-              )}
-            />
-            <Stack spacing={2} direction={"row"} alignItems="center">
-              <Controller
-                name="clientId"
-                control={control}
-                render={({ field: { onChange, value } }) => (
-                  <Autocomplete
-                    options={clients}
-                    getOptionLabel={(option) =>
-                      `[${option.identification}] - ${option.name}` || ""
-                    }
-                    value={
-                      clients.find((client) => client.id === value) || null
-                    }
-                    fullWidth
-                    onChange={(_, newValue) => onChange(newValue?.id || "")}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Cliente"
-                        size="small"
-                        fullWidth
-                        required
-                      />
-                    )}
-                    isOptionEqualToValue={(option, value) =>
-                      option.id === value.id
-                    }
-                  />
-                )}
-              />
-              <IconButton color="primary" onClick={handleOpenClientDialog}>
-                <UserPlus size={20} />
-              </IconButton>
+            <Stack direction="row" spacing={2}>
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<Save size={18} />}
+                disabled={isSubmitting}
+              >
+                Actualizar
+              </Button>
+              <Tooltip title="Enviar al SRI">
+                <Button
+                  variant="outlined"
+                  startIcon={<Send size={18} />}
+                  onClick={handleFirmar}
+                  disabled={isPending}
+                  // disabled={items.length === 0}
+                >
+                  {isPending ? "Firmando..." : "Firmar XML"}
+                </Button>
+              </Tooltip>
+              <Button
+                color="primary"
+                variant="outlined"
+                startIcon={<CodeXml size={16} />}
+                onClick={DownLoadXML}
+              >
+                Xml
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<FileText size={16} />}
+                onClick={handleDownloadPDF}
+              >
+                Ride
+              </Button>
             </Stack>
           </Box>
-        </Paper>
-        {/* Tabs */}
-        <Paper sx={{ p: 2 }}>
-          <Tabs value={tabValue} onChange={handleTabChange}>
-            <Tab
-              icon={<Package size={18} />}
-              iconPosition="start"
-              label="Productos / Servicios"
-            />
-            <Tab
-              icon={<CreditCard size={18} />}
-              iconPosition="start"
-              label="Formas de Pago"
-            />
-          </Tabs>
 
-          <TabPanel value={tabValue} index={0}>
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Producto / Servicio</TableCell>
-                    <TableCell>Cantidad</TableCell>
-                    <TableCell>Precio Unitario</TableCell>
-                    <TableCell>IVA</TableCell>
-                    <TableCell>% Desc.</TableCell>
-                    <TableCell>Subtotal</TableCell>
-                    <TableCell>Acciones</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {items.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} align="center">
-                        No hay productos agregados.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    items.map((item, index) => (
-                      <CustomRow
-                        key={index}
-                        item={item}
-                        index={index}
-                        products={products}
-                        taxOptions={taxOptions}
-                        setItems={setItems}
-                        getProductById={getProductById}
-                        onDelete={handleDeleteItem}
-                        onOpenModal={handleOpenProductDialog}
-                      />
-                    ))
+          <Divider sx={{ mb: 4 }} />
+
+          {error && <Alert severity="error">{error}</Alert>}
+          {/* Información del Documento */}
+          <Box sx={{ mb: 2 }}>
+            <Typography fontWeight={600}>Información del Documento</Typography>
+            <Box
+              sx={{
+                mt: 2,
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+                maxWidth: 400,
+              }}
+            >
+              <Controller
+                name="issueDate"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Fecha de Emisión"
+                    type="date"
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                    fullWidth
+                    required
+                    inputProps={{ readOnly: true }}
+                  />
+                )}
+              />
+              <Stack spacing={2} direction={"row"}>
+                <Controller
+                  name="establishmentId"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Establecimiento"
+                      size="small"
+                      fullWidth
+                      required
+                      value={serie1}
+                      inputProps={{ readOnly: true }}
+                    />
                   )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            <Stack direction="row" justifyContent="flex-end" mt={2}>
-              <Button
-                variant="text"
-                startIcon={<PlusCircle size={16} />}
-                onClick={() =>
-                  setItems([
-                    ...items,
-                    {
-                      id: "",
-                      invoiceId: "",
-                      productId: "",
-                      quantity: 1,
-                      unitPrice: 0,
-                      tax: "IVA_12",
-                      taxAmount: 0,
-                      discountRate: 0,
-                      discountAmount: 0,
-                      subtotal: 0,
-                    },
-                  ])
-                }
-              >
-                Agregar Producto
-              </Button>
-            </Stack>
-          </TabPanel>
-          <TabPanel value={tabValue} index={1}>
-            {/* Payment Methods Content */}
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Forma de Pago</TableCell>
-                    <TableCell>Plazo</TableCell>
-                    <TableCell>Unid. de tiempo</TableCell>
-                    <TableCell>Valor</TableCell>
-                    <TableCell>Acciones</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {paymentMethods.length === 0 ? (
+                />
+
+                <Controller
+                  name="emissionPointId"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Punto de Emisión"
+                      size="small"
+                      fullWidth
+                      required
+                      value={serie2}
+                      inputProps={{ readOnly: true }}
+                    />
+                  )}
+                />
+              </Stack>
+
+              <Controller
+                name="numDocumento"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Número de Documento"
+                    size="small"
+                    fullWidth
+                    inputProps={{ readOnly: true }}
+                    required
+                  />
+                )}
+              />
+              <Stack spacing={2} direction={"row"} alignItems="center">
+                <Controller
+                  name="clientId"
+                  control={control}
+                  render={({ field: { onChange, value } }) => (
+                    <Autocomplete
+                      options={clients}
+                      getOptionLabel={(option) =>
+                        `[${option.identification}] - ${option.name}` || ""
+                      }
+                      value={
+                        clients.find((client) => client.id === value) || null
+                      }
+                      fullWidth
+                      onChange={(_, newValue) => onChange(newValue?.id || "")}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Cliente"
+                          size="small"
+                          fullWidth
+                          required
+                        />
+                      )}
+                      isOptionEqualToValue={(option, value) =>
+                        option.id === value.id
+                      }
+                    />
+                  )}
+                />
+                <IconButton color="primary" onClick={handleOpenClientDialog}>
+                  <UserPlus size={20} />
+                </IconButton>
+              </Stack>
+            </Box>
+          </Box>
+
+          {/* Tabs */}
+          <Box>
+            <Tabs value={tabValue} onChange={handleTabChange}>
+              <Tab
+                icon={<Package size={18} />}
+                iconPosition="start"
+                label="Productos / Servicios"
+              />
+              <Tab
+                icon={<CreditCard size={18} />}
+                iconPosition="start"
+                label="Formas de Pago"
+              />
+            </Tabs>
+
+            <TabPanel value={tabValue} index={0}>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
-                        No hay formas de pago agregadas.
-                      </TableCell>
+                      <TableCell>Producto / Servicio</TableCell>
+                      <TableCell>Cantidad</TableCell>
+                      <TableCell>Precio Unitario</TableCell>
+                      <TableCell>IVA</TableCell>
+                      <TableCell>% Desc.</TableCell>
+                      <TableCell>Subtotal</TableCell>
+                      <TableCell>Acciones</TableCell>
                     </TableRow>
-                  ) : (
-                    paymentMethods.map((method, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          <TextField
-                            select
-                            size="small"
-                            fullWidth
-                            value={method.paymentMethod || ""}
-                            sx={{ width: 400 }}
-                            onChange={(e) => {
-                              const updatedMethods = [...paymentMethods];
-                              updatedMethods[index].paymentMethod =
-                                e.target.value;
-                              setPaymentMethods(updatedMethods);
-                            }}
-                            required
-                          >
-                            {sriPaymentMethods.map((method) => (
-                              <MenuItem key={method.value} value={method.value}>
-                                {method.label}
-                              </MenuItem>
-                            ))}
-                          </TextField>
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            type="number"
-                            size="small"
-                            value={method.term || 0}
-                            sx={{ width: 150 }}
-                            onChange={(e) => {
-                              const updatedMethods = [...paymentMethods];
-                              updatedMethods[index].term = Number(
-                                e.target.value
-                              );
-                              setPaymentMethods(updatedMethods);
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            select
-                            size="small"
-                            value={method.timeUnit || ""}
-                            sx={{ width: 150 }}
-                            onChange={(e) => {
-                              const updatedMethods = [...paymentMethods];
-                              updatedMethods[index].timeUnit = e.target.value;
-                              setPaymentMethods(updatedMethods);
-                            }}
-                          >
-                            <MenuItem value="DAYS">Días</MenuItem>
-                            <MenuItem value="MONTHS">Meses</MenuItem>
-                          </TextField>
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            type="number"
-                            size="small"
-                            value={method.amount || 0}
-                            sx={{ width: 150 }}
-                            onChange={(e) => {
-                              const updatedMethods = [...paymentMethods];
-                              updatedMethods[index].amount = Number(
-                                e.target.value
-                              );
-                              setPaymentMethods(updatedMethods);
-                            }}
-                            required
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <IconButton
-                            color="error"
-                            onClick={() => handleDeletePaymentMethod(index)}
-                          >
-                            <Delete />
-                          </IconButton>
+                  </TableHead>
+                  <TableBody>
+                    {items.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center">
+                          No hay productos agregados.
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            <Stack direction="row" justifyContent="flex-end" mt={2}>
-              <Button
-                variant="text"
-                startIcon={<PlusCircle size={16} />}
-                onClick={handleAddPaymentMethod}
-              >
-                Agregar Forma de Pago
-              </Button>
-            </Stack>
-          </TabPanel>
-        </Paper>
+                    ) : (
+                      items.map((item, index) => (
+                        <CustomRow
+                          key={index}
+                          item={item}
+                          index={index}
+                          products={products}
+                          taxOptions={taxOptions}
+                          setItems={setItems}
+                          getProductById={getProductById}
+                          onDelete={handleDeleteItem}
+                          onOpenModal={handleOpenProductDialog}
+                        />
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Stack direction="row" justifyContent="flex-end" mt={2}>
+                <Button
+                  variant="text"
+                  startIcon={<PlusCircle size={16} />}
+                  onClick={() =>
+                    setItems([
+                      ...items,
+                      {
+                        id: "",
+                        invoiceId: "",
+                        productId: "",
+                        quantity: 1,
+                        unitPrice: 0,
+                        tax: "IVA_12",
+                        taxAmount: 0,
+                        discountRate: 0,
+                        discountAmount: 0,
+                        subtotal: 0,
+                      },
+                    ])
+                  }
+                >
+                  Agregar Producto
+                </Button>
+              </Stack>
+            </TabPanel>
 
-        {/* Total */}
-        <Paper sx={{ p: 2, mt: 2 }}>
+            <TabPanel value={tabValue} index={1}>
+              {/* Payment Methods Content */}
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Forma de Pago</TableCell>
+                      <TableCell>Plazo</TableCell>
+                      <TableCell>Unid. de tiempo</TableCell>
+                      <TableCell>Valor</TableCell>
+                      <TableCell>Acciones</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {paymentMethods.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center">
+                          No hay formas de pago agregadas.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paymentMethods.map((method, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <TextField
+                              select
+                              size="small"
+                              fullWidth
+                              value={method.paymentMethod || ""}
+                              sx={{ width: 400 }}
+                              onChange={(e) => {
+                                const updatedMethods = [...paymentMethods];
+                                updatedMethods[index].paymentMethod =
+                                  e.target.value;
+                                setPaymentMethods(updatedMethods);
+                              }}
+                              required
+                            >
+                              {sriPaymentMethods.map((method) => (
+                                <MenuItem
+                                  key={method.value}
+                                  value={method.value}
+                                >
+                                  {method.label}
+                                </MenuItem>
+                              ))}
+                            </TextField>
+                          </TableCell>
+                          <TableCell>
+                            <TextField
+                              type="number"
+                              size="small"
+                              value={method.term || 0}
+                              sx={{ width: 150 }}
+                              onChange={(e) => {
+                                const updatedMethods = [...paymentMethods];
+                                updatedMethods[index].term = Number(
+                                  e.target.value
+                                );
+                                setPaymentMethods(updatedMethods);
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <TextField
+                              select
+                              size="small"
+                              value={method.timeUnit || ""}
+                              sx={{ width: 150 }}
+                              onChange={(e) => {
+                                const updatedMethods = [...paymentMethods];
+                                updatedMethods[index].timeUnit = e.target.value;
+                                setPaymentMethods(updatedMethods);
+                              }}
+                            >
+                              <MenuItem value="DAYS">Días</MenuItem>
+                              <MenuItem value="MONTHS">Meses</MenuItem>
+                            </TextField>
+                          </TableCell>
+                          <TableCell>
+                            <TextField
+                              type="number"
+                              size="small"
+                              value={method.amount || 0}
+                              sx={{ width: 150 }}
+                              onChange={(e) => {
+                                const updatedMethods = [...paymentMethods];
+                                updatedMethods[index].amount = Number(
+                                  e.target.value
+                                );
+                                setPaymentMethods(updatedMethods);
+                              }}
+                              required
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <IconButton
+                              color="error"
+                              onClick={() => handleDeletePaymentMethod(index)}
+                            >
+                              <Delete />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Stack direction="row" justifyContent="flex-end" mt={2}>
+                <Button
+                  variant="text"
+                  startIcon={<PlusCircle size={16} />}
+                  onClick={handleAddPaymentMethod}
+                >
+                  Agregar Forma de Pago
+                </Button>
+              </Stack>
+            </TabPanel>
+          </Box>
+
+          <Divider sx={{ my: 4 }} />
+
+          {/* Total */}
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 8 }}>
               <Controller
@@ -860,8 +872,9 @@ export default function InvoiceEditPage() {
               <InvoiceTotals items={items} />
             </Grid>
           </Grid>
-        </Paper>
-      </Box>
+        </Box>
+      </Paper>
+
       {/* DIALOGO FORMULARIO */}
       <ClientFormDialog
         open={openClientDialog}
@@ -879,6 +892,6 @@ export default function InvoiceEditPage() {
         editingProduct={null}
         onSubmit={handleSubmitProduct}
       />
-    </Container>
+    </PageContainer>
   );
 }

@@ -16,7 +16,7 @@ import {
   Typography,
   Box,
   IconButton,
-  Container,
+  TextField,
 } from "@mui/material";
 import { Plus, Edit, Delete, Files } from "lucide-react";
 import { ProductFormDialog } from "@/components/product/product-form-dialog";
@@ -29,6 +29,8 @@ import {
 } from "@/app/actions/product";
 import { useSession } from "next-auth/react";
 import { AlertService } from "@/lib/alerts";
+import PageContainer from "@/components/container/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function ProductsPage() {
   const { data: session } = useSession();
@@ -63,9 +65,23 @@ export default function ProductsPage() {
     try {
       console.log("Submitting product data:", data);
       if (editingProduct) {
-        await updateProduct(editingProduct.id, data);
+        const response = await updateProduct(editingProduct.id, data);
+
+        if (!response.success) {
+          AlertService.showError(
+            `Error: ${response.error}` || "Error al actualizar el producto"
+          );
+          return;
+        }
       } else {
-        await createProduct(data, tenantId);
+        const response = await createProduct(data, tenantId);
+
+        if (!response.success) {
+          AlertService.showError(
+            `Error: ${response.error}` || "Error al crear el producto"
+          );
+          return;
+        }
       }
       await loadProducts();
     } catch (error) {
@@ -104,35 +120,12 @@ export default function ProductsPage() {
   };
 
   return (
-    <Container maxWidth="xl">
+    <PageContainer
+      title="Productos"
+      description="Gestiona tus productos y servicios"
+    >
       {/* Header */}
-      <Box
-        sx={{
-          mb: 4,
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          alignItems: { sm: "center" },
-          justifyContent: "space-between",
-          gap: 2,
-        }}
-      >
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Productos y servicios
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Gestiona tus ofertas de productos y servicios
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<Plus />}
-          onClick={() => setIsDialogOpen(true)}
-          sx={{ width: { xs: "100%", sm: "auto" } }}
-        >
-          Agregar Producto
-        </Button>
-      </Box>
+      <PageHeader title="Productos" />
 
       {/* Modal */}
       <ProductFormDialog
@@ -174,7 +167,30 @@ export default function ProductsPage() {
               </Typography>
             </Box>
           ) : (
-            <TableContainer component={Paper}>
+            <Box>
+              <Box
+                sx={{
+                  mb: 2,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  flexDirection: { xs: "column", sm: "row" },
+                  gap: 2,
+                }}
+              >
+                <TextField
+                  label="Buscar productos"
+                  variant="outlined"
+                  size="small"
+                />
+                <Button
+                  variant="contained"
+                  startIcon={<Plus />}
+                  onClick={() => setIsDialogOpen(true)}
+                  sx={{ width: { xs: "100%", sm: "auto" } }}
+                >
+                  Agregar Producto
+                </Button>
+              </Box>
               <Table>
                 <TableHead>
                   <TableRow>
@@ -210,10 +226,10 @@ export default function ProductsPage() {
                   ))}
                 </TableBody>
               </Table>
-            </TableContainer>
+            </Box>
           )}
         </CardContent>
       </Card>
-    </Container>
+    </PageContainer>
   );
 }

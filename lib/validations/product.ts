@@ -2,9 +2,9 @@ import { z } from "zod";
 
 export const productSchema = z.object({
   id: z.string().cuid(),
-  code: z.string().min(1, "Code is required"),
-  description: z.string(),
-  price: z.number().positive("Price must be positive"),
+  code: z.string().min(1, "El código es obligatorio"),
+  description: z.string().min(1, "La descripción es obligatoria"),
+  price: z.number().positive("El precio debe ser positivo"),
   tax: z.enum([
     "IVA_0",
     "IVA_5",

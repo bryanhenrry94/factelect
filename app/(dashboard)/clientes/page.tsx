@@ -15,9 +15,11 @@ import {
   Paper,
   IconButton,
   Box,
-  Container,
   Alert,
+  Breadcrumbs,
+  TextField,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { Edit, Delete, Users, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
 
@@ -25,9 +27,13 @@ import { deleteClient, getClientsByTenant } from "@/app/actions/client";
 import { ClientReponse } from "@/lib/validations/client";
 import ClientFormDialog from "@/components/client/client-form-dialog";
 import { AlertService } from "@/lib/alerts";
+import PageContainer from "@/components/container/PageContainer";
+import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function ClientsPage() {
   const { data: session } = useSession();
+
   const [clients, setClients] = useState<ClientReponse[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<ClientReponse | null>(
@@ -78,27 +84,12 @@ export default function ClientsPage() {
   };
 
   return (
-    <Container maxWidth="lg">
+    <PageContainer
+      title="Clientes"
+      description="Administra las relaciones con tus clientes"
+    >
       {/* HEADER */}
-      <Box
-        sx={{
-          mb: 4,
-          display: "flex",
-          justifyContent: "space-between",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
-        }}
-      >
-        <Box>
-          <Typography variant="h4">Clientes</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Administra las relaciones con tus clientes
-          </Typography>
-        </Box>
-        <Button variant="contained" startIcon={<Plus />} onClick={handleAdd}>
-          Agregar Cliente
-        </Button>
-      </Box>
+      <PageHeader title="Clientes" />
 
       {/* DIALOGO FORMULARIO */}
       <ClientFormDialog
@@ -124,7 +115,30 @@ export default function ClientsPage() {
               </Typography>
             </Box>
           ) : (
-            <TableContainer component={Paper} variant="outlined">
+            <Box>
+              <Box
+                sx={{
+                  mb: 2,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  flexDirection: { xs: "column", sm: "row" },
+                  gap: 2,
+                }}
+              >
+                <TextField
+                  label="Buscar clientes"
+                  variant="outlined"
+                  size="small"
+                />
+                <Button
+                  variant="contained"
+                  startIcon={<Plus />}
+                  onClick={handleAdd}
+                >
+                  Agregar Cliente
+                </Button>
+              </Box>
+              {/* <TableContainer component={Paper} variant="outlined"> */}
               <Table>
                 <TableHead>
                   <TableRow>
@@ -147,7 +161,13 @@ export default function ClientsPage() {
                 </TableHead>
                 <TableBody>
                   {clients.map((client) => (
-                    <TableRow key={client.id} hover>
+                    <TableRow
+                      key={client.id}
+                      hover
+                      sx={{
+                        "&:last-child td, &:last-child th": { border: 0 },
+                      }}
+                    >
                       <TableCell>{client.identification}</TableCell>
                       <TableCell>{client.name}</TableCell>
                       <TableCell>{client.email}</TableCell>
@@ -170,7 +190,8 @@ export default function ClientsPage() {
                   ))}
                 </TableBody>
               </Table>
-            </TableContainer>
+              {/* </TableContainer> */}
+            </Box>
           )}
         </CardContent>
       </Card>
@@ -180,6 +201,6 @@ export default function ClientsPage() {
           {error}
         </Alert>
       )}
-    </Container>
+    </PageContainer>
   );
 }
