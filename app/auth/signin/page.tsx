@@ -1,224 +1,100 @@
 "use client";
-
-import { useEffect, useState, useTransition } from "react";
-import {
-  CssBaseline,
-  Box,
-  Paper,
-  TextField,
-  Button,
-  Typography,
-  Alert,
-  Link,
-  Container,
-  CircularProgress,
-} from "@mui/material";
-import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import Link from "next/link";
+import { Grid, Box, Card, Stack, Typography } from "@mui/material";
+// components
+import PageContainer from "@/components/container/PageContainer";
+import Logo from "@/components/layout/shared/logo/Logo";
+import AuthLogin from "@/components/auth/AuthLogin";
 import useTenant from "@/hooks/useTenant";
-import { identifyTenantAction } from "@/app/actions/auth";
-import { protocol, rootDomain } from "@/lib/config";
 
-interface FormData {
-  email: string;
-  password: string;
-}
-
-export default function SignInPage() {
-  const [formData, setFormData] = useState<FormData>({
-    email: "",
-    password: "",
-  });
-  const [error, setError] = useState("");
-  const [loadingLogin, setLoadingLogin] = useState(false);
-  const [isPending, startTransition] = useTransition();
-
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
-  const { tenant, loading: loadingTenant, error: tenantError } = useTenant();
-
-  const handleInputChange =
-    (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
-      setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-    };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoadingLogin(true);
-
-    const res = await signIn("credentials", {
-      redirect: false,
-      email: formData.email,
-      password: formData.password,
-      subdomain: tenant?.subdomain,
-    });
-
-    setLoadingLogin(false);
-
-    if (res?.error) {
-      setError("Credenciales inválidas. Por favor, intenta de nuevo.");
-    } else {
-      router.push(callbackUrl);
-    }
-  };
-
-  const handleIdentifyTenant = async () => {
-    startTransition(async () => {
-      const res = await identifyTenantAction(formData.email);
-      if (res.success && res.subdomain) {
-        router.push(
-          `${protocol}://${
-            res.subdomain
-          }.${rootDomain}/auth/signin?email=${encodeURIComponent(
-            formData.email
-          )}`
-        );
-      } else {
-        setError(
-          "No se pudo identificar la empresa. Verifica el correo e intenta de nuevo."
-        );
-      }
-    });
-  };
-
-  useEffect(() => {
-    const emailParam = searchParams.get("email");
-    if (emailParam) {
-      setFormData((prev) => ({ ...prev, email: emailParam }));
-    }
-  }, [searchParams]);
-
-  if (loadingTenant) {
-    return (
-      <Container maxWidth="sm" sx={{ textAlign: "center", mt: 20 }}>
-        <CssBaseline />
-        <CircularProgress />
-        <Typography sx={{ mt: 2 }}>
-          Cargando información de la empresa...
-        </Typography>
-      </Container>
-    );
-  }
+const Login2 = () => {
+  const { tenant } = useTenant();
 
   return (
-    <Container maxWidth="sm">
-      <CssBaseline />
+    <PageContainer title="Login" description="this is Login page">
       <Box
         sx={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          position: "relative",
+          "&:before": {
+            content: '""',
+            background: "radial-gradient(#d2f1df, #d3d7fa, #bad8f4)",
+            backgroundSize: "400% 400%",
+            animation: "gradient 15s ease infinite",
+            position: "absolute",
+            height: "100%",
+            width: "100%",
+            opacity: "0.3",
+          },
         }}
       >
-        <Paper elevation={3} sx={{ p: 4, width: "100%", maxWidth: 400 }}>
-          <Typography variant="h4" component="h1" gutterBottom align="center">
-            Iniciar Sesión
-          </Typography>
-
-          {tenant ? (
-            <>
-              <Typography variant="body1" align="center">
-                {tenant?.name || "la plataforma"}
-              </Typography>
-              {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {error}
-                </Alert>
-              )}
-              {tenantError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {tenantError}
-                </Alert>
-              )}
-              <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-                <TextField
-                  fullWidth
-                  type="email"
-                  label="Correo electrónico"
-                  value={formData.email}
-                  onChange={handleInputChange("email")}
-                  required
-                  margin="normal"
-                  variant="outlined"
-                />
-                <TextField
-                  fullWidth
-                  type="password"
-                  label="Contraseña"
-                  value={formData.password}
-                  onChange={handleInputChange("password")}
-                  required
-                  margin="normal"
-                  variant="outlined"
-                />
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  sx={{ mt: 3, mb: 2 }}
-                  disabled={loadingLogin}
-                >
-                  {loadingLogin ? (
-                    <CircularProgress size={24} color="inherit" />
-                  ) : (
-                    "Iniciar sesión"
-                  )}
-                </Button>
+        <Grid
+          container
+          spacing={0}
+          justifyContent="center"
+          sx={{ height: "100vh" }}
+        >
+          <Grid
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            size={{
+              xs: 12,
+              sm: 12,
+              lg: 4,
+              xl: 3,
+            }}
+          >
+            <Card
+              elevation={9}
+              sx={{ p: 4, zIndex: 1, width: "100%", maxWidth: "500px" }}
+            >
+              <Box display="flex" alignItems="center" justifyContent="center">
+                <Logo />
               </Box>
-              <Box sx={{ textAlign: "center", mt: 2 }}>
-                <Typography variant="body2">
-                  <Link href="/auth/forgot-password" underline="hover">
-                    ¿Olvidaste tu contraseña?
-                  </Link>
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  ¿No tienes cuenta?{" "}
-                  <Link href="/auth/signup" underline="hover">
-                    Regístrate
-                  </Link>
-                </Typography>
-              </Box>
-            </>
-          ) : (
-            <>
-              <Typography variant="body1" align="center" sx={{ mb: 2 }}>
-                Ingresa tu correo para identificar tu empresa
-              </Typography>
-              {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {error}
-                </Alert>
-              )}
-              <TextField
-                fullWidth
-                type="email"
-                label="Correo electrónico"
-                value={formData.email}
-                onChange={handleInputChange("email")}
-                required
-                margin="normal"
-                variant="outlined"
+              <AuthLogin
+                subtext={
+                  <Typography
+                    variant="subtitle1"
+                    textAlign="center"
+                    color="textSecondary"
+                    mb={1}
+                  >
+                    {tenant ? tenant.name || "Sin Tenant" : "Sin Tenant"}
+                  </Typography>
+                }
+                subtitle={
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    justifyContent="center"
+                    mt={3}
+                  >
+                    <Typography
+                      color="textSecondary"
+                      variant="h6"
+                      fontWeight="500"
+                    >
+                      Eres nuevo?
+                    </Typography>
+                    <Typography
+                      component={Link}
+                      href="/auth/signup"
+                      fontWeight="500"
+                      sx={{
+                        textDecoration: "none",
+                        color: "primary.main",
+                      }}
+                    >
+                      Crear una cuenta
+                    </Typography>
+                  </Stack>
+                }
               />
-              <Button
-                fullWidth
-                variant="contained"
-                sx={{ mt: 3, mb: 2 }}
-                onClick={handleIdentifyTenant}
-                disabled={isPending || !formData.email}
-              >
-                {isPending ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  "Continuar"
-                )}
-              </Button>
-            </>
-          )}
-        </Paper>
+            </Card>
+          </Grid>
+        </Grid>
       </Box>
-    </Container>
+    </PageContainer>
   );
-}
+};
+export default Login2;

@@ -47,6 +47,7 @@ export const authOptions: AuthOptions = {
           include: { tenant: true }, // cargar tenant
         });
 
+        console.log("User found:", user);
         if (!user) return null;
 
         const isValid = await bcrypt.compare(
