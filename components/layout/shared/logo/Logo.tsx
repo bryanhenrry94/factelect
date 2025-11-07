@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { styled } from "@mui/material";
-import logoAPP from "@/public/images/logos/dark-logo.svg";
+import logoAPP from "@/public/images/logos/app-logo.svg";
 
 const StyledLink = styled(Link)(({ theme }) => ({
   display: "inline-flex",

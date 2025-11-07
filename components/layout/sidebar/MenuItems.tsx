@@ -32,7 +32,7 @@ const Menuitems = [
   },
   {
     navlabel: true,
-    subheader: "TRANSACCIONES",
+    subheader: "FACTURACIÓN ELECTRÓNICA",
   },
   {
     id: uniqueId(),

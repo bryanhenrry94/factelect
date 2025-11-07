@@ -1,6 +1,5 @@
 import { Box } from "@mui/material";
 import {
-  Logo,
   Sidebar as MUI_Sidebar,
   Menu,
   MenuItem,
@@ -10,6 +9,7 @@ import { Dot } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Menuitems from "./MenuItems";
+import Logo from "../shared/logo/Logo";
 
 const renderMenuItems = (items: any, pathDirect: any) => {
   return items.map((item: any) => {
@@ -77,9 +77,12 @@ const SidebarItems = () => {
         themeColor={"#5D87FF"}
         themeSecondaryColor={"#49beff"}
       >
-        <Logo img="/images/logos/dark-logo.svg" component={Link} href="/">
+        {/* <Logo img="/images/logos/app-logo.svg" component={Link} href="/">
           Modernize
-        </Logo>
+        </Logo> */}
+        <Box sx={{ display: "flex", justifyContent: "center" }}>
+          <Logo />
+        </Box>
 
         {renderMenuItems(Menuitems, pathDirect)}
       </MUI_Sidebar>
