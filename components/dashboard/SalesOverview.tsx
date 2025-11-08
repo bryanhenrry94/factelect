@@ -7,11 +7,14 @@ import dynamic from "next/dynamic";
 import DashboardCard from "@/components/shared/DashboardCard";
 import { getCategoriesForMonth, getLastMonths } from "@/utils/dashboard";
 import { getTotalAmountByMonth } from "@/app/actions/dashboard";
+import { useSession } from "next-auth/react";
 
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 const SalesOverview: React.FC = () => {
   const theme = useTheme();
+
+  const { data: session } = useSession();
 
   const [month, setMonth] = useState<number | null>(null);
   const [months, setMonths] = useState<{ value: number; label: string }[]>([]);
@@ -31,7 +34,8 @@ const SalesOverview: React.FC = () => {
     // Totales de ventas por semana
     const weeklySalesData = await getTotalAmountByMonth(
       currentYear,
-      selectedMonth
+      selectedMonth,
+      session?.user.tenantId || ""
     );
     setWeeklySales(weeklySalesData || []);
     setLoading(false);

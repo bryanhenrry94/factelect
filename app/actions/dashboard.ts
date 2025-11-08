@@ -1,6 +1,5 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
 
 interface MonthlyEarningsResponse {
   currentMonth: {
@@ -25,11 +24,9 @@ interface YearlyBreakupResponse {
 
 export const getTotalAmountByMonth = async (
   year: number,
-  month: number
+  month: number,
+  tenantId: string
 ): Promise<number[]> => {
-  const session = await getServerSession();
-  const tenantId = session?.user?.tenantId;
-
   try {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0); // Last day of the month
@@ -43,7 +40,7 @@ export const getTotalAmountByMonth = async (
           lte: endDate,
         },
         status: {
-          in: ["AUTHORIZED", "PENDING"], // Only count valid invoices
+          in: ["AUTHORIZED", "DRAFT"], // Only count valid invoices
         },
       },
       select: {
@@ -101,12 +98,10 @@ export const getTotalAmountByMonth = async (
 };
 
 export const getYearlyBreakup = async (
-  year: number
+  year: number,
+  tenantId: string
 ): Promise<YearlyBreakupResponse> => {
   try {
-    const session = await getServerSession();
-    const tenantId = session?.user?.tenantId;
-
     const currentYearInvoices = await prisma.invoice.findMany({
       where: {
         tenantId,
@@ -115,7 +110,7 @@ export const getYearlyBreakup = async (
           lte: new Date(year, 11, 31),
         },
         status: {
-          in: ["AUTHORIZED", "PENDING"],
+          in: ["AUTHORIZED", "DRAFT"],
         },
       },
       select: {
@@ -132,7 +127,7 @@ export const getYearlyBreakup = async (
           lte: new Date(year - 1, 11, 31),
         },
         status: {
-          in: ["AUTHORIZED", "PENDING"],
+          in: ["AUTHORIZED", "DRAFT"],
         },
       },
       select: {
@@ -189,12 +184,10 @@ export const getYearlyBreakup = async (
 
 export const getMonthlyEarnings = async (
   year: number,
-  month: number
+  month: number,
+  tenantId: string
 ): Promise<MonthlyEarningsResponse> => {
   try {
-    const session = await getServerSession();
-    const tenantId = session?.user?.tenantId;
-
     const currentMonthInvoices = await prisma.invoice.findMany({
       where: {
         tenantId,
@@ -203,7 +196,7 @@ export const getMonthlyEarnings = async (
           lte: new Date(year, month, 0),
         },
         status: {
-          in: ["AUTHORIZED", "PENDING"],
+          in: ["AUTHORIZED", "DRAFT"],
         },
       },
       select: {
@@ -219,7 +212,7 @@ export const getMonthlyEarnings = async (
           lte: new Date(year - 1, month, 0),
         },
         status: {
-          in: ["AUTHORIZED", "PENDING"],
+          in: ["AUTHORIZED", "DRAFT"],
         },
       },
       select: {
@@ -256,7 +249,7 @@ export const getMonthlyEarnings = async (
             lte: new Date(date.getFullYear(), date.getMonth() + 1, 0),
           },
           status: {
-            in: ["AUTHORIZED", "PENDING"],
+            in: ["AUTHORIZED", "DRAFT"],
           },
         },
         select: {
@@ -304,11 +297,11 @@ export const getMonthlyEarnings = async (
   }
 };
 
-export const getMonthlySalesData = async (year: number): Promise<number[]> => {
+export const getMonthlySalesData = async (
+  year: number,
+  tenantId: string
+): Promise<number[]> => {
   try {
-    const session = await getServerSession();
-    const tenantId = session?.user?.tenantId;
-
     const monthlyTotals: number[] = Array.from({ length: 12 }, () => 0);
 
     const invoices = await prisma.invoice.findMany({
@@ -319,7 +312,7 @@ export const getMonthlySalesData = async (year: number): Promise<number[]> => {
           lte: new Date(year, 11, 31),
         },
         status: {
-          in: ["AUTHORIZED", "PENDING"],
+          in: ["AUTHORIZED", "DRAFT"],
         },
       },
       select: {

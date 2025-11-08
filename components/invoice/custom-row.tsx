@@ -160,7 +160,12 @@ const CustomRow: React.FC<CustomRowProps> = memo(
             size="small"
             value={localItem.quantity ?? 1}
             onChange={handleChange("quantity")}
-            inputProps={{ min: 1 }}
+            slotProps={{
+              htmlInput: {
+                min: 0,
+                step: "0.01", // permite decimales
+              },
+            }}
           />
         </TableCell>
 
@@ -171,7 +176,12 @@ const CustomRow: React.FC<CustomRowProps> = memo(
             size="small"
             value={localItem.unitPrice ?? 0}
             onChange={handleChange("unitPrice")}
-            inputProps={{ min: 0, step: 0.01 }}
+            slotProps={{
+              htmlInput: {
+                min: 0,
+                step: "0.01", // permite decimales
+              },
+            }}
           />
         </TableCell>
 
@@ -198,7 +208,13 @@ const CustomRow: React.FC<CustomRowProps> = memo(
             size="small"
             value={localItem.discountRate ?? 0}
             onChange={handleChange("discountRate")}
-            inputProps={{ min: 0, max: 100, step: 0.01 }}
+            slotProps={{
+              htmlInput: {
+                min: 0,
+                max: 100,
+                step: "0.01",
+              },
+            }}
           />
         </TableCell>
 

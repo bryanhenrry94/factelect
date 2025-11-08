@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useForm, Controller } from "react-hook-form";
 import {
@@ -71,10 +71,11 @@ import InvoicePDF from "@/components/pdf/InvoicePDF";
 import { ProductFormDialog } from "@/components/product/product-form-dialog";
 import { CreateProduct } from "@/lib/validations/product";
 import { useTransition } from "react";
-import { firmarFactura } from "@/app/actions/firmarFactura";
+import { firmarFactura } from "@/app/actions/firma";
 import { uploadInvoiceXML } from "@/app/actions/supabase";
 import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { sendToSRI } from "@/app/actions/sri";
 
 interface InvoiceFormInputs {
   establishmentId: string;
@@ -84,6 +85,7 @@ interface InvoiceFormInputs {
   dueDate: string;
   customerId: string;
   description: string;
+  status: string;
 }
 
 function TabPanel({
@@ -101,6 +103,55 @@ function TabPanel({
     </div>
   );
 }
+
+const InvoiceStatusLabel: React.FC<{ status: string }> = ({ status }) => {
+  let color:
+    | "primary"
+    | "secondary"
+    | "error"
+    | "info"
+    | "success"
+    | "warning" = "info";
+  let label = "";
+
+  switch (status) {
+    case "DRAFT":
+      color = "info";
+      label = "Borrador";
+      break;
+    case "SENT":
+      color = "primary";
+      label = "Enviado";
+      break;
+    case "AUTHORIZED":
+      color = "success";
+      label = "Autorizado";
+      break;
+    case "REJECTED":
+      color = "error";
+      label = "Rechazado";
+      break;
+    default:
+      color = "info";
+      label = status;
+  }
+
+  return (
+    <Typography
+      variant="body2"
+      sx={{
+        px: 1,
+        py: 0.5,
+        borderRadius: 1,
+        bgcolor: (theme) => theme.palette[color].light,
+        color: (theme) => theme.palette[color].dark,
+        fontWeight: 600,
+      }}
+    >
+      {label}
+    </Typography>
+  );
+};
 
 export default function InvoiceEditPage() {
   const { data: session } = useSession();
@@ -136,6 +187,7 @@ export default function InvoiceEditPage() {
         dueDate: new Date().toISOString().split("T")[0],
         customerId: "",
         description: "",
+        status: "DRAFT",
       },
     });
 
@@ -191,6 +243,7 @@ export default function InvoiceEditPage() {
             .split("T")[0],
           customerId: invoiceRes.data.customerId,
           description: invoiceRes.data.description || "",
+          status: invoiceRes.data.status,
         });
 
         // Load items and payment methods
@@ -300,7 +353,7 @@ export default function InvoiceEditPage() {
         tenantId: session?.user?.tenantId || "",
         emissionPointId: data.emissionPointId,
         sequential: parseInt(data.numDocumento, 10),
-        status: "PENDING",
+        status: "DRAFT",
         issueDate: new Date(data.issueDate),
         term: 0,
         dueDate: new Date(data.dueDate),
@@ -405,64 +458,44 @@ export default function InvoiceEditPage() {
 
   const [isPending, startTransition] = useTransition();
 
-  const handleFirmar = () => {
+  const handleSendToSRI = async () => {
+    const confirm = await AlertService.showConfirm(
+      "¿Estás seguro de enviar la factura al SRI?",
+      "Se enviará la factura al SRI para su autorización."
+    );
+    if (!confirm) return;
+
+    if (!params.id) {
+      AlertService.showError("ID de factura no válido.");
+      return;
+    }
+
+    if (!session) {
+      AlertService.showError("No se encontró la sesión.");
+      return;
+    }
+
+    if (!session.user.tenantId) {
+      AlertService.showError("No se encontró el inquilino.");
+      return;
+    }
+
     startTransition(async () => {
-      if (!sriConfig) {
-        AlertService.showError("Configuración del SRI no encontrada.");
-        return;
-      }
-
-      if (!sriConfig?.p12CertificateUrl || !sriConfig?.certificatePassword) {
-        AlertService.showError("Certificado digital no configurado.");
-        return;
-      }
-
-      const invoice = await getInvoice(params.id as string);
-      if (!invoice.success || !invoice.data) {
-        AlertService.showError("Factura no encontrada.");
-        return;
-      }
-
-      // Si no existe el XML, generarlo y subirlo
-      if (!invoice.data.xmlFilePath || !invoice.data.xmlFileUrl) {
-        // Genera y sube el XML de la factura a Supabase Storage
-        const response = await uploadInvoiceXML(
-          session?.user?.tenantId || "",
-          params.id as string
-        );
-
-        console.log("response:", response);
-
-        if (!response.success) {
-          AlertService.showError("Error al subir el XML generado.");
-          return;
-        }
-
-        // Actualizar los datos de la factura con la nueva ruta y URL del XML
-        invoice.data.xmlFilePath = response.path || "";
-        invoice.data.xmlFileUrl = response.url || "";
-
-        //  Actualizar la ruta del archivo XML en la factura
-        await updateInvoiceXmlFile(
+      try {
+        console.log("session front: ", session);
+        const res = await sendToSRI(
           params.id as string,
-          response.path || "",
-          response.url || ""
+          session?.user.tenantId
         );
-      }
 
-      const res = await firmarFactura({
-        certUrl: sriConfig?.p12CertificateUrl || "",
-        certPassword: sriConfig?.certificatePassword || "",
-        xmlUrl: invoice.data.xmlFileUrl || "",
-        tenantId: session?.user?.tenantId || "",
-      });
-
-      if (res.success) {
-        AlertService.showSuccess(
-          "XML firmado correctamente: " + res.urlFirmado
-        );
-      } else {
-        AlertService.showError("Error: " + res.mensaje);
+        if (res.success) {
+          AlertService.showSuccess("Documento autorizado correctamente");
+          router.refresh();
+        } else {
+          AlertService.showError("Error: " + res.error || "Error desconocido");
+        }
+      } catch (error) {
+        AlertService.showError("Error al enviar la factura al SRI");
       }
     });
   };
@@ -485,46 +518,53 @@ export default function InvoiceEditPage() {
               mb: 4,
               display: "flex",
               flexDirection: { xs: "column", sm: "row" },
-              justifyContent: "flex-end",
+              justifyContent: "space-between",
               alignItems: "center",
               gap: 2,
             }}
           >
+            <InvoiceStatusLabel status={watch("status")} />
             <Stack direction="row" spacing={2}>
               <Button
                 type="submit"
                 variant="contained"
                 startIcon={<Save size={18} />}
-                disabled={isSubmitting}
+                disabled={isSubmitting || watch("status") !== "DRAFT"}
               >
                 Actualizar
               </Button>
-              <Tooltip title="Enviar al SRI">
-                <Button
-                  variant="outlined"
-                  startIcon={<Send size={18} />}
-                  onClick={handleFirmar}
-                  disabled={isPending}
-                  // disabled={items.length === 0}
-                >
-                  {isPending ? "Firmando..." : "Firmar XML"}
-                </Button>
-              </Tooltip>
-              <Button
-                color="primary"
-                variant="outlined"
-                startIcon={<CodeXml size={16} />}
-                onClick={DownLoadXML}
-              >
-                Xml
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<FileText size={16} />}
-                onClick={handleDownloadPDF}
-              >
-                Ride
-              </Button>
+              {watch("status") === "DRAFT" && (
+                <Tooltip title="Enviar al SRI">
+                  <Button
+                    variant="outlined"
+                    startIcon={<Send size={18} />}
+                    onClick={handleSendToSRI}
+                    disabled={isPending}
+                    loading={isPending}
+                  >
+                    {isPending ? "Enviando..." : "Enviar al SRI"}
+                  </Button>
+                </Tooltip>
+              )}
+              {watch("status") === "AUTHORIZED" && (
+                <>
+                  <Button
+                    color="primary"
+                    variant="outlined"
+                    startIcon={<CodeXml size={16} />}
+                    onClick={DownLoadXML}
+                  >
+                    Xml
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<FileText size={16} />}
+                    onClick={handleDownloadPDF}
+                  >
+                    Ride
+                  </Button>
+                </>
+              )}
             </Stack>
           </Box>
 

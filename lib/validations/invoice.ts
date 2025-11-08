@@ -12,10 +12,11 @@ export const invoiceSchema = z.object({
     .int()
     .positive("Sequential must be a positive integer"),
   accessKey: z.string().optional().nullable(),
-  authorization: z.string().optional().nullable(),
+  authorizationNumber: z.string().optional().nullable(),
+  authorizationDate: z.date().optional().nullable(),
   status: z
-    .enum(["PENDING", "AUTHORIZED", "REJECTED", "CANCELED"])
-    .default("PENDING"),
+    .enum(["DRAFT", "SIGNED", "SENT", "AUTHORIZED", "REJECTED", "CANCELED"])
+    .default("DRAFT"),
 
   // Fechas
   issueDate: z.date(),

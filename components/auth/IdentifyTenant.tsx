@@ -5,7 +5,16 @@ import PageContainer from "@/components/container/PageContainer";
 import Logo from "@/components/layout/shared/logo/Logo";
 import CustomTextField from "@/components/ui/CustomTextField";
 import { protocol, rootDomain } from "@/lib/config";
-import { Alert, Box, Button, Card, Grid, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  Grid,
+  Stack,
+  Typography,
+} from "@mui/material";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
@@ -163,6 +172,22 @@ export default function IdentifyTenant() {
                   {isLoading ? "Cargando..." : "Continuar"}
                 </Button>
               </Box>
+              <Stack direction="row" spacing={1} justifyContent="center" mt={3}>
+                <Typography color="textSecondary" variant="h6" fontWeight="500">
+                  Eres nuevo?
+                </Typography>
+                <Typography
+                  component={Link}
+                  href="/auth/signup"
+                  fontWeight="500"
+                  sx={{
+                    textDecoration: "none",
+                    color: "primary.main",
+                  }}
+                >
+                  Crear una cuenta
+                </Typography>
+              </Stack>
             </Card>
           </Grid>
         </Grid>

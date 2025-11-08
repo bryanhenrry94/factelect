@@ -14,6 +14,7 @@ import DashboardCard from "@/components/shared/DashboardCard";
 import { ArrowDownRight, ArrowUpLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getYearlyBreakup } from "@/app/actions/dashboard";
+import { useSession } from "next-auth/react";
 
 interface YearlyData {
   totalCurrentYear: number;
@@ -22,6 +23,7 @@ interface YearlyData {
 }
 
 const YearlyBreakup = () => {
+  const { data: session } = useSession();
   const [data, setData] = useState<YearlyData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +41,10 @@ const YearlyBreakup = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await getYearlyBreakup(currentYear);
+        const response = await getYearlyBreakup(
+          currentYear,
+          session?.user.tenantId || ""
+        );
         setData(response);
       } catch (err) {
         console.error("Error fetching yearly breakup:", err);

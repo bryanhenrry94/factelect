@@ -15,16 +15,22 @@ const supabase = createClient(
 interface FirmarFacturaInput {
   certUrl: string; // URL pública o presigned del .p12
   certPassword: string; // contraseña del .p12
-  xmlUrl: string; // URL pública o presigned del XML sin firmar
+  xmlDocument: string; // URL pública o presigned del XML sin firmar
   tenantId: string; // opcional, para organizar por cliente
 }
 
 export async function firmarFactura({
   certUrl,
   certPassword,
-  xmlUrl,
+  xmlDocument,
   tenantId,
-}: FirmarFacturaInput) {
+}: FirmarFacturaInput): Promise<{
+  success: boolean;
+  xmlSigned?: string;
+  xmlFilePath?: string;
+  xmlFileUrl?: string;
+  error?: string;
+}> {
   const javaDir = path.join(process.cwd(), "lib", "java");
   const jarPath = path.join(javaDir, "FirmaElectronica.jar");
   const libPath = path.join(javaDir, "lib", "*");
@@ -38,22 +44,15 @@ export async function firmarFactura({
 
   try {
     // 1️⃣ Descargar archivos desde Supabase o URLs públicas
-    console.log("Downloading files from URLs:", { certUrl, xmlUrl });
+    console.log("Downloading cert from URL:", { certUrl });
 
-    let certRes, xmlRes;
+    let certRes;
     try {
-      [certRes, xmlRes] = await Promise.all([
-        axios.get(certUrl, {
-          responseType: "arraybuffer",
-          timeout: 30000,
-          maxRedirects: 5,
-        }),
-        axios.get(xmlUrl, {
-          responseType: "arraybuffer",
-          timeout: 30000,
-          maxRedirects: 5,
-        }),
-      ]);
+      certRes = await axios.get(certUrl, {
+        responseType: "arraybuffer",
+        timeout: 30000,
+        maxRedirects: 5,
+      });
     } catch (downloadError: any) {
       console.error("Download error details:", {
         message: downloadError.message,
@@ -61,13 +60,12 @@ export async function firmarFactura({
         statusText: downloadError.response?.statusText,
         data: downloadError.response?.data,
         certUrl,
-        xmlUrl,
       });
       throw new Error(`Failed to download files: ${downloadError.message}`);
     }
 
     fs.writeFileSync(certPath, certRes.data);
-    fs.writeFileSync(xmlPath, xmlRes.data);
+    fs.writeFileSync(xmlPath, xmlDocument);
 
     const args = [
       "-cp",
@@ -95,12 +93,15 @@ export async function firmarFactura({
     // 3️⃣ Leer el archivo firmado
     const signedBuffer = fs.readFileSync(signedPath);
 
+    // crear xmlSigned
+    const xmlSigned = fs.readFileSync(signedPath, "utf8");
+
     // 4️⃣ Subir el archivo firmado a Supabase Storage
-    const fileName = `${tenantId}/xml/firmados/factura_${Date.now()}.xml`;
+    const filePath = `${tenantId}/xml/firmados/factura_${Date.now()}.xml`;
 
     const { data, error } = await supabase.storage
       .from("facturacion") // nombre del bucket
-      .upload(fileName, signedBuffer, {
+      .upload(filePath, signedBuffer, {
         contentType: "application/xml",
         upsert: true,
       });
@@ -110,18 +111,19 @@ export async function firmarFactura({
     // 5️⃣ Obtener la URL pública o firmada
     const {
       data: { publicUrl },
-    } = supabase.storage.from("facturacion").getPublicUrl(fileName);
+    } = supabase.storage.from("facturacion").getPublicUrl(filePath);
 
     return {
       success: true,
-      urlFirmado: publicUrl,
-      mensaje: "XML firmado y subido correctamente",
+      xmlSigned: xmlSigned,
+      xmlFilePath: filePath,
+      xmlFileUrl: publicUrl,
     };
   } catch (err: any) {
     console.error("Error al firmar:", err);
     return {
       success: false,
-      mensaje: err.message || "Error al firmar el XML",
+      error: err.message || "Error al firmar el XML",
     };
   } finally {
     // 6️⃣ Limpieza

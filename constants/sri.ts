@@ -1,3 +1,18 @@
+export const sriUrls = {
+  sandbox: {
+    recepcion:
+      "https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl",
+    autorizacion:
+      "https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl",
+  },
+  produccion: {
+    recepcion:
+      "https://cel.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl",
+    autorizacion:
+      "https://cel.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl",
+  },
+} as const;
+
 export const sriEnvironmentOptions = [
   { value: "1", label: "SANDBOX" },
   { value: "2", label: "PRODUCCION" },
@@ -12,3 +27,15 @@ export const sriPaymentMethods = [
   { value: "20", label: "OTROS CON UTILIZACION DEL SISTEMA FINANCIERO" },
   { value: "21", label: "ENDOSO DE TÍTULOS" },
 ];
+
+export const sriDocumentTypes = {
+  INVOICE: "01",
+  CREDIT_NOTE: "04",
+  DEBIT_NOTE: "05",
+} as const;
+
+export const sriEmissionTypes = {
+  NORMAL: "1",
+  CONTINGENCY: "2",
+  OFFLINE: "3",
+} as const;

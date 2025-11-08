@@ -177,6 +177,14 @@ export default function InvoicesNewPage() {
   };
 
   const onSubmit = async (data: InvoiceFormInputs) => {
+    await saveDraft(data);
+  };
+
+  const saveAndSendToSRI = async (invoiceData: InvoiceFormInputs) => {
+    // Implementar lógica para guardar y enviar al SRI
+  }
+
+  const saveDraft = async (invoiceData: InvoiceFormInputs) => {
     try {
       setError(null);
 
@@ -221,35 +229,30 @@ export default function InvoicesNewPage() {
         return;
       }
 
+      const confirm = await AlertService.showConfirm(
+        "¿Está seguro de crear la factura?",
+        "Se generará un borrador de la factura que podrá editar posteriormente."
+      );
+      if (!confirm) return;
+
       const total = items
         .map((item) => item.subtotal + (item.taxAmount || 0))
         .reduce((acc, curr) => acc + curr, 0);
 
-      // Generar clave de acceso, revisar utils/sri.ts
-      const accessKey = generateAccessKey(
-        new Date(data.issueDate),
-        "01", // Tipo de documento: Factura
-        tenant?.ruc, // RUC - TODO: Obtener del establecimiento o configuración SRI
-        sriConfig?.sriEnvironment || "1", // Ambiente: 1=Pruebas, 2=Producción
-        "001001", // Serie: TODO: Obtener del punto de emisión
-        data.numDocumento,
-        "12345678", // Código numérico: TODO: Generar aleatoriamente
-        "1" // Tipo de emisión: 1=Normal
-      );
-
       const newInvoice: CreateInvoice = {
-        customerId: data.customerId,
+        customerId: invoiceData.customerId,
         tenantId: session?.user?.tenantId || "",
-        emissionPointId: data.emissionPointId,
-        sequential: parseInt(data.numDocumento, 10),
-        accessKey: accessKey,
-        authorization: "",
-        status: "PENDING",
-        issueDate: new Date(data.issueDate),
+        emissionPointId: invoiceData.emissionPointId,
+        sequential: parseInt(invoiceData.numDocumento, 10),
+        accessKey: null,
+        authorizationNumber: null,
+        authorizationDate: null,
+        status: "DRAFT",
+        issueDate: new Date(invoiceData.issueDate),
         term: 0,
-        dueDate: new Date(data.dueDate),
+        dueDate: new Date(invoiceData.dueDate),
         total,
-        description: data.description,
+        description: invoiceData.description,
         xmlFilePath: "",
         pdfFilePath: "",
         sriResponse: null,
@@ -316,6 +319,10 @@ export default function InvoicesNewPage() {
     setOpenProductDialog(true);
   };
 
+  const total = items
+    .map((item) => item.subtotal + (item.taxAmount || 0))
+    .reduce((acc, curr) => acc + curr, 0);
+
   return (
     <PageContainer
       title="Nueva Factura"
@@ -346,7 +353,7 @@ export default function InvoicesNewPage() {
                 type="submit"
                 variant="contained"
                 startIcon={<Save size={18} />}
-                disabled={isSubmitting}
+                disabled={total === 0 || isSubmitting}
               >
                 Guardar
               </Button>
@@ -354,9 +361,9 @@ export default function InvoicesNewPage() {
                 <Button
                   variant="outlined"
                   startIcon={<Send size={18} />}
-                  disabled={items.length === 0}
+                  disabled={total === 0 || isSubmitting}
                 >
-                  Enviar
+                  Guardar & Enviar al SRI
                 </Button>
               </Tooltip>
             </Stack>
@@ -367,7 +374,7 @@ export default function InvoicesNewPage() {
           {error && <Alert severity="error">{error}</Alert>}
 
           {/* Información del Documento */}
-          <Box sx={{ p: 2 }}>
+          <Box>
             <Typography variant="h6" gutterBottom>
               Información del Documento
             </Typography>
@@ -498,7 +505,7 @@ export default function InvoicesNewPage() {
           </Box>
 
           {/* Tabs */}
-          <Box sx={{ p: 2 }}>
+          <Box>
             <Tabs value={tabValue} onChange={handleTabChange}>
               <Tab
                 icon={<Package size={18} />}
@@ -699,7 +706,7 @@ export default function InvoicesNewPage() {
           </Box>
 
           {/* Total */}
-          <Box sx={{ p: 2, mt: 2 }}>
+          <Box sx={{ mt: 2 }}>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 8 }}>
                 <Controller

@@ -8,14 +8,15 @@ async function main() {
     update: {},
     create: {
       id: "0874303e-6795-46ef-8416-5d76bba8071b",
-      name: "DAZZSOFT S.A.S.",
-      subdomain: "dazzsoft",
-      legalName: "DAZZSOFT S.A.S.",
-      ruc: "0993385366001",
+      name: "BRYAN HENRRY NAVARRETE ZUÑIGA",
+      subdomain: "0940528128001",
+      legalName: "BRYAN HENRRY NAVARRETE ZUÑIGA",
+      ruc: "0940528128001",
       phone: "+593969437708",
-      contactEmail: "info@dazzsoft.com",
+      contactEmail: "bryanhenrry94@gmail.com",
       address: "Guayaquil - Ecuador",
       logoUrl: null,
+      obligatedAccounting: false,
     },
   });
 
@@ -37,8 +38,8 @@ async function main() {
     update: {},
     create: {
       id: "28112419-5c53-47c5-b109-a29d02c1bb5d",
-      email: "bryan.navarrete@dazzsoft.com",
-      name: "Bryan Henrry",
+      email: "bryanhenrry94@gmail.com",
+      name: "Bryan Navarrete",
       password: password_hash,
       tenantId: "0874303e-6795-46ef-8416-5d76bba8071b",
     },

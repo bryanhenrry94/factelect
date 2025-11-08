@@ -6,6 +6,7 @@ import DashboardCard from "../shared/DashboardCard";
 import { getMonthNamesUpToCurrent } from "@/utils/dashboard";
 import { useTheme } from "@mui/material/styles";
 import { getMonthlySalesData } from "@/app/actions/dashboard";
+import { useSession } from "next-auth/react";
 
 // 👇 Importa el chart dinámicamente (solo en el cliente)
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
@@ -15,6 +16,8 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
 const MonthlySalesTrend: React.FC = () => {
   const theme = useTheme();
 
+  const { data: session } = useSession();
+
   const [monthlySalesData, setMonthlySalesData] = React.useState<number[]>([]);
   const categories = getMonthNamesUpToCurrent();
 
@@ -22,7 +25,10 @@ const MonthlySalesTrend: React.FC = () => {
     const fetchMonthlySalesData = async () => {
       const year = new Date().getFullYear();
 
-      const salesData = await getMonthlySalesData(year);
+      const salesData = await getMonthlySalesData(
+        year,
+        session?.user.tenantId || ""
+      );
       setMonthlySalesData(salesData);
     };
 

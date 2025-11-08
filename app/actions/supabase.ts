@@ -2,6 +2,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { generateXmlSRI } from "./sri-document";
+import { uuid } from "zod";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -79,32 +80,24 @@ export async function uploadLogoAction(formData: FormData) {
 
 export async function uploadInvoiceXML(
   tenantId: string,
-  invoiceId: string
+  xmlDocument: string
 ): Promise<{ success: boolean; error?: string; path?: string; url?: string }> {
   if (!tenantId) {
     return { success: false, error: "tenantId es requerido" };
   }
 
-  if (!invoiceId) {
-    return { success: false, error: "invoiceId es requerido" };
+  if (!xmlDocument) {
+    return { success: false, error: "El documento XML es requerido" };
   }
 
-  // Generar el XML de la factura
-  const response = await generateXmlSRI(invoiceId);
-
-  if (!response.success || !response.xml) {
-    return { success: false, error: response.error || "Error al generar XML" };
-  }
-
-  const xml = response.xml;
-
-  const filename = `factura_${invoiceId}.xml`;
+  const id = crypto.randomUUID();
+  const filename = `factura_${id}.xml`;
   const filePath = `${tenantId}/xml/generados/${filename}`;
 
   // Subir el XML a Supabase Storage
   const { data, error } = await supabase.storage
     .from("facturacion")
-    .upload(filePath, xml);
+    .upload(filePath, xmlDocument);
 
   if (error) {
     console.error("Error uploading XML to Supabase:", error);

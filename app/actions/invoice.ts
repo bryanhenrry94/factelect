@@ -215,7 +215,9 @@ export const updateInvoice = async (
     const formattedInvoice: Invoice = {
       ...invoice,
       status: invoice.status as
-        | "PENDING"
+        | "DRAFT"
+        | "SIGNED"
+        | "SENT"
         | "AUTHORIZED"
         | "REJECTED"
         | "CANCELED",
@@ -248,7 +250,9 @@ export const getInvoices = async (
     const formattedInvoices = invoices.map((invoice) => ({
       ...invoice,
       status: invoice.status as
-        | "PENDING"
+        | "DRAFT"
+        | "SIGNED"
+        | "SENT"
         | "AUTHORIZED"
         | "REJECTED"
         | "CANCELED",
@@ -311,7 +315,9 @@ export const getInvoice = async (
     const formattedInvoice: InvoiceResponse = {
       ...invoice,
       status: invoice.status as
-        | "PENDING"
+        | "DRAFT"
+        | "SIGNED"
+        | "SENT"
         | "AUTHORIZED"
         | "REJECTED"
         | "CANCELED",
@@ -497,14 +503,14 @@ export const getInvoiceDataForPDF = async (
         direccionMatriz: invoice.tenant.address,
         correo: invoice.tenant.contactEmail,
         telefono: invoice.tenant.phone,
-        obligadoContabilidad: "NO",
-        regimenRimpe: "RIMPE EMPRENDEDOR",
+        obligadoContabilidad: invoice.tenant.obligatedAccounting ? "SI" : "NO",
+        regimenRimpe: "",
       },
       infoTributaria: {
         ambiente:
-          invoice.tenant.sriConfig?.sriEnvironment === "PRODUCTION"
-            ? "PRODUCCIÓN"
-            : "PRUEBAS",
+          invoice.tenant.sriConfig?.sriEnvironment === "1"
+            ? "PRUEBAS"
+            : "PRODUCCIÓN",
         tipoEmision: "NORMAL",
         estab: invoice.emissionPoint.establishment.code,
         ptoEmi: invoice.emissionPoint.code,
@@ -512,10 +518,8 @@ export const getInvoiceDataForPDF = async (
         claveAcceso: invoice.accessKey,
       },
       autorizacion: {
-        numeroAutorizacion:
-          invoice.authorization ||
-          "0000000000000000000000000000000000000000000000000",
-        fechaAutorizacion: invoice.dueDate?.toISOString() || "",
+        numeroAutorizacion: invoice.authorizationNumber || "",
+        fechaAutorizacion: invoice.authorizationDate?.toISOString() || "",
       },
       comprador: {
         razonSocial: invoice.customer.name,

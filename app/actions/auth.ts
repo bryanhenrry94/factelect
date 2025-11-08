@@ -120,3 +120,91 @@ export async function resetPassword(
     return { success: false, message: "Failed to reset password" };
   }
 }
+
+type FormValues = {
+  name: string;
+  email: string;
+  password: string;
+  ruc: string;
+  tenantName: string;
+  tenantAddress: string;
+  acceptTerms: boolean;
+};
+
+export const createAccount = async (
+  data: FormValues
+): Promise<{ success: boolean; error?: string; data?: any }> => {
+  try {
+    const emailExists = await prisma.user.findFirst({
+      where: {
+        email: data.email,
+      },
+    });
+
+    if (emailExists) {
+      return {
+        success: false,
+        error: "Ya existe una cuenta registrada con el correo ingresado",
+      };
+    }
+
+    const subdomainExists = await prisma.tenant.findFirst({
+      where: {
+        subdomain: data.ruc,
+      },
+    });
+
+    if (subdomainExists) {
+      return {
+        success: false,
+        error: "Ya existe una empresa registrada con el mismo ruc",
+      };
+    }
+
+    const tenant = await prisma.tenant.create({
+      data: {
+        ruc: data.ruc,
+        name: data.tenantName,
+        subdomain: data.ruc,
+      },
+    });
+
+    if (!tenant) {
+      return { success: false, error: "Hubo un error al registrar la empresa" };
+    }
+
+    const sriConfig = await prisma.sRIConfiguration.create({
+      data: {
+        tenantId: tenant.id,
+        sriEnvironment: "1",
+      },
+    });
+
+    if (!sriConfig) {
+      return { success: false, error: "Hubo un error al configurar el SRI" };
+    }
+
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    const newUser = await prisma.user.create({
+      data: {
+        name: data.name,
+        email: data.email,
+        password: hashedPassword,
+        tenantId: tenant.id,
+      },
+    });
+
+    if (!newUser) {
+      return {
+        success: false,
+        error: "Hubo un error al registrar la cuenta del usuario",
+      };
+    }
+
+    return { success: true, data: "Cuenta registrada exitosamente!" };
+  } catch (error) {
+    console.error(`Error al momento de crear la cuenta: ${error}`);
+    return { success: false, error: "Error al crear la cuenta" };
+  }
+};

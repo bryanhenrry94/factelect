@@ -5,16 +5,15 @@ import { Grid, Box, Card, Stack, Typography } from "@mui/material";
 import PageContainer from "@/components/container/PageContainer";
 import Logo from "@/components/layout/shared/logo/Logo";
 import AuthLogin from "@/components/auth/AuthLogin";
-import useTenant from "@/hooks/useTenant";
+import usetenant from "@/hooks/useTenant";
 import IdentifyTenant from "@/components/auth/IdentifyTenant";
 
 const Signin = () => {
-  const { tenant } = useTenant();
+  const { tenant } = usetenant();
 
   if (!tenant) {
     return <IdentifyTenant />;
   }
-
   return (
     <PageContainer title="Login" description="this is Login page">
       <Box
@@ -64,7 +63,7 @@ const Signin = () => {
                     color="textSecondary"
                     mb={1}
                   >
-                    {tenant ? tenant.name || "Sin Tenant" : "Sin Tenant"}
+                    Ingresa con las credenciales de tu cuenta
                   </Typography>
                 }
                 subtitle={

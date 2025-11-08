@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { create } from "xmlbuilder2";
 import { InvoiceTax } from "@/prisma/generated/prisma";
 import { formatDate } from "@/utils/formatters";
+import { sriDocumentTypes, sriEmissionTypes } from "@/constants/sri";
+import { generateAccessKey } from "@/utils/sri";
 
 export async function generateXmlSRI(invoiceId: string): Promise<{
   success: boolean;
@@ -31,6 +33,15 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
       throw new Error("Invoice not found");
     }
 
+    // Obtiene parametro de configuración del sriEnvironment
+    const sriConfig = await prisma.sRIConfiguration.findFirst({
+      where: { tenantId: invoice.tenantId },
+    });
+
+    if (!sriConfig) {
+      throw new Error("SRI configuration not found for tenant");
+    }
+
     const totalWithoutTaxes = invoice.items.reduce((acc: number, item: any) => {
       return acc + item.subtotal;
     }, 0);
@@ -39,18 +50,34 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
       return acc + item.discount;
     }, 0);
 
+    const serie1 = invoice.emissionPoint.establishment.code;
+    const serie2 = invoice.emissionPoint.code;
+    const sequential = String(invoice.sequential).padStart(9, "0");
+
+    // Generar clave de acceso, revisar utils/sri.ts
+    const accessKey = generateAccessKey(
+      new Date(invoice.issueDate),
+      sriDocumentTypes.INVOICE, // Tipo de documento: Factura
+      invoice.tenant.ruc ?? "", // RUC - TODO: Obtener del establecimiento o configuración SRI
+      sriConfig?.sriEnvironment || "1", // Ambiente: 1=Pruebas, 2=Producción
+      `${serie1}${serie2}`, // Serie: TODO: Obtener del punto de emisión
+      sequential, // Número secuencial
+      "12345678", // Código numérico: TODO: Generar aleatoriamente
+      sriEmissionTypes.NORMAL // Tipo de emisión: 1=Normal
+    );
+
     // Construir el objeto XML
     const xmlObj = {
       factura: {
         "@id": "comprobante",
         "@version": "1.1.0",
         infoTributaria: {
-          ambiente: "2",
-          tipoEmision: "1",
+          ambiente: sriConfig.sriEnvironment,
+          tipoEmision: "1", // Emisión normal
           razonSocial: invoice.tenant.legalName, // companyName
           ruc: invoice.tenant.ruc,
-          claveAcceso: invoice.accessKey,
-          codDoc: "01",
+          claveAcceso: accessKey,
+          codDoc: sriDocumentTypes.INVOICE,
           estab: invoice.emissionPoint.establishment.code, // establishmentCode
           ptoEmi: invoice.emissionPoint.code, // emissionPointCode
           secuencial: String(invoice.sequential).padStart(9, "0"), // sequentialNumber

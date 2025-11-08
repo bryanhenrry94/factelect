@@ -136,6 +136,14 @@ const SriTenantForm: React.FC<SriTenantFormProps> = ({ tenantId }) => {
       return;
     }
 
+    if (data.sriEnvironment === "2") {
+      const confirm = await AlertService.showConfirm(
+        "¿Cambiar al ambiente de PRODUCCIÓN?",
+        "El ambiente de producción envía comprobantes electrónicos con validez fiscal ante el SRI. ¿Desea continuar?"
+      );
+      if (!confirm) return;
+    }
+
     const result = await updateTenantSriConfig(currentTenantId, data);
     if (result?.success) {
       AlertService.showSuccess("Configuración SRI actualizada correctamente.");
@@ -207,7 +215,9 @@ const SriTenantForm: React.FC<SriTenantFormProps> = ({ tenantId }) => {
         <Grid size={{ xs: 12, md: 6 }}>
           <Typography variant="body1">Ambiente SRI</Typography>
           <Typography variant="caption" color="text.secondary">
-            Seleccione el entorno de pruebas o producción según corresponda.
+            <strong>Ambiente de Pruebas:</strong> Para realizar pruebas sin afectar documentos reales. Los comprobantes no tienen validez fiscal.
+            <br />
+            <strong>Ambiente de Producción:</strong> Para emisión real de comprobantes electrónicos con validez fiscal ante el SRI.
           </Typography>
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>

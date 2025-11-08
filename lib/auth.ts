@@ -4,19 +4,6 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import bcrypt from "bcrypt";
 
-// Extend NextAuth types to include custom properties
-declare module "next-auth" {
-  interface User {
-    id: string;
-    tenantId: string;
-    tenantName: string;
-    tenantSubdomain: string;
-  }
-  interface Session {
-    user?: User;
-  }
-}
-
 export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({

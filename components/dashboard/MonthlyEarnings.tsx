@@ -8,6 +8,7 @@ import DashboardCard from "@/components/shared/DashboardCard";
 import { ArrowDown, ArrowUpLeft, Currency } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getMonthlyEarnings } from "@/app/actions/dashboard";
+import { useSession } from "next-auth/react";
 
 interface EarningsData {
   currentMonth: {
@@ -26,6 +27,8 @@ interface EarningsData {
 const MonthlyEarnings = () => {
   const [earningsData, setEarningsData] = useState<EarningsData | null>(null);
 
+  const { data: session } = useSession();
+
   const theme = useTheme();
   const secondary = theme.palette.secondary.main;
   const secondarylight = "#f5fcff";
@@ -36,7 +39,8 @@ const MonthlyEarnings = () => {
     const fetchData = async () => {
       const data = await getMonthlyEarnings(
         new Date().getFullYear(),
-        new Date().getMonth() + 1
+        new Date().getMonth() + 1,
+        session?.user.tenantId || ""
       );
       setEarningsData(data);
     };

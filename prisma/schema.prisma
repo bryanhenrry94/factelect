@@ -9,23 +9,24 @@ datasource db {
 }
 
 model Tenant {
-  id           String                                  @id @default(uuid())
-  name         String            @map("name")
-  subdomain    String                                  @unique
-  legalName    String?           @map("legal_name")
-  ruc          String?
-  phone        String?           @map("phone")
-  contactEmail String?           @map("contact_email")
-  address      String?           @map("address")
-  logoUrl      String?           @map("logo_url")
-  sriConfig    SRIConfiguration?
+  id                  String                                         @id @default(uuid())
+  name                String            @map("name")
+  subdomain           String                                         @unique
+  legalName           String?           @map("legal_name")
+  ruc                 String?
+  phone               String?           @map("phone")
+  contactEmail        String?           @map("contact_email")
+  address             String?           @map("address")
+  logoUrl             String?           @map("logo_url")
+  sriConfig           SRIConfiguration?
+  obligatedAccounting Boolean           @map("obligated_accounting") @default(false)
 
-  createdAt    DateTime          @map("created_at")    @default(now())
-  updatedAt    DateTime          @map("updated_at")    @updatedAt
-  users        User[]
-  products     Product[]
-  clients      Customer[]
-  invoices     Invoice[]
+  createdAt           DateTime          @map("created_at")           @default(now())
+  updatedAt           DateTime          @map("updated_at")           @updatedAt
+  users               User[]
+  products            Product[]
+  clients             Customer[]
+  invoices            Invoice[]
 
   @@map("tenant")
 }
@@ -128,6 +129,15 @@ model Product {
   @@map("product")
 }
 
+enum InvoiceStatus {
+  DRAFT        // Borrador, editable
+  SIGNED       // Firmada digitalmente
+  SENT         // Enviada al SRI
+  AUTHORIZED   // Autorizada por el SRI
+  REJECTED     // Rechazada por el SRI
+  CANCELED     // Anulada o cancelada por el emisor
+}
+
 model Invoice {
   id                                                       String        @map("id")                                                                         @id @default(cuid())
   customerId                                               String        @map("customer_id")
@@ -136,9 +146,10 @@ model Invoice {
   // Datos de emisión
   emissionPointId                                          String        @map("emission_point_id") // 🔹 Nuevo campo
   sequential                                               Int           @map("sequential")
-  accessKey                                                String?       @map("access_key") // Clave de acceso generada para el SRI                         @unique
-  authorization                                            String?       @map("authorization") // Número de autorización del SRI
-  status                                                   String        @map("status") // PENDING | AUTHORIZED | REJECTED | CANCELED                       @default("PENDING")
+  accessKey                                                String?       @map("access_key") // Clave de acceso generada para el SRI
+  authorizationNumber                                      String?       @map("authorization_number") // Número de autorización del SRI
+  authorizationDate                                        DateTime?     @map("authorization_date") // Fecha de autorización del SRI
+  status                                                   InvoiceStatus @map("status")                                                                     @default(DRAFT)
 
   //                                                       Fechas
   issueDate                                                DateTime      @map("issue_date") // Fecha de emisión
