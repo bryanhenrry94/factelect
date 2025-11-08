@@ -2,7 +2,7 @@ import { email, z } from "zod";
 
 export const invoiceSchema = z.object({
   id: z.string().cuid().optional(),
-  clientId: z.string().min(1, "Client ID is required"),
+  customerId: z.string().min(1, "Customer ID is required"),
   tenantId: z.string().min(1, "Tenant ID is required"),
 
   // Datos de emisión
@@ -46,7 +46,7 @@ export const invoiceSchema = z.object({
 });
 
 export const InvoiceResponseSchema = invoiceSchema.extend({
-  client: z.object({
+  customer: z.object({
     id: z.string().cuid(),
     name: z.string(),
     identification: z.string(),

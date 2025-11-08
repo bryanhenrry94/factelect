@@ -4,7 +4,6 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Select, MenuItem, CircularProgress, Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import dynamic from "next/dynamic";
-import { useSession } from "next-auth/react";
 import DashboardCard from "@/components/shared/DashboardCard";
 import { getCategoriesForMonth, getLastMonths } from "@/utils/dashboard";
 import { getTotalAmountByMonth } from "@/app/actions/dashboard";
@@ -13,7 +12,6 @@ const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 const SalesOverview: React.FC = () => {
   const theme = useTheme();
-  const { data: session } = useSession();
 
   const [month, setMonth] = useState<number | null>(null);
   const [months, setMonths] = useState<{ value: number; label: string }[]>([]);
@@ -22,26 +20,22 @@ const SalesOverview: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
 
   // 🎯 Cargar datos del mes seleccionado
-  const fetchMonthlyData = useCallback(
-    async (selectedMonth: number) => {
-      setLoading(true);
-      const currentYear = new Date().getFullYear();
+  const fetchMonthlyData = useCallback(async (selectedMonth: number) => {
+    setLoading(true);
+    const currentYear = new Date().getFullYear();
 
-      // Semanas del mes
-      const data = getCategoriesForMonth(currentYear, selectedMonth);
-      setCategories(data || []);
+    // Semanas del mes
+    const data = getCategoriesForMonth(currentYear, selectedMonth);
+    setCategories(data || []);
 
-      // Totales de ventas por semana
-      const weeklySalesData = await getTotalAmountByMonth(
-        session?.user?.tenantId || "",
-        currentYear,
-        selectedMonth
-      );
-      setWeeklySales(weeklySalesData || []);
-      setLoading(false);
-    },
-    [session?.user?.tenantId]
-  );
+    // Totales de ventas por semana
+    const weeklySalesData = await getTotalAmountByMonth(
+      currentYear,
+      selectedMonth
+    );
+    setWeeklySales(weeklySalesData || []);
+    setLoading(false);
+  }, []);
 
   // 🧭 Carga inicial (últimos meses)
   useEffect(() => {

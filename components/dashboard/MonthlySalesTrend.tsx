@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import DashboardCard from "../shared/DashboardCard";
 import { getMonthNamesUpToCurrent } from "@/utils/dashboard";
 import { useTheme } from "@mui/material/styles";
-import { useSession } from "next-auth/react";
 import { getMonthlySalesData } from "@/app/actions/dashboard";
 
 // 👇 Importa el chart dinámicamente (solo en el cliente)
@@ -14,8 +13,6 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
 });
 
 const MonthlySalesTrend: React.FC = () => {
-  const { data: session } = useSession();
-
   const theme = useTheme();
 
   const [monthlySalesData, setMonthlySalesData] = React.useState<number[]>([]);
@@ -25,15 +22,12 @@ const MonthlySalesTrend: React.FC = () => {
     const fetchMonthlySalesData = async () => {
       const year = new Date().getFullYear();
 
-      const salesData = await getMonthlySalesData(
-        session?.user?.tenantId || "",
-        year
-      );
+      const salesData = await getMonthlySalesData(year);
       setMonthlySalesData(salesData);
     };
 
     fetchMonthlySalesData();
-  }, [session]);
+  }, []);
 
   // 🎨 Configuración del gráfico
   const primary = theme.palette.primary.main;

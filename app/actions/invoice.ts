@@ -235,7 +235,7 @@ export const getInvoices = async (
     const invoices = await prisma.invoice.findMany({
       where: { tenantId },
       include: {
-        client: true,
+        customer: true,
         emissionPoint: {
           include: {
             establishment: true,
@@ -252,12 +252,12 @@ export const getInvoices = async (
         | "AUTHORIZED"
         | "REJECTED"
         | "CANCELED",
-      client: {
-        id: invoice.client.id,
-        name: invoice.client.name,
-        identification: invoice.client.identification,
-        email: invoice.client.email,
-        phone: invoice.client.phone,
+      customer: {
+        id: invoice.customer.id,
+        name: invoice.customer.name,
+        identification: invoice.customer.identification,
+        email: invoice.customer.email,
+        phone: invoice.customer.phone,
       },
       document: `${invoice.emissionPoint.establishment.code}-${
         invoice.emissionPoint.code
@@ -292,7 +292,7 @@ export const getInvoice = async (
     const invoice = await prisma.invoice.findUnique({
       where: { id },
       include: {
-        client: true,
+        customer: true,
         emissionPoint: {
           include: {
             establishment: true,
@@ -315,12 +315,12 @@ export const getInvoice = async (
         | "AUTHORIZED"
         | "REJECTED"
         | "CANCELED",
-      client: {
-        id: invoice.client.id,
-        name: invoice.client.name,
-        identification: invoice.client.identification,
-        email: invoice.client.email,
-        phone: invoice.client.phone,
+      customer: {
+        id: invoice.customer.id,
+        name: invoice.customer.name,
+        identification: invoice.customer.identification,
+        email: invoice.customer.email,
+        phone: invoice.customer.phone,
       },
       document: `${invoice.emissionPoint.establishment.code}-${
         invoice.emissionPoint.code
@@ -407,7 +407,7 @@ export const getInvoiceDataForPDF = async (
             sriConfig: true,
           },
         },
-        client: true,
+        customer: true,
         emissionPoint: {
           include: { establishment: true },
         },
@@ -518,11 +518,11 @@ export const getInvoiceDataForPDF = async (
         fechaAutorizacion: invoice.dueDate?.toISOString() || "",
       },
       comprador: {
-        razonSocial: invoice.client.name,
-        identificacion: invoice.client.identification,
-        direccion: invoice.client.address || "",
-        telefono: invoice.client.phone,
-        correo: invoice.client.email,
+        razonSocial: invoice.customer.name,
+        identificacion: invoice.customer.identification,
+        direccion: invoice.customer.address || "",
+        telefono: invoice.customer.phone,
+        correo: invoice.customer.email,
       },
       infoFactura: {
         fechaEmision: formatDate(invoice.issueDate.toISOString()),

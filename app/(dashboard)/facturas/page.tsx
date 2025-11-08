@@ -11,13 +11,10 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Chip,
   IconButton,
-  Container,
   Pagination,
   TextField,
 } from "@mui/material";
@@ -87,6 +84,27 @@ export default function InvoicesPage() {
     <PageContainer title="Facturas" description="Crea y gestiona tus facturas">
       <PageHeader title="Facturas" />
 
+      <Box
+        sx={{
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          flexDirection: { xs: "column", sm: "row" },
+          gap: 2,
+        }}
+      >
+        <TextField label="Buscar facturas" variant="outlined" size="small" />
+        <Link href="/facturas/nueva" style={{ textDecoration: "none" }}>
+          <Button
+            variant="contained"
+            startIcon={<Plus size={16} />}
+            sx={{ width: { xs: "100%", sm: "auto" } }}
+          >
+            Crear Factura
+          </Button>
+        </Link>
+      </Box>
+      
       <Box>
         <Card>
           <CardContent sx={{ p: 3 }}>
@@ -111,34 +129,6 @@ export default function InvoicesPage() {
               </Box>
             ) : (
               <Box>
-                <Box
-                  sx={{
-                    mb: 2,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    flexDirection: { xs: "column", sm: "row" },
-                    gap: 2,
-                  }}
-                >
-                  <TextField
-                    label="Buscar facturas"
-                    variant="outlined"
-                    size="small"
-                  />
-                  <Link
-                    href="/facturas/nueva"
-                    style={{ textDecoration: "none" }}
-                  >
-                    <Button
-                      variant="contained"
-                      startIcon={<Plus size={16} />}
-                      sx={{ width: { xs: "100%", sm: "auto" } }}
-                    >
-                      Crear Factura
-                    </Button>
-                  </Link>
-                </Box>
-
                 <Table>
                   <TableHead>
                     <TableRow>
@@ -163,13 +153,13 @@ export default function InvoicesPage() {
                               variant="body2"
                               sx={{ fontWeight: "normal" }}
                             >
-                              {invoice.client?.name || "N/A"}
+                              {invoice.customer?.name || "N/A"}
                             </Typography>
                             <Typography
                               variant="caption"
                               color="text.secondary"
                             >
-                              {invoice.client?.identification || "N/A"}
+                              {invoice.customer?.identification || "N/A"}
                             </Typography>
                           </Box>
                         </TableCell>

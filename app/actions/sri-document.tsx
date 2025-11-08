@@ -15,7 +15,7 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
       where: { id: invoiceId },
       include: {
         tenant: true,
-        client: true,
+        customer: true,
         emissionPoint: {
           include: { establishment: true },
         },
@@ -60,9 +60,9 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
           fechaEmision: formatDate(invoice.issueDate.toString()),
           dirEstablecimiento: invoice.emissionPoint.establishment.address, // establishmentAddress
           obligadoContabilidad: "SI",
-          tipoIdentificacionComprador: invoice.client.identificationType, // buyerIdType
-          razonSocialComprador: invoice.client.name, // buyerName
-          identificacionComprador: invoice.client.identification, // buyerId
+          tipoIdentificacionComprador: invoice.customer.identificationType, // buyerIdType
+          razonSocialComprador: invoice.customer.name, // buyerName
+          identificacionComprador: invoice.customer.identification, // buyerId
           totalSinImpuestos: totalWithoutTaxes
             ? totalWithoutTaxes.toFixed(2)
             : "0.00",

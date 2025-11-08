@@ -127,6 +127,26 @@ export default function ProductsPage() {
       {/* Header */}
       <PageHeader title="Productos" />
 
+      <Box
+        sx={{
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          flexDirection: { xs: "column", sm: "row" },
+          gap: 2,
+        }}
+      >
+        <TextField label="Buscar productos" variant="outlined" size="small" />
+        <Button
+          variant="contained"
+          startIcon={<Plus />}
+          onClick={() => setIsDialogOpen(true)}
+          sx={{ width: { xs: "100%", sm: "auto" } }}
+        >
+          Agregar Producto
+        </Button>
+      </Box>
+
       {/* Modal */}
       <ProductFormDialog
         isDialogOpen={isDialogOpen}
@@ -168,29 +188,6 @@ export default function ProductsPage() {
             </Box>
           ) : (
             <Box>
-              <Box
-                sx={{
-                  mb: 2,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  flexDirection: { xs: "column", sm: "row" },
-                  gap: 2,
-                }}
-              >
-                <TextField
-                  label="Buscar productos"
-                  variant="outlined"
-                  size="small"
-                />
-                <Button
-                  variant="contained"
-                  startIcon={<Plus />}
-                  onClick={() => setIsDialogOpen(true)}
-                  sx={{ width: { xs: "100%", sm: "auto" } }}
-                >
-                  Agregar Producto
-                </Button>
-              </Box>
               <Table>
                 <TableHead>
                   <TableRow>

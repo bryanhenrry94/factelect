@@ -12,7 +12,6 @@ import {
 } from "@mui/material";
 import DashboardCard from "@/components/shared/DashboardCard";
 import { ArrowDownRight, ArrowUpLeft } from "lucide-react";
-import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { getYearlyBreakup } from "@/app/actions/dashboard";
 
@@ -23,7 +22,6 @@ interface YearlyData {
 }
 
 const YearlyBreakup = () => {
-  const { data: session } = useSession();
   const [data, setData] = useState<YearlyData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -41,11 +39,7 @@ const YearlyBreakup = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        if (!session?.user?.tenantId) return;
-        const response = await getYearlyBreakup(
-          session.user.tenantId,
-          currentYear
-        );
+        const response = await getYearlyBreakup(currentYear);
         setData(response);
       } catch (err) {
         console.error("Error fetching yearly breakup:", err);
@@ -54,7 +48,7 @@ const YearlyBreakup = () => {
       }
     };
     fetchData();
-  }, [session]);
+  }, []);
 
   // 📊 Configuración del gráfico
   const options: any = {

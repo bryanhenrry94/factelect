@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useForm, Controller } from "react-hook-form";
 import {
-  Container,
   Box,
   Typography,
   Stack,
@@ -40,12 +39,11 @@ import { taxOptions } from "@/constants/tax";
 import { AlertService } from "@/lib/alerts";
 import type { CreateInvoice } from "@/lib/validations/invoice";
 import { InvoiceItem } from "@/lib/validations/invoice-item";
-import { getClientsByTenant } from "@/app/actions/client";
+import { getCustomersByTenant } from "@/app/actions/customer";
 import {
   createProduct,
   getAllProducts,
   getProductById,
-  updateProduct,
 } from "@/app/actions/product";
 import {
   getEmissionPointsByEstablishment,
@@ -61,7 +59,7 @@ import { getTenantById } from "@/app/actions/tenant";
 import { InvoiceTotals } from "@/components/invoice/totals";
 import { sriPaymentMethods } from "@/constants/sri";
 import { InvoicePaymentMethod } from "@/lib/validations/invoice-payment-method";
-import ClientFormDialog from "@/components/client/client-form-dialog";
+import CustomerFormDialog from "@/components/customer/customer-form-dialog";
 import { useRouter } from "next/navigation";
 import { ProductFormDialog } from "@/components/product/product-form-dialog";
 import { CreateProduct } from "@/lib/validations/product";
@@ -74,7 +72,7 @@ interface InvoiceFormInputs {
   numDocumento: string;
   issueDate: string;
   dueDate: string;
-  clientId: string;
+  customerId: string;
   description: string;
 }
 
@@ -105,7 +103,7 @@ export default function InvoicesNewPage() {
         numDocumento: "",
         issueDate: new Date().toISOString().split("T")[0],
         dueDate: new Date().toISOString().split("T")[0],
-        clientId: "",
+        customerId: "",
         description: "",
       },
     });
@@ -140,7 +138,7 @@ export default function InvoicesNewPage() {
       if (!session?.user?.tenantId) return;
       const [clientRes, productRes, establishmentRes, tenantRes, sriConfigRes] =
         await Promise.all([
-          getClientsByTenant(session.user.tenantId),
+          getCustomersByTenant(session.user.tenantId),
           getAllProducts(session.user.tenantId),
           getEstablishmentsByTenant(session.user.tenantId),
           getTenantById(session.user.tenantId),
@@ -158,7 +156,7 @@ export default function InvoicesNewPage() {
 
   const loadClients = async () => {
     if (!session?.user?.tenantId) return;
-    const response = await getClientsByTenant(session.user.tenantId);
+    const response = await getCustomersByTenant(session.user.tenantId);
     if (response.success) setClients(response.data);
   };
 
@@ -240,7 +238,7 @@ export default function InvoicesNewPage() {
       );
 
       const newInvoice: CreateInvoice = {
-        clientId: data.clientId,
+        customerId: data.customerId,
         tenantId: session?.user?.tenantId || "",
         emissionPointId: data.emissionPointId,
         sequential: parseInt(data.numDocumento, 10),
@@ -463,7 +461,7 @@ export default function InvoicesNewPage() {
               />
               <Stack spacing={2} direction={"row"} alignItems="center">
                 <Controller
-                  name="clientId"
+                  name="customerId"
                   control={control}
                   render={({ field: { onChange, value } }) => (
                     <Autocomplete
@@ -472,7 +470,8 @@ export default function InvoicesNewPage() {
                         `[${option.identification}] - ${option.name}` || ""
                       }
                       value={
-                        clients.find((client) => client.id === value) || null
+                        clients.find((customer) => customer.id === value) ||
+                        null
                       }
                       fullWidth
                       onChange={(_, newValue) => onChange(newValue?.id || "")}
@@ -726,11 +725,11 @@ export default function InvoicesNewPage() {
       </Paper>
 
       {/* DIALOGO FORMULARIO */}
-      <ClientFormDialog
+      <CustomerFormDialog
         open={openClientDialog}
         onClose={() => setOpenClientDialog(false)}
         onSuccess={loadClients}
-        editingClient={null}
+        editingCustomer={null}
         tenantId={session?.user?.tenantId ?? ""}
         setError={setError}
       />

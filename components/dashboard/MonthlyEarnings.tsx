@@ -6,7 +6,6 @@ import { useTheme } from "@mui/material/styles";
 import { Stack, Typography, Avatar, Fab } from "@mui/material";
 import DashboardCard from "@/components/shared/DashboardCard";
 import { ArrowDown, ArrowUpLeft, Currency } from "lucide-react";
-import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { getMonthlyEarnings } from "@/app/actions/dashboard";
 
@@ -25,7 +24,6 @@ interface EarningsData {
 }
 
 const MonthlyEarnings = () => {
-  const { data: session } = useSession();
   const [earningsData, setEarningsData] = useState<EarningsData | null>(null);
 
   const theme = useTheme();
@@ -36,16 +34,14 @@ const MonthlyEarnings = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!session?.user?.tenantId) return;
       const data = await getMonthlyEarnings(
-        session.user.tenantId,
         new Date().getFullYear(),
         new Date().getMonth() + 1
       );
       setEarningsData(data);
     };
     fetchData();
-  }, [session]);
+  }, []);
 
   const optionscolumnchart: any = {
     chart: {

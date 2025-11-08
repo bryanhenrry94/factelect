@@ -1,11 +1,11 @@
-import { createClient, updateClient } from "@/app/actions/client";
+import { createCustomer, updateCustomer } from "@/app/actions/customer";
 import { identificationOptions } from "@/constants/identification";
 import { AlertService } from "@/lib/alerts";
 import {
-  ClientCreate,
-  ClientCreateSchema,
-  ClientReponse,
-} from "@/lib/validations/client";
+  CustomerCreate,
+  CustomerCreateSchema,
+  CustomerReponse,
+} from "@/lib/validations/customer";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
@@ -21,20 +21,20 @@ import {
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 
-interface ClientFormDialogProps {
+interface CustomerFormDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => Promise<void>;
-  editingClient: ClientReponse | null;
+  editingCustomer: CustomerReponse | null;
   tenantId: string;
   setError: (error: string | null) => void;
 }
 
-const ClientFormDialog: React.FC<ClientFormDialogProps> = ({
+const CustomerFormDialog: React.FC<CustomerFormDialogProps> = ({
   open,
   onClose,
   onSuccess,
-  editingClient,
+  editingCustomer,
   tenantId,
   setError,
 }) => {
@@ -44,9 +44,9 @@ const ClientFormDialog: React.FC<ClientFormDialogProps> = ({
     formState: { errors, isSubmitting },
     reset,
     watch,
-  } = useForm<ClientCreate>({
-    resolver: zodResolver(ClientCreateSchema),
-    defaultValues: editingClient ?? {
+  } = useForm<CustomerCreate>({
+    resolver: zodResolver(CustomerCreateSchema),
+    defaultValues: editingCustomer ?? {
       identificationType: "CEDULA",
       identification: "",
       name: "",
@@ -59,8 +59,8 @@ const ClientFormDialog: React.FC<ClientFormDialogProps> = ({
 
   // Rellena el formulario si se está editando
   useEffect(() => {
-    if (editingClient) {
-      reset(editingClient);
+    if (editingCustomer) {
+      reset(editingCustomer);
     } else {
       reset({
         identificationType: "CEDULA",
@@ -72,18 +72,18 @@ const ClientFormDialog: React.FC<ClientFormDialogProps> = ({
         notes: "",
       });
     }
-  }, [editingClient, reset]);
+  }, [editingCustomer, reset]);
 
-  const onSubmit = async (data: ClientCreate) => {
+  const onSubmit = async (data: CustomerCreate) => {
     setError(null);
 
-    const action = editingClient
-      ? await updateClient(editingClient.id, data)
-      : await createClient(data, tenantId);
+    const action = editingCustomer
+      ? await updateCustomer(editingCustomer.id, data)
+      : await createCustomer(data, tenantId);
 
     if (action.success) {
       AlertService.showSuccess(
-        editingClient ? "Cliente actualizado" : "Cliente creado"
+        editingCustomer ? "Cliente actualizado" : "Cliente creado"
       );
       await onSuccess();
       onClose();
@@ -96,12 +96,12 @@ const ClientFormDialog: React.FC<ClientFormDialogProps> = ({
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogTitle>
-          {editingClient ? "Editar Cliente" : "Agregar Cliente"}
+          {editingCustomer ? "Editar Cliente" : "Agregar Cliente"}
         </DialogTitle>
 
         <DialogContent sx={{ display: "grid", gap: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            {editingClient
+            {editingCustomer
               ? "Actualiza la información del cliente."
               : "Agrega un nuevo cliente a tu base de datos."}
           </Typography>
@@ -167,7 +167,7 @@ const ClientFormDialog: React.FC<ClientFormDialogProps> = ({
             Cancelar
           </Button>
           <Button type="submit" variant="contained" disabled={isSubmitting}>
-            {editingClient ? "Actualizar" : "Agregar"}
+            {editingCustomer ? "Actualizar" : "Agregar"}
           </Button>
         </DialogActions>
       </form>
@@ -175,4 +175,4 @@ const ClientFormDialog: React.FC<ClientFormDialogProps> = ({
   );
 };
 
-export default ClientFormDialog;
+export default CustomerFormDialog;

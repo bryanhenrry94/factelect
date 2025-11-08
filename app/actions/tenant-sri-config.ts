@@ -59,7 +59,7 @@ export const updateTenantSriConfig = async (
     const updatedConfig = await prisma.sRIConfiguration.upsert({
       where: { tenantId },
       update: { ...cleanData },
-      create: { tenantId, ...cleanData },
+      create: { tenantId, sriEnvironment: "1", ...cleanData },
     });
 
     console.log("Configuración SRI actualizada:", updatedConfig);
@@ -91,7 +91,12 @@ export const updateCertificatePath = async (
     await prisma.sRIConfiguration.upsert({
       where: { tenantId },
       update: { p12CertificatePath, p12CertificateUrl },
-      create: { tenantId, p12CertificatePath, p12CertificateUrl },
+      create: {
+        tenantId,
+        p12CertificatePath,
+        p12CertificateUrl,
+        sriEnvironment: "1",
+      },
     });
 
     return { success: true };

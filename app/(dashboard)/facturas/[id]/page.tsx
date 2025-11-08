@@ -18,18 +18,13 @@ import {
   TableRow,
   Paper,
   Chip,
-  IconButton,
   Container,
   CircularProgress,
 } from "@mui/material";
-import { ArrowLeft, CodeXml, Edit, FileText } from "lucide-react";
+import { ArrowLeft, Edit } from "lucide-react";
 import { InvoiceResponse } from "@/lib/validations/invoice";
 import { useSession } from "next-auth/react";
-import {
-  deleteInvoice,
-  getInvoice,
-  getInvoiceItems,
-} from "@/app/actions/invoice";
+import { getInvoice, getInvoiceItems } from "@/app/actions/invoice";
 import { AlertService } from "@/lib/alerts";
 import { InvoiceItemResponse } from "@/lib/validations/invoice-item";
 import InvoiceTotals from "@/components/invoice/totals";
@@ -210,19 +205,19 @@ const InvoiceViewPage = () => {
                 Cliente
               </Typography>
               <Typography variant="body1" sx={{ fontWeight: "medium" }}>
-                {invoice.client?.name || "N/A"}
+                {invoice.customer?.name || "N/A"}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {invoice.client?.identification || "N/A"}
+                {invoice.customer?.identification || "N/A"}
               </Typography>
-              {invoice.client?.email && (
+              {invoice.customer?.email && (
                 <Typography variant="body2" color="text.secondary">
-                  {invoice.client.email}
+                  {invoice.customer.email}
                 </Typography>
               )}
-              {invoice.client?.phone && (
+              {invoice.customer?.phone && (
                 <Typography variant="body2" color="text.secondary">
-                  {invoice.client.phone}
+                  {invoice.customer.phone}
                 </Typography>
               )}
             </Box>

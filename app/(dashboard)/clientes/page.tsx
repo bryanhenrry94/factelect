@@ -10,63 +10,57 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableContainer,
   TableRow,
-  Paper,
   IconButton,
   Box,
   Alert,
-  Breadcrumbs,
   TextField,
 } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
 import { Edit, Delete, Users, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
 
-import { deleteClient, getClientsByTenant } from "@/app/actions/client";
-import { ClientReponse } from "@/lib/validations/client";
-import ClientFormDialog from "@/components/client/client-form-dialog";
+import { deleteCustomer, getCustomersByTenant } from "@/app/actions/customer";
+import { CustomerReponse } from "@/lib/validations/customer";
+import ClientFormDialog from "@/components/customer/customer-form-dialog";
 import { AlertService } from "@/lib/alerts";
 import PageContainer from "@/components/container/PageContainer";
-import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 
-export default function ClientsPage() {
+export default function CustomersPage() {
   const { data: session } = useSession();
 
-  const [clients, setClients] = useState<ClientReponse[]>([]);
+  const [customers, setCustomers] = useState<CustomerReponse[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<ClientReponse | null>(
-    null
-  );
+  const [editingCustomer, setEditingCustomer] =
+    useState<CustomerReponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const loadClients = useCallback(async () => {
+  const loadCustomers = useCallback(async () => {
     if (!session?.user?.tenantId) return;
-    const response = await getClientsByTenant(session.user.tenantId);
-    if (response.success) setClients(response.data);
+    const response = await getCustomersByTenant(session.user.tenantId);
+    if (response.success) setCustomers(response.data);
   }, [session?.user?.tenantId]);
 
   useEffect(() => {
-    loadClients();
-  }, [loadClients]);
+    loadCustomers();
+  }, [loadCustomers]);
 
   const handleAdd = () => {
-    setEditingClient(null);
+    setEditingCustomer(null);
     setDialogOpen(true);
   };
 
-  const handleEdit = (client: ClientReponse) => {
-    setEditingClient(client);
+  const handleEdit = (customer: CustomerReponse) => {
+    setEditingCustomer(customer);
     setDialogOpen(true);
   };
 
   const handleClose = () => {
     setDialogOpen(false);
-    setEditingClient(null);
+    setEditingCustomer(null);
   };
 
-  const handleDelete = (clientId: string) => {
+  const handleDelete = (customerId: string) => {
     AlertService.showConfirm(
       "Confirmar eliminación",
       "¿Estás seguro de que deseas eliminar este cliente? Esta acción no se puede deshacer.",
@@ -75,10 +69,10 @@ export default function ClientsPage() {
     ).then(async (confirmed) => {
       if (confirmed) {
         // Lógica para eliminar el cliente
-        await deleteClient(clientId);
+        await deleteCustomer(customerId);
         AlertService.showSuccess("Cliente eliminado exitosamente.");
         // Recargar la lista de clientes después de la eliminación
-        await loadClients();
+        await loadCustomers();
       }
     });
   };
@@ -91,12 +85,27 @@ export default function ClientsPage() {
       {/* HEADER */}
       <PageHeader title="Clientes" />
 
+      <Box
+        sx={{
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          flexDirection: { xs: "column", sm: "row" },
+          gap: 2,
+        }}
+      >
+        <TextField label="Buscar clientes" variant="outlined" size="small" />
+        <Button variant="contained" startIcon={<Plus />} onClick={handleAdd}>
+          Agregar Cliente
+        </Button>
+      </Box>
+
       {/* DIALOGO FORMULARIO */}
       <ClientFormDialog
         open={dialogOpen}
         onClose={handleClose}
-        onSuccess={loadClients}
-        editingClient={editingClient}
+        onSuccess={loadCustomers}
+        editingCustomer={editingCustomer}
         tenantId={session?.user?.tenantId ?? ""}
         setError={setError}
       />
@@ -104,7 +113,7 @@ export default function ClientsPage() {
       {/* TABLA */}
       <Card sx={{ mt: 3 }}>
         <CardContent>
-          {clients.length === 0 ? (
+          {customers.length === 0 ? (
             <Box textAlign="center" py={6}>
               <Users />
               <Typography variant="h6" mt={2}>
@@ -116,28 +125,6 @@ export default function ClientsPage() {
             </Box>
           ) : (
             <Box>
-              <Box
-                sx={{
-                  mb: 2,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  flexDirection: { xs: "column", sm: "row" },
-                  gap: 2,
-                }}
-              >
-                <TextField
-                  label="Buscar clientes"
-                  variant="outlined"
-                  size="small"
-                />
-                <Button
-                  variant="contained"
-                  startIcon={<Plus />}
-                  onClick={handleAdd}
-                >
-                  Agregar Cliente
-                </Button>
-              </Box>
               {/* <TableContainer component={Paper} variant="outlined"> */}
               <Table>
                 <TableHead>
@@ -160,28 +147,28 @@ export default function ClientsPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {clients.map((client) => (
+                  {customers.map((customer) => (
                     <TableRow
-                      key={client.id}
+                      key={customer.id}
                       hover
                       sx={{
                         "&:last-child td, &:last-child th": { border: 0 },
                       }}
                     >
-                      <TableCell>{client.identification}</TableCell>
-                      <TableCell>{client.name}</TableCell>
-                      <TableCell>{client.email}</TableCell>
-                      <TableCell>{client.phone || "-"}</TableCell>
+                      <TableCell>{customer.identification}</TableCell>
+                      <TableCell>{customer.name}</TableCell>
+                      <TableCell>{customer.email}</TableCell>
+                      <TableCell>{customer.phone || "-"}</TableCell>
                       <TableCell align="right">
                         <IconButton
                           color="primary"
-                          onClick={() => handleEdit(client)}
+                          onClick={() => handleEdit(customer)}
                         >
                           <Edit />
                         </IconButton>
                         <IconButton
                           color="error"
-                          onClick={() => handleDelete(client.id)}
+                          onClick={() => handleDelete(customer.id)}
                         >
                           <Delete />
                         </IconButton>

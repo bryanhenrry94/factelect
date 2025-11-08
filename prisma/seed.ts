@@ -15,7 +15,18 @@ async function main() {
       phone: "+593969437708",
       contactEmail: "info@dazzsoft.com",
       address: "Guayaquil - Ecuador",
-      logoUrl: "https://dazzsoft.com/logo.png",
+      logoUrl: null,
+    },
+  });
+
+  await prisma.sRIConfiguration.upsert({
+    where: { tenantId: "0874303e-6795-46ef-8416-5d76bba8071b" },
+    update: {},
+    create: {
+      tenantId: "0874303e-6795-46ef-8416-5d76bba8071b",
+      sriEnvironment: "1",
+      p12CertificatePath: "",
+      certificatePassword: "",
     },
   });
 
@@ -26,7 +37,7 @@ async function main() {
     update: {},
     create: {
       id: "28112419-5c53-47c5-b109-a29d02c1bb5d",
-      email: "admin@demo.com",
+      email: "bryan.navarrete@dazzsoft.com",
       name: "Bryan Henrry",
       password: password_hash,
       tenantId: "0874303e-6795-46ef-8416-5d76bba8071b",

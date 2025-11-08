@@ -11,16 +11,18 @@ export const IdentificationTypeSchema = z.enum([
   $Enums.IdentificationType.PLACA,
 ]);
 
-export const ClientBaseSchema = z
+export const CustomerBaseSchema = z
   .object({
-    id: z.string().cuid({ message: "Invalid client ID format" }),
+    id: z.string().cuid({ message: "El ID del cliente no es válido" }),
     identificationType: IdentificationTypeSchema,
 
     identification: z
       .string({ message: "La identificación es obligatoria" })
       .min(1, "La identificación es obligatoria"),
 
-    name: z.string({ message: "El nombre es obligatorio" }).min(1, "El nombre es obligatorio"),
+    name: z
+      .string({ message: "El nombre es obligatorio" })
+      .min(1, "El nombre es obligatorio"),
 
     email: z
       .string({ message: "El correo electrónico es obligatorio" })
@@ -31,7 +33,7 @@ export const ClientBaseSchema = z
       .optional()
       .nullable()
       .refine((val) => !val || /^\+?\d{6,15}$/.test(val), {
-        message: "Invalid phone number",
+        message: "Número de teléfono no válido",
       }),
 
     address: z.string().optional().nullable(),
@@ -39,7 +41,7 @@ export const ClientBaseSchema = z
 
     tenantId: z
       .string()
-      .cuid({ message: "Invalid tenant ID format" })
+      .cuid({ message: "Formato de ID de inquilino no válido" })
       .optional(),
 
     createdAt: z
@@ -74,16 +76,16 @@ export const ClientBaseSchema = z
     }
   );
 
-// Create client schema (excludes auto-generated fields)
-export const ClientCreateSchema = ClientBaseSchema.omit({
+// Create customer schema (excludes auto-generated fields)
+export const CustomerCreateSchema = CustomerBaseSchema.omit({
   id: true,
   tenantId: true,
   createdAt: true,
   updatedAt: true,
 });
 
-// Update client schema (all fields optional except those that shouldn't change)
-export const ClientUpdateSchema = ClientBaseSchema.partial().omit({
+// Update customer schema (all fields optional except those that shouldn't change)
+export const CustomerUpdateSchema = CustomerBaseSchema.partial().omit({
   id: true,
   tenantId: true,
   createdAt: true,
@@ -91,8 +93,8 @@ export const ClientUpdateSchema = ClientBaseSchema.partial().omit({
 });
 
 // Type exports
-export type ClientBase = z.infer<typeof ClientBaseSchema>;
-export type ClientCreate = z.infer<typeof ClientCreateSchema>;
-export type ClientUpdate = z.infer<typeof ClientUpdateSchema>;
-export type ClientReponse = ClientBase;
-export type ClientFormInputs = z.infer<typeof ClientCreateSchema>;
+export type CustomerBase = z.infer<typeof CustomerBaseSchema>;
+export type CustomerCreate = z.infer<typeof CustomerCreateSchema>;
+export type CustomerUpdate = z.infer<typeof CustomerUpdateSchema>;
+export type CustomerReponse = CustomerBase;
+export type CustomerFormInputs = z.infer<typeof CustomerCreateSchema>;

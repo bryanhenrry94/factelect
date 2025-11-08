@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useForm, Controller } from "react-hook-form";
 import {
-  Container,
   Box,
   Typography,
   Stack,
@@ -34,17 +33,15 @@ import {
   CreditCard,
   PlusCircle,
   Delete,
-  Trash2,
   CodeXml,
   FileText,
-  Divide,
 } from "lucide-react";
 import CustomRow from "@/components/invoice/custom-row";
 import { taxOptions } from "@/constants/tax";
 import { AlertService } from "@/lib/alerts";
 import type { UpdateInvoice } from "@/lib/validations/invoice";
 import { InvoiceItem } from "@/lib/validations/invoice-item";
-import { getClientsByTenant } from "@/app/actions/client";
+import { getCustomersByTenant } from "@/app/actions/customer";
 import {
   createProduct,
   getAllProducts,
@@ -66,7 +63,7 @@ import { getTenantById } from "@/app/actions/tenant";
 import { InvoiceTotals } from "@/components/invoice/totals";
 import { sriPaymentMethods } from "@/constants/sri";
 import { InvoicePaymentMethod } from "@/lib/validations/invoice-payment-method";
-import ClientFormDialog from "@/components/client/client-form-dialog";
+import CustomerFormDialog from "@/components/customer/customer-form-dialog";
 import { useParams, useRouter } from "next/navigation";
 import { generateXmlSRI } from "@/app/actions/sri-document";
 import { pdf } from "@react-pdf/renderer";
@@ -85,7 +82,7 @@ interface InvoiceFormInputs {
   numDocumento: string;
   issueDate: string;
   dueDate: string;
-  clientId: string;
+  customerId: string;
   description: string;
 }
 
@@ -137,7 +134,7 @@ export default function InvoiceEditPage() {
         numDocumento: "",
         issueDate: new Date().toISOString().split("T")[0],
         dueDate: new Date().toISOString().split("T")[0],
-        clientId: "",
+        customerId: "",
         description: "",
       },
     });
@@ -150,7 +147,7 @@ export default function InvoiceEditPage() {
       // Cargar clientes, productos, configuración SRI y datos del inquilino
       const [clientRes, productRes, tenantRes, sriConfigRes, invoiceRes] =
         await Promise.all([
-          getClientsByTenant(session.user.tenantId),
+          getCustomersByTenant(session.user.tenantId),
           getAllProducts(session.user.tenantId),
           getTenantById(session.user.tenantId),
           getTenantSriConfig(session.user.tenantId),
@@ -192,7 +189,7 @@ export default function InvoiceEditPage() {
           dueDate: new Date(invoiceRes.data.dueDate)
             .toISOString()
             .split("T")[0],
-          clientId: invoiceRes.data.clientId,
+          customerId: invoiceRes.data.customerId,
           description: invoiceRes.data.description || "",
         });
 
@@ -245,7 +242,7 @@ export default function InvoiceEditPage() {
 
   const loadClients = async () => {
     if (!session?.user?.tenantId) return;
-    const response = await getClientsByTenant(session.user.tenantId);
+    const response = await getCustomersByTenant(session.user.tenantId);
     if (response.success) setClients(response.data);
   };
 
@@ -299,7 +296,7 @@ export default function InvoiceEditPage() {
         .reduce((acc, curr) => acc + curr, 0);
 
       const invoice: UpdateInvoice = {
-        clientId: data.clientId,
+        customerId: data.customerId,
         tenantId: session?.user?.tenantId || "",
         emissionPointId: data.emissionPointId,
         sequential: parseInt(data.numDocumento, 10),
@@ -612,7 +609,7 @@ export default function InvoiceEditPage() {
               />
               <Stack spacing={2} direction={"row"} alignItems="center">
                 <Controller
-                  name="clientId"
+                  name="customerId"
                   control={control}
                   render={({ field: { onChange, value } }) => (
                     <Autocomplete
@@ -876,11 +873,11 @@ export default function InvoiceEditPage() {
       </Paper>
 
       {/* DIALOGO FORMULARIO */}
-      <ClientFormDialog
+      <CustomerFormDialog
         open={openClientDialog}
         onClose={() => setOpenClientDialog(false)}
         onSuccess={loadClients}
-        editingClient={null}
+        editingCustomer={null}
         tenantId={session?.user?.tenantId ?? ""}
         setError={setError}
       />
