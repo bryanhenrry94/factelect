@@ -133,6 +133,7 @@ enum InvoiceStatus {
   DRAFT        // Borrador, editable
   SIGNED       // Firmada digitalmente
   SENT         // Enviada al SRI
+  PENDING_AUTHORIZATION // En espera de autorización del SRI
   AUTHORIZED   // Autorizada por el SRI
   REJECTED     // Rechazada por el SRI
   CANCELED     // Anulada o cancelada por el emisor
@@ -168,7 +169,7 @@ model Invoice {
   pdfFilePath                                              String?       @map("pdf_file_path") // Ruta o URL del PDF generado
   pdfFileUrl                                               String?       @map("pdf_file_url") // URL pública del PDF generado
   sriResponse                                              Json?         @map("sri_response") // Guarda respuesta completa del SRI (estado, mensajes, etc.)
-
+  sriError                                                 String?       @map("sri_error") // Guarda mensaje de error en caso de fallo con el SRI
   //                                                       Auditoría
   createdAt                                                DateTime      @map("created_at")                                                                 @default(now())
   updatedAt                                                DateTime      @map("updated_at")                                                                 @updatedAt

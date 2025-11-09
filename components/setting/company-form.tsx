@@ -99,7 +99,7 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
           {/* Nombre legal */}
           <Grid size={{ xs: 12, md: 6 }}>
             <Typography variant="body1" gutterBottom>
-              Nombre Legal
+              Nombre / Razón Social
             </Typography>
             <Typography variant="caption" color="textSecondary" gutterBottom>
               El nombre oficial de tu empresa según registros legales.
@@ -108,7 +108,7 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
-              label="Nombre Legal"
+              label="Nombre / Razón Social"
               placeholder="Ej: Mi Empresa S.A."
               {...register("name")}
               error={!!errors.name}

@@ -47,7 +47,7 @@ export async function sendPasswordResetEmail(email: string) {
       },
     });
 
-    const resetLink = `${process.env.NEXT_PUBLIC_ROOT_DOMAIN}/auth/reset-password?token=${resetToken}`;
+    const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password?token=${resetToken}`;
 
     console.log("Reset link:", resetLink); // Para propósitos de depuración
 

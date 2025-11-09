@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Image,
 } from "@react-pdf/renderer";
+import { generateBarcodeBase64 } from "@/lib/barcode";
 
 // Estilos optimizados
 const styles = StyleSheet.create({
@@ -71,6 +72,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 10,
     textAlign: "right",
+  },
+  barcode: {
+    width: 250,
+    height: 40,
+    alignSelf: "center",
+    marginTop: 5,
+    marginBottom: 5,
   },
 });
 
@@ -152,170 +160,182 @@ interface InvoicePDFProps {
 const formatMoney = (n: number) =>
   `$${n.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
 
-const InvoicePDF: React.FC<InvoicePDFProps> = ({ factura }) => (
-  <Document>
-    <Page size="A4" style={styles.page}>
-      {/* Encabezado */}
-      <View style={[styles.rowBetween, styles.section]}>
-        {/* Emisor */}
-        <View style={{ width: "49%" }}>
-          <Image style={styles.logo} src={factura.emisor.logoUrl} />
-          <View style={styles.grayBox}>
-            <Text style={styles.label}>
-              Emisor: {factura.emisor.razonSocial}
-            </Text>
-            <Text>RUC: {factura.emisor.ruc}</Text>
-            <Text>Matriz: {factura.emisor.direccionMatriz}</Text>
-            <Text>Correo: {factura.emisor.correo}</Text>
-            <Text>Teléfono: {factura.emisor.telefono}</Text>
+const InvoicePDF: React.FC<InvoicePDFProps> = ({ factura }) => {
+  const barcodeImage = generateBarcodeBase64(
+    factura.infoTributaria.claveAcceso
+  );
+
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        {/* Encabezado */}
+        <View style={[styles.rowBetween, styles.section]}>
+          {/* Emisor */}
+          <View style={{ width: "49%" }}>
+            <Image style={styles.logo} src={factura.emisor.logoUrl} />
+            <View style={styles.grayBox}>
+              <Text style={styles.label}>
+                Emisor: {factura.emisor.razonSocial}
+              </Text>
+              <Text>RUC: {factura.emisor.ruc}</Text>
+              <Text>Matriz: {factura.emisor.direccionMatriz}</Text>
+              <Text>Correo: {factura.emisor.correo}</Text>
+              <Text>Teléfono: {factura.emisor.telefono}</Text>
+              <Text>
+                Obligado a llevar contabilidad:{" "}
+                {factura.emisor.obligadoContabilidad}
+              </Text>
+              <Text style={styles.label}>{factura.emisor.regimenRimpe}</Text>
+            </View>
+          </View>
+
+          {/* Información tributaria */}
+          <View style={{ width: "49%" }}>
+            <View style={[styles.grayBox, { marginBottom: 5 }]}>
+              <Text style={styles.title}>FACTURA</Text>
+              <Text style={{ textAlign: "center" }}>
+                No.{factura.infoTributaria.estab}-
+                {factura.infoTributaria.ptoEmi}-
+                {factura.infoTributaria.secuencial}
+              </Text>
+            </View>
+            <View style={styles.grayBox}>
+              <Text style={styles.label}>Número de Autorización:</Text>
+              <Text style={{ fontSize: 9 }}>
+                {factura.autorizacion.numeroAutorizacion}
+              </Text>
+              <Text style={[styles.label, { marginTop: 5 }]}>
+                Fecha y hora de Autorización:
+              </Text>
+              <Text>{factura.autorizacion.fechaAutorizacion}</Text>
+              <Text>Ambiente: {factura.infoTributaria.ambiente}</Text>
+              <Text>Emisión: {factura.infoTributaria.tipoEmision}</Text>
+              <Text style={[styles.label, { marginTop: 5 }]}>
+                Clave de Acceso:
+              </Text>
+              <Image src={barcodeImage} style={styles.barcode} />
+              <Text style={{ fontSize: 9 }}>
+                {factura.infoTributaria.claveAcceso}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Cliente */}
+        <View style={[styles.grayBox, styles.rowBetween]}>
+          <View style={{ width: "49%" }}>
             <Text>
-              Obligado a llevar contabilidad:{" "}
-              {factura.emisor.obligadoContabilidad}
+              <Text style={styles.label}>Razón Social: </Text>
+              {factura.comprador.razonSocial}
             </Text>
-            <Text style={styles.label}>{factura.emisor.regimenRimpe}</Text>
+            <Text>
+              <Text style={styles.label}>Dirección: </Text>
+              {factura.comprador.direccion}
+            </Text>
+            <Text>
+              <Text style={styles.label}>Fecha Emisión: </Text>
+              {factura.infoFactura.fechaEmision}
+            </Text>
+          </View>
+          <View style={{ width: "49%" }}>
+            <Text>
+              <Text style={styles.label}>RUC/CI: </Text>
+              {factura.comprador.identificacion}
+            </Text>
+            <Text>
+              <Text style={styles.label}>Teléfono: </Text>
+              {factura.comprador.telefono}
+            </Text>
+            <Text>
+              <Text style={styles.label}>Correo: </Text>
+              {factura.comprador.correo}
+            </Text>
           </View>
         </View>
 
-        {/* Información tributaria */}
-        <View style={{ width: "49%" }}>
-          <View style={[styles.grayBox, { marginBottom: 5 }]}>
-            <Text style={styles.title}>FACTURA</Text>
-            <Text style={{ textAlign: "center" }}>
-              No.{factura.infoTributaria.estab}-{factura.infoTributaria.ptoEmi}-
-              {factura.infoTributaria.secuencial}
-            </Text>
+        {/* Detalle */}
+        <View style={styles.section}>
+          <View style={styles.tableHeader}>
+            {[
+              "Código",
+              "Cantidad",
+              "Descripción",
+              "P.Unit",
+              "Descuento",
+              "Total",
+            ].map((header, i) => (
+              <Text
+                key={i}
+                style={[
+                  styles.tableCell,
+                  { flex: 1, fontWeight: "bold", textAlign: "center" },
+                ]}
+              >
+                {header}
+              </Text>
+            ))}
           </View>
-          <View style={styles.grayBox}>
-            <Text style={styles.label}>Número de Autorización:</Text>
-            <Text>{factura.autorizacion.numeroAutorizacion}</Text>
-            <Text style={[styles.label, { marginTop: 5 }]}>
-              Fecha y hora de Autorización:
-            </Text>
-            <Text>{factura.autorizacion.fechaAutorizacion}</Text>
-            <Text>Ambiente: {factura.infoTributaria.ambiente}</Text>
-            <Text>Emisión: {factura.infoTributaria.tipoEmision}</Text>
-            <Text style={[styles.label, { marginTop: 5 }]}>
-              Clave de Acceso:
-            </Text>
-            <Text>{factura.infoTributaria.claveAcceso}</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Cliente */}
-      <View style={[styles.grayBox, styles.rowBetween]}>
-        <View style={{ width: "49%" }}>
-          <Text>
-            <Text style={styles.label}>Razón Social: </Text>
-            {factura.comprador.razonSocial}
-          </Text>
-          <Text>
-            <Text style={styles.label}>Dirección: </Text>
-            {factura.comprador.direccion}
-          </Text>
-          <Text>
-            <Text style={styles.label}>Fecha Emisión: </Text>
-            {factura.infoFactura.fechaEmision}
-          </Text>
-        </View>
-        <View style={{ width: "49%" }}>
-          <Text>
-            <Text style={styles.label}>RUC/CI: </Text>
-            {factura.comprador.identificacion}
-          </Text>
-          <Text>
-            <Text style={styles.label}>Teléfono: </Text>
-            {factura.comprador.telefono}
-          </Text>
-          <Text>
-            <Text style={styles.label}>Correo: </Text>
-            {factura.comprador.correo}
-          </Text>
-        </View>
-      </View>
-
-      {/* Detalle */}
-      <View style={styles.section}>
-        <View style={styles.tableHeader}>
-          {[
-            "Código",
-            "Cantidad",
-            "Descripción",
-            "P.Unit",
-            "Descuento",
-            "Total",
-          ].map((header, i) => (
-            <Text
-              key={i}
-              style={[
-                styles.tableCell,
-                { flex: 1, fontWeight: "bold", textAlign: "center" },
-              ]}
-            >
-              {header}
-            </Text>
+          {factura.detalles.map((item, index) => (
+            <View key={index} style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>
+                {item.codigoPrincipal}
+              </Text>
+              <Text style={[styles.tableCell, { flex: 1, textAlign: "right" }]}>
+                {item.cantidad.toFixed(2)}
+              </Text>
+              <Text style={[styles.tableCell, { flex: 2 }]}>
+                {item.descripcion}
+              </Text>
+              <Text style={[styles.tableCell, { flex: 1, textAlign: "right" }]}>
+                {formatMoney(item.precioUnitario)}
+              </Text>
+              <Text style={[styles.tableCell, { flex: 1, textAlign: "right" }]}>
+                {formatMoney(item.descuento)}
+              </Text>
+              <Text style={[styles.tableCell, { flex: 1, textAlign: "right" }]}>
+                {formatMoney(item.precioTotalSinImpuesto)}
+              </Text>
+            </View>
           ))}
         </View>
-        {factura.detalles.map((item, index) => (
-          <View key={index} style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {item.codigoPrincipal}
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1, textAlign: "right" }]}>
-              {item.cantidad.toFixed(2)}
-            </Text>
-            <Text style={[styles.tableCell, { flex: 2 }]}>
-              {item.descripcion}
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1, textAlign: "right" }]}>
-              {formatMoney(item.precioUnitario)}
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1, textAlign: "right" }]}>
-              {formatMoney(item.descuento)}
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1, textAlign: "right" }]}>
-              {formatMoney(item.precioTotalSinImpuesto)}
-            </Text>
-          </View>
-        ))}
-      </View>
 
-      {/* Totales y formas de pago */}
-      <View style={[styles.rowBetween, styles.section]}>
-        {/* Información adicional */}
-        <View style={{ width: "49%" }}>
-          <View style={styles.grayBox}>
-            <Text style={styles.label}>Información Adicional:</Text>
-            <Text>
-              Por servicios de aplicaciones correspondientes a abril 2025.
-            </Text>
+        {/* Totales y formas de pago */}
+        <View style={[styles.rowBetween, styles.section]}>
+          {/* Información adicional */}
+          <View style={{ width: "49%" }}>
+            <View style={styles.grayBox}>
+              <Text style={styles.label}>Información Adicional:</Text>
+              <Text>-</Text>
+            </View>
+            <View style={styles.grayBox}>
+              <Text style={styles.label}>Formas de Pago:</Text>
+              {factura.infoFactura.pagos.map((pago, i) => (
+                <View key={i} style={{ flexDirection: "row" }}>
+                  <Text style={{ width: 130 }}>{pago.formaPago}</Text>
+                  <Text style={{ width: 70 }}>{formatMoney(pago.total)}</Text>
+                  <Text>
+                    {pago.plazo} {pago.unidadTiempo}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
-          <View style={styles.grayBox}>
-            <Text style={styles.label}>Formas de Pago:</Text>
-            {factura.infoFactura.pagos.map((pago, i) => (
-              <View key={i} style={{ flexDirection: "row" }}>
-                <Text style={{ width: 130 }}>{pago.formaPago}</Text>
-                <Text style={{ width: 70 }}>{formatMoney(pago.total)}</Text>
-                <Text>
-                  {pago.plazo} {pago.unidadTiempo}
+
+          {/* Totales */}
+          <View style={{ width: "49%" }}>
+            {factura.totals.map((total, i) => (
+              <View key={i} style={styles.totalRow}>
+                <Text style={styles.totalLabel}>{total.label}:</Text>
+                <Text style={styles.totalValue}>
+                  {formatMoney(total.value)}
                 </Text>
               </View>
             ))}
           </View>
         </View>
-
-        {/* Totales */}
-        <View style={{ width: "49%" }}>
-          {factura.totals.map((total, i) => (
-            <View key={i} style={styles.totalRow}>
-              <Text style={styles.totalLabel}>{total.label}:</Text>
-              <Text style={styles.totalValue}>{formatMoney(total.value)}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-    </Page>
-  </Document>
-);
+      </Page>
+    </Document>
+  );
+};
 
 export default InvoicePDF;

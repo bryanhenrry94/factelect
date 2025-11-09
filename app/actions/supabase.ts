@@ -1,8 +1,6 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { generateXmlSRI } from "./sri-document";
-import { uuid } from "zod";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -109,4 +107,21 @@ export async function uploadInvoiceXML(
     .getPublicUrl(filePath);
 
   return { success: true, path: filePath, url: publicUrlData.publicUrl };
+}
+
+export async function getXmlSignedByPath(
+  xmlFilePath: string
+): Promise<{ success: boolean; error?: string; xmlSigned?: string }> {
+  const { data, error } = await supabase.storage
+    .from("facturacion")
+    .download(xmlFilePath);
+
+  if (error) {
+    console.error("Error downloading signed XML from Supabase:", error);
+    return { success: false, error: error.message };
+  }
+
+  const xmlSigned = await data.text();
+
+  return { success: true, xmlSigned };
 }

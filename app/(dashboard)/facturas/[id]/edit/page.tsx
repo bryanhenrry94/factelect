@@ -193,66 +193,67 @@ export default function InvoiceEditPage() {
 
   // Cargar datos iniciales
   useEffect(() => {
-    const fetchData = async () => {
-      if (!session?.user?.tenantId) return;
-
-      // Cargar clientes, productos, configuración SRI y datos del inquilino
-      const [clientRes, productRes, tenantRes, sriConfigRes, invoiceRes] =
-        await Promise.all([
-          getCustomersByTenant(session.user.tenantId),
-          getAllProducts(session.user.tenantId),
-          getTenantById(session.user.tenantId),
-          getTenantSriConfig(session.user.tenantId),
-          getInvoice(params.id as string),
-        ]);
-
-      if (clientRes.success) setClients(clientRes.data);
-      if (productRes.success) setProducts(productRes.data || []);
-      if (sriConfigRes.success) setSriConfig(sriConfigRes.data || null);
-      if (tenantRes.success) setTenant(tenantRes.data || null);
-      if (invoiceRes.success && invoiceRes.data) {
-        const emissionPoin = await getEmissionPoint(
-          invoiceRes.data.emissionPointId
-        );
-
-        const establishmentId =
-          emissionPoin.success && emissionPoin.data
-            ? emissionPoin.data.establishmentId
-            : "";
-
-        // Set series
-        if (emissionPoin.success && emissionPoin.data) {
-          const establishmentCode =
-            emissionPoin.data.establishment.code.padStart(3, "0");
-          const emissionPointCode = emissionPoin.data.code.padStart(3, "0");
-          setSerie1(establishmentCode);
-          setSerie2(emissionPointCode);
-          setSequential(String(invoiceRes.data.sequential).padStart(9, "0"));
-        }
-
-        // Load items
-        reset({
-          establishmentId: establishmentId,
-          emissionPointId: invoiceRes.data.emissionPointId,
-          numDocumento: invoiceRes.data.sequential.toString().padStart(8, "0"),
-          issueDate: new Date(invoiceRes.data.issueDate)
-            .toISOString()
-            .split("T")[0],
-          dueDate: new Date(invoiceRes.data.dueDate)
-            .toISOString()
-            .split("T")[0],
-          customerId: invoiceRes.data.customerId,
-          description: invoiceRes.data.description || "",
-          status: invoiceRes.data.status,
-        });
-
-        // Load items and payment methods
-        if (invoiceRes.data.id) loadItems(invoiceRes.data.id);
-        if (invoiceRes.data.id) loadPaymentMethods(invoiceRes.data.id);
-      }
-    };
     fetchData();
   }, [session?.user?.tenantId, params.id, reset]);
+
+  const fetchData = async () => {
+    if (!session?.user?.tenantId) return;
+
+    // Cargar clientes, productos, configuración SRI y datos del inquilino
+    const [clientRes, productRes, tenantRes, sriConfigRes, invoiceRes] =
+      await Promise.all([
+        getCustomersByTenant(session.user.tenantId),
+        getAllProducts(session.user.tenantId),
+        getTenantById(session.user.tenantId),
+        getTenantSriConfig(session.user.tenantId),
+        getInvoice(params.id as string),
+      ]);
+
+    if (clientRes.success) setClients(clientRes.data);
+    if (productRes.success) setProducts(productRes.data || []);
+    if (sriConfigRes.success) setSriConfig(sriConfigRes.data || null);
+    if (tenantRes.success) setTenant(tenantRes.data || null);
+    if (invoiceRes.success && invoiceRes.data) {
+      const emissionPoin = await getEmissionPoint(
+        invoiceRes.data.emissionPointId
+      );
+
+      const establishmentId =
+        emissionPoin.success && emissionPoin.data
+          ? emissionPoin.data.establishmentId
+          : "";
+
+      // Set series
+      if (emissionPoin.success && emissionPoin.data) {
+        const establishmentCode = emissionPoin.data.establishment.code.padStart(
+          3,
+          "0"
+        );
+        const emissionPointCode = emissionPoin.data.code.padStart(3, "0");
+        setSerie1(establishmentCode);
+        setSerie2(emissionPointCode);
+        setSequential(String(invoiceRes.data.sequential).padStart(9, "0"));
+      }
+
+      // Load items
+      reset({
+        establishmentId: establishmentId,
+        emissionPointId: invoiceRes.data.emissionPointId,
+        numDocumento: invoiceRes.data.sequential.toString().padStart(8, "0"),
+        issueDate: new Date(invoiceRes.data.issueDate)
+          .toISOString()
+          .split("T")[0],
+        dueDate: new Date(invoiceRes.data.dueDate).toISOString().split("T")[0],
+        customerId: invoiceRes.data.customerId,
+        description: invoiceRes.data.description || "",
+        status: invoiceRes.data.status,
+      });
+
+      // Load items and payment methods
+      if (invoiceRes.data.id) loadItems(invoiceRes.data.id);
+      if (invoiceRes.data.id) loadPaymentMethods(invoiceRes.data.id);
+    }
+  };
 
   const loadItems = async (invoiceId: string) => {
     try {
@@ -490,7 +491,8 @@ export default function InvoiceEditPage() {
 
         if (res.success) {
           AlertService.showSuccess("Documento autorizado correctamente");
-          router.refresh();
+          // router.push(`/facturas/${params.id}/edit`);
+          await fetchData();
         } else {
           AlertService.showError("Error: " + res.error || "Error desconocido");
         }
@@ -533,7 +535,7 @@ export default function InvoiceEditPage() {
               >
                 Actualizar
               </Button>
-              {watch("status") === "DRAFT" && (
+              {watch("status") !== "AUTHORIZED" && (
                 <Tooltip title="Enviar al SRI">
                   <Button
                     variant="outlined"

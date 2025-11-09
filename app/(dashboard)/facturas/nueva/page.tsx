@@ -24,6 +24,7 @@ import {
   IconButton,
   Autocomplete,
   Divider,
+  Chip,
 } from "@mui/material";
 import {
   Save,
@@ -37,7 +38,7 @@ import {
 import CustomRow from "@/components/invoice/custom-row";
 import { taxOptions } from "@/constants/tax";
 import { AlertService } from "@/lib/alerts";
-import type { CreateInvoice } from "@/lib/validations/invoice";
+import type { CreateInvoice, Invoice } from "@/lib/validations/invoice";
 import { InvoiceItem } from "@/lib/validations/invoice-item";
 import { getCustomersByTenant } from "@/app/actions/customer";
 import {
@@ -65,6 +66,7 @@ import { ProductFormDialog } from "@/components/product/product-form-dialog";
 import { CreateProduct } from "@/lib/validations/product";
 import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { sendToSRI } from "@/app/actions/sri";
 
 interface InvoiceFormInputs {
   establishmentId: string;
@@ -177,14 +179,21 @@ export default function InvoicesNewPage() {
   };
 
   const onSubmit = async (data: InvoiceFormInputs) => {
-    await saveDraft(data);
+    console.log("Data btn1: ", data);
+
+    await saveInvoice(data);
   };
 
   const saveAndSendToSRI = async (invoiceData: InvoiceFormInputs) => {
+    console.log("Data btn2: ", invoiceData);
     // Implementar lógica para guardar y enviar al SRI
-  }
+    await saveInvoice(invoiceData, true);
+  };
 
-  const saveDraft = async (invoiceData: InvoiceFormInputs) => {
+  const saveInvoice = async (
+    invoiceData: InvoiceFormInputs,
+    sendToAuthorize: boolean = false
+  ) => {
     try {
       setError(null);
 
@@ -261,10 +270,30 @@ export default function InvoicesNewPage() {
       const response = await createInvoice(newInvoice, items, paymentMethods);
       if (response.success) {
         AlertService.showSuccess("Factura creada exitosamente.");
+
+        if (sendToAuthorize && response.data) {
+          const responseSri = await sendToSRI(
+            response.data.id,
+            tenant.id ?? ""
+          );
+
+          if (responseSri.success) {
+            AlertService.showSuccess("Factura enviada al SRI exitosamente.");
+          } else {
+            AlertService.showError(
+              `Error al enviar la factura al SRI: ${
+                responseSri.error || "Error desconocido"
+              }`
+            );
+          }
+        }
+
         reset();
         setItems([]);
         setPaymentMethods([]);
         router.push(`/facturas/${response.data?.id}/edit`);
+
+        return response.data || null;
       } else {
         setError(response.error || "Error al crear la factura");
       }
@@ -343,15 +372,22 @@ export default function InvoicesNewPage() {
               mb: 4,
               display: "flex",
               flexDirection: { xs: "column", sm: "row" },
-              justifyContent: "flex-end",
+              justifyContent: "space-between",
               alignItems: "center",
               gap: 2,
             }}
           >
+            <Chip
+              label={
+                sriConfig?.sriEnvironment === "2" ? "Producción" : "Pruebas"
+              }
+              color={sriConfig?.sriEnvironment === "2" ? "primary" : "warning"}
+              variant="outlined"
+            />
             <Stack direction="row" spacing={2}>
               <Button
                 type="submit"
-                variant="contained"
+                variant="outlined"
                 startIcon={<Save size={18} />}
                 disabled={total === 0 || isSubmitting}
               >
@@ -359,7 +395,9 @@ export default function InvoicesNewPage() {
               </Button>
               <Tooltip title="Enviar al SRI">
                 <Button
-                  variant="outlined"
+                  type="button"
+                  onClick={handleSubmit(saveAndSendToSRI)}
+                  variant="contained"
                   startIcon={<Send size={18} />}
                   disabled={total === 0 || isSubmitting}
                 >

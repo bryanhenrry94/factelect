@@ -1,354 +1,307 @@
 "use server";
 import { prisma } from "@/lib/prisma";
 import { generateXmlSRI } from "./sri-document";
-import { sriUrls } from "@/constants/sri";
 import { firmarFactura } from "./firma";
-import axios from "axios";
+import { getXmlSignedByPath } from "./supabase";
+import { enviarComprobanteAlSRI } from "./sri-recepcion";
+import { consultarAutorizacionSRI } from "./sri-autorizacion";
 
 export async function sendToSRI(
   invoiceId: string,
   tenantId: string
 ): Promise<{
   success: boolean;
-  authorizationCode?: string;
+  authorizationNumber?: string;
+  authorizationDate?: Date;
   error?: string;
 }> {
   try {
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      include: {
-        sriConfig: true,
-      },
+      include: { sriConfig: true },
     });
 
-    if (!tenant) {
-      throw new Error("Error de configuración del tenant");
-    }
+    if (!tenant) throw new Error("Tenant no encontrado");
+    if (!tenant.sriConfig)
+      throw new Error("Configuración del SRI no encontrada");
 
-    if (!tenant.sriConfig) {
-      throw new Error("Error de configuración del SRI para el tenant");
-    }
-
-    if (
-      !tenant.sriConfig.p12CertificateUrl ||
-      !tenant.sriConfig.certificatePassword
-    ) {
-      throw new Error("Error de configuración del certificado SRI");
-    }
+    const { p12CertificateUrl, certificatePassword, sriEnvironment } =
+      tenant.sriConfig;
+    if (!p12CertificateUrl || !certificatePassword)
+      throw new Error("Certificado SRI no configurado correctamente");
 
     const invoice = await prisma.invoice.findUnique({
       where: { id: invoiceId },
       include: {
         tenant: true,
         customer: true,
-        emissionPoint: {
-          include: { establishment: true },
-        },
+        emissionPoint: { include: { establishment: true } },
         taxes: true,
-        items: {
-          include: { product: true },
-        },
+        items: { include: { product: true } },
         paymentMethods: true,
       },
     });
 
-    if (!invoice) {
-      throw new Error("Factura no encontrada");
+    if (!invoice) throw new Error("Factura no encontrada");
+
+    // ===============================================
+    // 🧩 1. Generar XML y firmar si está en DRAFT
+    // ===============================================
+    let xmlSigned: {
+      success: boolean;
+      xmlContent?: string;
+      xmlFilePath?: string;
+      xmlFileUrl?: string;
+      error?: string;
+    } = { success: false };
+
+    if (invoice.status === "DRAFT") {
+      const xmlResult = await generateXmlSRI(invoiceId);
+      if (!xmlResult.success || !xmlResult.xml)
+        throw new Error(xmlResult.error || "Error al generar XML");
+
+      const responseSigned = await firmarFactura({
+        certUrl: p12CertificateUrl,
+        certPassword: certificatePassword,
+        xmlDocument: xmlResult.xml,
+        tenantId: tenant.id,
+      });
+
+      if (
+        responseSigned.error?.includes("Keystore") ||
+        responseSigned.error?.includes("password")
+      ) {
+        throw new Error("Contraseña del certificado incorrecta");
+      }
+
+      if (!responseSigned.success)
+        throw new Error(responseSigned.error || "Error al firmar XML");
+
+      // Extraer clave de acceso del XML firmado
+      const accessKeyMatch = responseSigned.xmlSigned?.match(
+        /<claveAcceso>(\d+)<\/claveAcceso>/
+      );
+      const accessKey = accessKeyMatch ? accessKeyMatch[1] : null;
+      if (!accessKey)
+        throw new Error("Clave de acceso no encontrada en el XML firmado");
+
+      // Asignar clave de acceso a la factura en memoria para uso posterior
+      invoice.accessKey = accessKey;
+
+      // Guardar estado firmado
+      await prisma.invoice.update({
+        where: { id: invoiceId },
+        data: {
+          xmlFilePath: responseSigned.xmlFilePath,
+          xmlFileUrl: responseSigned.xmlFileUrl,
+          status: "SIGNED",
+          accessKey,
+        },
+      });
+
+      xmlSigned = {
+        success: true,
+        xmlContent: responseSigned.xmlSigned,
+        xmlFilePath: responseSigned.xmlFilePath,
+        xmlFileUrl: responseSigned.xmlFileUrl,
+      };
     }
 
-    // 1. Construir el XML del comprobante electrónico según las especificaciones del SRI
-    const xmlResult = await generateXmlSRI(invoiceId);
-    if (!xmlResult.success || !xmlResult.xml) {
-      throw new Error(xmlResult.error || "Error al generar XML");
+    // ===============================================
+    // 🧩 2. Si ya está firmado, obtener XML
+    // ===============================================
+    if (invoice.status === "SIGNED") {
+      const resDownloadXml = await getXmlSignedByPath(invoice.xmlFilePath!);
+      if (!resDownloadXml.success || !resDownloadXml.xmlSigned)
+        throw new Error(resDownloadXml.error || "Error al obtener XML firmado");
+
+      xmlSigned = {
+        success: true,
+        xmlContent: resDownloadXml.xmlSigned,
+        xmlFilePath: invoice.xmlFilePath!,
+        xmlFileUrl: invoice.xmlFileUrl!,
+      };
     }
 
-    // 2. Firmar el XML digitalmente usando el certificado P12
-    const parameters = {
-      certUrl: tenant.sriConfig.p12CertificateUrl,
-      certPassword: tenant.sriConfig.certificatePassword,
-      xmlDocument: xmlResult.xml,
-      tenantId: tenant.id,
-    };
+    // ===============================================
+    // 🧩 3. Enviar al SRI (Recepción)
+    // ===============================================
+    const resSriRecep = await enviarComprobanteAlSRI(
+      xmlSigned.xmlContent || "",
+      sriEnvironment as "1" | "2"
+    );
 
-    const xmlSigned = await firmarFactura(parameters);
-    if (
-      !xmlSigned.success ||
-      !xmlSigned.xmlSigned ||
-      !xmlSigned.xmlFilePath ||
-      !xmlSigned.xmlFileUrl
-    ) {
-      throw new Error(xmlSigned.error || "Error al firmar XML");
+    console.log("Respuesta SRI Recepción:", resSriRecep);
+
+    if (!resSriRecep.success) {
+      await prisma.invoice.update({
+        where: { id: invoiceId },
+        data: {
+          status: "PENDING_AUTHORIZATION",
+          sriResponse: JSON.stringify(resSriRecep.raw || resSriRecep),
+          sriError: resSriRecep.error,
+        },
+      });
+      throw new Error("Error en la recepción del SRI: " + resSriRecep.error);
     }
 
-    // Actualizar la factura con la información del XML firmado
+    if (resSriRecep.estado !== "RECIBIDA") {
+      await prisma.invoice.update({
+        where: { id: invoiceId },
+        data: {
+          status: "PENDING_AUTHORIZATION",
+          sriResponse: JSON.stringify(resSriRecep.raw || resSriRecep),
+        },
+      });
+      throw new Error(
+        `Factura no recibida por el SRI. Estado: ${resSriRecep.estado}`
+      );
+    }
+
+    await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: { status: "SENT" },
+    });
+
+    // Espera unos segundos antes de autorizar
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+
+    // ===============================================
+    // 🧩 4. Consultar autorización
+    // ===============================================
+    const resSriAuth = await consultarAutorizacionSRI(
+      invoice.accessKey!,
+      sriEnvironment as "1" | "2"
+    );
+
+    console.log("Respuesta SRI Autorización:", resSriAuth);
+
+    if (!resSriAuth.success) {
+      await prisma.invoice.update({
+        where: { id: invoiceId },
+        data: {
+          status: "PENDING_AUTHORIZATION",
+          sriResponse: JSON.stringify(resSriAuth.raw || resSriAuth),
+          sriError: resSriAuth.error,
+        },
+      });
+      throw new Error("Error al consultar autorización: " + resSriAuth.error);
+    }
+
+    if (resSriAuth.estado !== "AUTORIZADO") {
+      await prisma.invoice.update({
+        where: { id: invoiceId },
+        data: {
+          status: "PENDING_AUTHORIZATION",
+          sriResponse: JSON.stringify(resSriAuth.raw || resSriAuth),
+        },
+      });
+      throw new Error(`Factura no autorizada. Estado: ${resSriAuth.estado}`);
+    }
+
+    // ===============================================
+    // 🧩 5. Factura AUTORIZADA ✅
+    // ===============================================
     await prisma.invoice.update({
       where: { id: invoiceId },
       data: {
-        xmlFilePath: xmlSigned.xmlFilePath,
-        xmlFileUrl: xmlSigned.xmlFileUrl,
-        status: "SIGNED",
+        status: "AUTHORIZED",
+        authorizationNumber: resSriAuth.numeroAutorizacion || "",
+        authorizationDate: resSriAuth.fechaAutorizacion
+          ? new Date(resSriAuth.fechaAutorizacion)
+          : null,
+        sriResponse: JSON.stringify(resSriAuth.raw),
       },
     });
 
-    // 3. Subir el XML firmado al SRI para su validación
-    const urlRecepcionSRI =
-      tenant.sriConfig.sriEnvironment === "1"
-        ? sriUrls.sandbox.recepcion
-        : sriUrls.produccion.recepcion;
-
-    // Convertir XML a base64 como requiere el WSDL
-    // const xmlBase64 = Buffer.from(xmlSigned.xmlSigned).toString("base64");
-
-    const xmlContent = xmlSigned.xmlSigned
-      .replace(/<\?xml.*?\?>/, "") // elimina la cabecera XML
-      .trim();
-
-    const xmlSoap = `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-      xmlns:ws="http://ec.gob.sri.ws.recepcion">
-      <soapenv:Header/>
-      <soapenv:Body>
-        <ws:validarComprobante>
-          <ws:xml><![CDATA[${xmlSigned.xmlSigned}]]></ws:xml>
-        </ws:validarComprobante>
-      </soapenv:Body>
-    </soapenv:Envelope>`;
-
-    console.log("XML SOAP to SRI:", xmlContent);
-
-    const { data } = await axios.post(
-      "https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline",
-      xmlSoap,
-      {
-        headers: {
-          "Content-Type": "text/xml;charset=UTF-8",
-          SOAPAction: "",
-        },
-        timeout: 15000, // opcional, evita cuelgues
-      }
-    );
-
-    console.log("SRI Response Data:", data);
-
-    // // Enviar solicitud SOAP al SRI
-    // const response = await fetch(urlRecepcionSRI, {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "text/xml; charset=utf-8",
-    //     SOAPAction: "",
-    //   },
-    //   body: soapEnvelope,
-    // });
-
-    // console.log("SRI Response Status:", response);
-
-    // if (!response.ok) {
-    //   throw new Error(
-    //     `Error en el servicio SRI: ${response.status} ${response.statusText}`
-    //   );
-    // }
-
-    // const responseText = await response.text();
-
-    // // Parse the SOAP response (simplified parsing)
-    // // In production, you should use a proper XML parser
-    // const isSuccess = responseText.includes("<estado>RECIBIDA</estado>");
-
-    // if (!isSuccess) {
-    //   // Parse SRI error response
-    //   const estadoMatch = responseText.match(/<estado>(.*?)<\/estado>/);
-    //   const estado = estadoMatch ? estadoMatch[1] : "UNKNOWN";
-
-    //   const mensajeMatch = responseText.match(/<mensaje>(.*?)<\/mensaje>/);
-    //   const mensaje = mensajeMatch ? mensajeMatch[1] : "Unknown error from SRI";
-
-    //   const informacionMatch = responseText.match(
-    //     /<informacionAdicional>(.*?)<\/informacionAdicional>/
-    //   );
-    //   const informacionAdicional = informacionMatch ? informacionMatch[1] : "";
-
-    //   const tipoMatch = responseText.match(/<tipo>(.*?)<\/tipo>/);
-    //   const tipo = tipoMatch ? tipoMatch[1] : "ERROR";
-
-    //   const sriResponse = {
-    //     estado,
-    //     mensaje,
-    //     informacionAdicional,
-    //     tipo,
-    //     fullResponse: responseText,
-    //   };
-
-    //   await prisma.invoice.update({
-    //     where: { id: invoiceId },
-    //     data: {
-    //       status: "REJECTED",
-    //       sriResponse: JSON.stringify(sriResponse),
-    //     },
-    //   });
-
-    //   throw new Error(`SRI rechazó la factura: ${mensaje}`);
-    // }
-
-    // // Actualizar el estado de la factura a SENT
-    // await prisma.invoice.update({
-    //   where: { id: invoiceId },
-    //   data: {
-    //     status: "SENT",
-    //   },
-    // });
-
-    // // espera unos segundos antes de consultar
-    // await new Promise((resolve) => setTimeout(resolve, 5000));
-
-    // // 4. Consultar la autorización del comprobante
-    // const urlAutorizacionSRI =
-    //   tenant.sriConfig.sriEnvironment === "1"
-    //     ? sriUrls.sandbox.autorizacion
-    //     : sriUrls.produccion.autorizacion;
-
-    // const accessKey = xmlResult.xml.match(
-    //   /<claveAcceso>(.*?)<\/claveAcceso>/
-    // )?.[1]; // La clave de acceso generada previamente
-
-    // const authSoapEnvelope = `<?xml version="1.0" encoding="UTF-8"?>
-    // <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:aut="http://ec.gob.sri.ws.autorizacion">
-    //   <soap:Header/>
-    //   <soap:Body>
-    //     <aut:autorizacionComprobante>
-    //       <aut:claveAccesoComprobante>${accessKey}</aut:claveAccesoComprobante>
-    //     </aut:autorizacionComprobante>
-    //   </soap:Body>
-    // </soap:Envelope>`;
-
-    // const authResponse = await fetch(urlAutorizacionSRI, {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "text/xml; charset=utf-8",
-    //     SOAPAction: "",
-    //   },
-    //   body: authSoapEnvelope,
-    // });
-
-    // if (!authResponse.ok) {
-    //   throw new Error(
-    //     `Error en el servicio de autorización SRI: ${authResponse.status} ${authResponse.statusText}`
-    //   );
-    // }
-
-    // const authResponseText = await authResponse.text();
-
-    // // Simplified parsing of the authorization response
-    // const isAuthorized = authResponseText.includes(
-    //   "<estado>AUTORIZADO</estado>"
-    // );
-
-    // if (!isAuthorized) {
-    //   const estadoMatch = authResponseText.match(/<estado>(.*?)<\/estado>/);
-    //   const estado = estadoMatch ? estadoMatch[1] : "UNKNOWN";
-
-    //   const mensajeMatch = authResponseText.match(/<mensaje>(.*?)<\/mensaje>/);
-    //   const mensaje = mensajeMatch ? mensajeMatch[1] : "Unknown error from SRI";
-
-    //   await prisma.invoice.update({
-    //     where: { id: invoiceId },
-    //     data: {
-    //       status: "REJECTED",
-    //       sriResponse: JSON.stringify({
-    //         estado,
-    //         mensaje,
-    //         fullResponse: authResponseText,
-    //       }),
-    //     },
-    //   });
-
-    //   throw new Error("Factura no autorizada por el SRI");
-    // }
-
-    // // Extraer el número de autorización y la fecha
-    // const authorizationNumber = authResponseText.match(
-    //   /<numeroAutorizacion>(.*?)<\/numeroAutorizacion>/
-    // )?.[1];
-
-    // if (!authorizationNumber) {
-    //   throw new Error("Authorization number not found in SRI response");
-    // }
-
-    // const authorizationDateStr = authResponseText.match(
-    //   /<fechaAutorizacion>(.*?)<\/fechaAutorizacion>/
-    // )?.[1];
-
-    // let authorizationDate: Date | null = null;
-    // if (authorizationDateStr) {
-    //   authorizationDate = new Date(authorizationDateStr);
-    // }
-
-    // // Actualizar la factura con el estado autorizado y el número de autorización
-    // await prisma.invoice.update({
-    //   where: { id: invoiceId },
-    //   data: {
-    //     status: "AUTHORIZED",
-    //     authorizationNumber: authorizationNumber,
-    //     authorizationDate: authorizationDate,
-    //     sriResponse: JSON.stringify({
-    //       estado: "AUTORIZADO",
-    //       numeroAutorizacion: authorizationNumber,
-    //       fechaAutorizacion: authorizationDateStr,
-    //       fullResponse: authResponseText,
-    //     }),
-    //   },
-    // });
-
     return {
       success: true,
-      authorizationCode: "authorizationNumber",
+      authorizationNumber: resSriAuth.numeroAutorizacion || "",
+      authorizationDate: resSriAuth.fechaAutorizacion
+        ? new Date(resSriAuth.fechaAutorizacion)
+        : undefined,
     };
   } catch (error: any) {
-    console.error("Error al autorizar la factura con el SRI:", error);
+    console.error(
+      "❌ Error al autorizar la factura con el SRI:",
+      error.message
+    );
+
+    await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        status: "PENDING_AUTHORIZATION",
+        sriError: error.message,
+      },
+    });
+
     return {
       success: false,
-      error: error.message,
+      error: error.message || "Error general en el proceso de autorización",
     };
   }
 }
 
-export async function authorizeWithSRI(invoiceId: string): Promise<{
-  success: boolean;
-  authorizationCode?: string;
-  error?: string;
-}> {
-  try {
-    const invoice = await prisma.invoice.findUnique({
-      where: { id: invoiceId },
-      include: {
-        tenant: true,
-        customer: true,
-        emissionPoint: {
-          include: { establishment: true },
-        },
-        taxes: true,
-        items: {
-          include: { product: true },
-        },
-        paymentMethods: true,
-      },
-    });
+export async function retryPendingAuthorizations() {
+  const pendingInvoices = await prisma.invoice.findMany({
+    where: { status: "PENDING_AUTHORIZATION" },
+  });
 
-    if (!invoice) {
-      throw new Error("Invoice not found");
+  for (const invoice of pendingInvoices) {
+    try {
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: invoice.tenantId },
+        include: { sriConfig: true },
+      });
+
+      if (!tenant?.sriConfig) continue;
+
+      const resAuth = await consultarAutorizacionSRI(
+        invoice.accessKey!,
+        tenant.sriConfig.sriEnvironment as "1" | "2"
+      );
+
+      console.log(
+        `Reintentando autorización para factura ${invoice.id}:`,
+        resAuth
+      );
+
+      if (resAuth.success && resAuth.estado === "AUTORIZADO") {
+        await prisma.invoice.update({
+          where: { id: invoice.id },
+          data: {
+            status: "AUTHORIZED",
+            authorizationNumber: resAuth.numeroAutorizacion || "",
+            authorizationDate: resAuth.fechaAutorizacion
+              ? new Date(resAuth.fechaAutorizacion)
+              : null,
+            sriResponse: JSON.stringify(resAuth.raw),
+          },
+        });
+      } else if (resAuth.success && resAuth.estado === "NO AUTORIZADO") {
+        await prisma.invoice.update({
+          where: { id: invoice.id },
+          data: {
+            status: "REJECTED",
+            sriResponse: JSON.stringify(resAuth.raw || resAuth),
+            sriError: resAuth.error || null,
+          },
+        });
+        console.log(`Factura ${invoice.id} no autorizada por el SRI.`);
+      } else {
+        await prisma.invoice.update({
+          where: { id: invoice.id },
+          data: {
+            sriResponse: JSON.stringify(resAuth.raw || resAuth),
+            sriError: resAuth.error || null,
+          },
+        });
+        console.log(
+          `Factura ${invoice.id} aún no autorizada. Estado: ${resAuth.estado}`
+        );
+      }
+    } catch (err) {
+      console.error("❌ Error reintentando autorización:", err);
     }
-
-    // Aquí iría la lógica para autorizar el comprobante con el SRI
-    // Por ahora, simularemos una respuesta exitosa
-
-    const simulatedAuthorizationCode = "0987654321";
-
-    return {
-      success: true,
-      authorizationCode: simulatedAuthorizationCode,
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.message,
-    };
   }
 }

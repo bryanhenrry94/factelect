@@ -6,6 +6,7 @@ import { InvoiceTax } from "@/prisma/generated/prisma";
 import { formatDate } from "@/utils/formatters";
 import { sriDocumentTypes, sriEmissionTypes } from "@/constants/sri";
 import { generateAccessKey } from "@/utils/sri";
+import { identificationOptions } from "@/constants/identification";
 
 export async function generateXmlSRI(invoiceId: string): Promise<{
   success: boolean;
@@ -66,6 +67,15 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
       sriEmissionTypes.NORMAL // Tipo de emisión: 1=Normal
     );
 
+    // Mapear tipo de identificación del comprador al código SRI
+    const tipoIdentificacionComprador = identificationOptions.find(
+      (option) => option.value === invoice.customer.identificationType
+    )?.sriCode;
+
+    if (!tipoIdentificacionComprador) {
+      throw new Error("Tipo de identificación del comprador no válido");
+    }
+
     // Construir el objeto XML
     const xmlObj = {
       factura: {
@@ -74,7 +84,7 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
         infoTributaria: {
           ambiente: sriConfig.sriEnvironment,
           tipoEmision: "1", // Emisión normal
-          razonSocial: invoice.tenant.legalName, // companyName
+          razonSocial: invoice.tenant.name, // companyName
           ruc: invoice.tenant.ruc,
           claveAcceso: accessKey,
           codDoc: sriDocumentTypes.INVOICE,
@@ -87,7 +97,7 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
           fechaEmision: formatDate(invoice.issueDate.toString()),
           dirEstablecimiento: invoice.emissionPoint.establishment.address, // establishmentAddress
           obligadoContabilidad: "SI",
-          tipoIdentificacionComprador: invoice.customer.identificationType, // buyerIdType
+          tipoIdentificacionComprador: tipoIdentificacionComprador, // buyerIdType
           razonSocialComprador: invoice.customer.name, // buyerName
           identificacionComprador: invoice.customer.identification, // buyerId
           totalSinImpuestos: totalWithoutTaxes
@@ -106,10 +116,12 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
           importeTotal: invoice.total,
           moneda: "DOLAR",
           pagos: invoice.paymentMethods.map((method: any) => ({
-            formaPago: method.paymentMethod,
-            total: method.amount,
-            plazo: method.term || "0",
-            unidadTiempo: method.timeUnit || "DÍAS",
+            pago: {
+              formaPago: method.paymentMethod,
+              total: method.amount,
+              plazo: method.term || "0",
+              unidadTiempo: method.timeUnit || "DÍAS",
+            },
           })),
         },
         detalles: {

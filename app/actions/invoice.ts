@@ -498,7 +498,7 @@ export const getInvoiceDataForPDF = async (
     const invoiceData = {
       emisor: {
         logoUrl: invoice.tenant.logoUrl,
-        razonSocial: invoice.tenant.legalName,
+        razonSocial: invoice.tenant.name || invoice.tenant.legalName,
         ruc: invoice.tenant.ruc,
         direccionMatriz: invoice.tenant.address,
         correo: invoice.tenant.contactEmail,

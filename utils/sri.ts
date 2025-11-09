@@ -8,26 +8,23 @@ export const generateAccessKey = (
   numericCode: string,
   emissionType: string
 ): string => {
-  const pad = (num: number, size: number) => {
-    let s = num.toString();
-    while (s.length < size) s = "0" + s;
-    return s;
-  };
+  const pad = (value: string | number, length: number) =>
+    value.toString().padStart(length, "0");
 
   const formattedDate =
     pad(issueDate.getDate(), 2) +
     pad(issueDate.getMonth() + 1, 2) +
-    issueDate.getFullYear().toString().slice(-2);
+    issueDate.getFullYear().toString();
 
   const rawKey =
     formattedDate +
-    documentType +
-    ruc +
-    environment +
-    series +
-    sequential +
-    numericCode +
-    emissionType;
+    pad(documentType, 2) +
+    pad(ruc, 13) +
+    pad(environment, 1) +
+    pad(series, 6) +
+    pad(sequential, 9) +
+    pad(numericCode, 8) +
+    pad(emissionType, 1);
 
   const verifierDigit = calculateVerifierDigit(rawKey);
   return rawKey + verifierDigit;
@@ -43,7 +40,8 @@ const calculateVerifierDigit = (key: string): string => {
     weightIndex = (weightIndex + 1) % weights.length;
   }
 
-  const mod = sum % 11;
-  const verifierDigit = mod === 0 ? 0 : 11 - mod;
+  const mod = 11 - (sum % 11);
+  const verifierDigit = mod === 11 ? 0 : mod === 10 ? 1 : mod;
+
   return verifierDigit.toString();
 };
