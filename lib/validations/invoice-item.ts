@@ -4,7 +4,7 @@ export const invoiceItemSchema = z.object({
   id: z.string().cuid().optional(),
   invoiceId: z.string(),
   productId: z.string(),
-  quantity: z.number().positive().default(1),
+  quantity: z.number().positive(),
   unitPrice: z.number().positive(),
   tax: z.enum([
     "IVA_0",
@@ -15,13 +15,17 @@ export const invoiceItemSchema = z.object({
     "NO_IVA",
     "EXENTO_IVA",
   ]),
-  taxAmount: z.number().min(0).default(0),
-  discountRate: z.number().min(0).max(100).default(0),
-  discountAmount: z.number().min(0).default(0),
+  taxAmount: z.number().min(0),
+  discountRate: z.number().min(0).max(100),
+  discountAmount: z.number().min(0),
   subtotal: z.number().positive(),
+  total: z.number().positive(),
 });
 
-export const createInvoiceItemSchema = invoiceItemSchema.omit({ id: true });
+export const createInvoiceItemSchema = invoiceItemSchema.omit({
+  id: true,
+  invoiceId: true,
+});
 
 export const updateInvoiceItemSchema = invoiceItemSchema
   .partial()

@@ -57,6 +57,7 @@ model Establishment {
   address        String           @map("address")
   sriConfig      SRIConfiguration @relation(fields: [sriConfigId], references: [id])
   emissionPoints EmissionPoint[]
+  invoices       Invoice[]
 
   @@map("establishment")
 }
@@ -145,6 +146,7 @@ model Invoice {
   tenantId                                                 String        @map("tenant_id")
 
   // Datos de emisión
+  establishmentId                                          String        @map("establishment_id") // 🔹 Nuevo campo
   emissionPointId                                          String        @map("emission_point_id") // 🔹 Nuevo campo
   sequential                                               Int           @map("sequential")
   accessKey                                                String?       @map("access_key") // Clave de acceso generada para el SRI
@@ -177,6 +179,7 @@ model Invoice {
 
   //                                                       Relaciones
   tenant                                                   Tenant        @relation(fields: [tenantId], references: [id])
+  establishment                                            Establishment @relation(fields: [establishmentId], references: [id])
   emissionPoint                                            EmissionPoint @relation(fields: [emissionPointId], references: [id])
   customer                                                 Customer      @relation(fields: [customerId], references: [id])
   items          InvoiceItem[] // Productos o servicios
@@ -212,6 +215,7 @@ model InvoiceItem {
   discountRate   Float   @map("discount_rate") // Ej: 0%, 5%, 10% @default(0)
   discountAmount Float   @map("discount_amount")                  @default(0)
   subtotal       Float   @map("subtotal")
+  total          Float   @map("total")
 
   product        Product @relation(fields: [productId], references: [id])
   invoice        Invoice @relation(fields: [invoiceId], references: [id])

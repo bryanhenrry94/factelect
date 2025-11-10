@@ -97,7 +97,7 @@ export async function getProductById(
 
 export async function getAllProducts(
   tenantId: string
-): Promise<{ success: boolean; data?: Product[]; error?: string }> {
+): Promise<{ success: boolean; data: Product[]; error?: string }> {
   try {
     const products = await prisma.product.findMany({
       where: { tenantId },
@@ -107,6 +107,6 @@ export async function getAllProducts(
     return { success: true, data: products };
   } catch (error) {
     console.error("Error fetching products:", error);
-    return { success: false, error: "Error fetching products" };
+    return { success: false, error: "Error fetching products", data: [] };
   }
 }

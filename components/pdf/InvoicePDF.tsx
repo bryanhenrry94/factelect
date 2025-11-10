@@ -161,9 +161,9 @@ const formatMoney = (n: number) =>
   `$${n.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
 
 const InvoicePDF: React.FC<InvoicePDFProps> = ({ factura }) => {
-  const barcodeImage = generateBarcodeBase64(
-    factura.infoTributaria.claveAcceso
-  );
+  // const barcodeImage = generateBarcodeBase64(
+  //   factura.infoTributaria.claveAcceso
+  // );
 
   return (
     <Document>
@@ -213,7 +213,7 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({ factura }) => {
               <Text style={[styles.label, { marginTop: 5 }]}>
                 Clave de Acceso:
               </Text>
-              <Image src={barcodeImage} style={styles.barcode} />
+              {/* <Image src={barcodeImage} style={styles.barcode} /> */}
               <Text style={{ fontSize: 9 }}>
                 {factura.infoTributaria.claveAcceso}
               </Text>

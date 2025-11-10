@@ -13,20 +13,22 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  Chip,
   IconButton,
   Pagination,
   TextField,
 } from "@mui/material";
-import { Plus, Eye, Trash2, Files } from "lucide-react";
+import { Plus, Eye, Trash2, Files, Delete, Edit } from "lucide-react";
 import { InvoiceResponse } from "@/lib/validations/invoice";
 import { useSession } from "next-auth/react";
 import { deleteInvoice, getInvoices } from "@/app/actions/invoice";
 import { AlertService } from "@/lib/alerts";
 import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
+import InvoiceStatusLabel from "@/components/invoice/InvoiceStatusLabel";
+import { useRouter } from "next/navigation";
 
 export default function InvoicesPage() {
+  const router = useRouter();
   const { data: session } = useSession();
   const [invoices, setInvoices] = useState<InvoiceResponse[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -66,6 +68,10 @@ export default function InvoicesPage() {
     }
   };
 
+  const handleEdit = (id: string) => {
+    router.push(`/facturas/${id}`);
+  };
+
   const handlePageChange = (
     _event: React.ChangeEvent<unknown>,
     value: number
@@ -77,8 +83,6 @@ export default function InvoicesPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-
-  console.log("invoices", invoices);
 
   return (
     <PageContainer title="Facturas" description="Crea y gestiona tus facturas">
@@ -104,7 +108,7 @@ export default function InvoicesPage() {
           </Button>
         </Link>
       </Box>
-      
+
       <Box>
         <Card>
           <CardContent sx={{ p: 3 }}>
@@ -145,7 +149,17 @@ export default function InvoicesPage() {
                     {paginatedInvoices.map((invoice) => (
                       <TableRow key={invoice.id}>
                         <TableCell sx={{ fontWeight: "medium" }}>
-                          {invoice.document}
+                          <Typography
+                            variant="body2"
+                            component={Link}
+                            href={`/facturas/${invoice.id}`}
+                            sx={{
+                              textDecoration: "none",
+                              color: "primary.main",
+                            }}
+                          >
+                            {invoice.document}
+                          </Typography>
                         </TableCell>
                         <TableCell>
                           <Box>
@@ -171,27 +185,21 @@ export default function InvoicesPage() {
                         </TableCell>
                         <TableCell>${invoice.total.toFixed(2)}</TableCell>
                         <TableCell>
-                          <Chip
-                            label={invoice.status}
-                            color="primary"
-                            size="small"
-                            sx={{ textTransform: "capitalize" }}
-                          />
+                          <InvoiceStatusLabel status={invoice.status} />
                         </TableCell>
                         <TableCell align="right">
-                          <Link
-                            href={`/facturas/${invoice.id}`}
-                            style={{ textDecoration: "none" }}
-                          >
-                            <IconButton size="small">
-                              <Eye size={16} />
-                            </IconButton>
-                          </Link>
                           <IconButton
-                            size="small"
-                            onClick={() => handleDelete(invoice.id || "")}
+                            color="primary"
+                            onClick={() => handleEdit(invoice.id || "")}
                           >
-                            <Trash2 size={16} />
+                            <Edit />
+                          </IconButton>
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDelete(invoice.id || "")}
+                            disabled={invoice.status !== "DRAFT"}
+                          >
+                            <Delete />
                           </IconButton>
                         </TableCell>
                       </TableRow>

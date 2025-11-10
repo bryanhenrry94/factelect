@@ -3,10 +3,10 @@ import { updateUserProfile } from "@/app/actions/user";
 import PageContainer from "@/components/container/PageContainer";
 import ChangePasswordForm from "@/components/setting/change-password-form";
 import { PageHeader } from "@/components/ui/PageHeader";
+import TabPanel from "@/components/ui/TabPanel";
 import { AlertService } from "@/lib/alerts";
 import {
   Box,
-  Container,
   Typography,
   Button,
   Grid,
@@ -19,7 +19,6 @@ import {
   Tabs,
   Tab,
   Stack,
-  IconButton,
   CardActions,
   Alert,
 } from "@mui/material";
@@ -31,21 +30,6 @@ interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`settings-tabpanel-${index}`}
-      aria-labelledby={`settings-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
 }
 
 const ProfilePage = () => {

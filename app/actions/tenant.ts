@@ -31,12 +31,12 @@ export async function createUser(
 
 export const getTenantById = async (
   id: string
-): Promise<{ success: boolean; data?: Tenant; error?: string }> => {
+): Promise<{ success: boolean; data: Tenant | null; error?: string }> => {
   const tenant = await prisma.tenant.findUnique({
     where: { id },
   });
   if (!tenant) {
-    return { success: false, error: "Tenant not found" };
+    return { success: false, error: "Tenant not found", data: null };
   }
 
   const formattedTenant: Tenant = {

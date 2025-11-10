@@ -11,26 +11,12 @@ import { useSession } from "next-auth/react";
 import { Tenant } from "@/lib/validations/tenant";
 import { PageHeader } from "@/components/ui/PageHeader";
 import PageContainer from "@/components/container/PageContainer";
+import TabPanel from "@/components/ui/TabPanel";
 
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`settings-tabpanel-${index}`}
-      aria-labelledby={`settings-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ pt: 2 }}>{children}</Box>}
-    </div>
-  );
 }
 
 export default function SettingsPage() {

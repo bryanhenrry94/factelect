@@ -4,7 +4,7 @@ export const invoicePaymentMethodSchema = z.object({
   id: z.string().cuid().optional(),
   invoiceId: z.string(),
   paymentMethod: z.string().min(1, "Payment method is required"),
-  term: z.number().int().positive().optional(),
+  term: z.number().int().optional(),
   timeUnit: z.string().optional(),
   amount: z.number().positive("Amount must be greater than 0"),
 });
@@ -12,6 +12,7 @@ export const invoicePaymentMethodSchema = z.object({
 export const createInvoicePaymentMethodSchema = invoicePaymentMethodSchema.omit(
   {
     id: true,
+    invoiceId: true,
   }
 );
 

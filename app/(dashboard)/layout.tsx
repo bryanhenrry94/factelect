@@ -73,7 +73,7 @@ export default function RootLayout({
           {/* End Page */}
           {/* ------------------------------------------- */}
         </Container>
-      </PageWrapper>
+      </PageWrapper>      
     </MainWrapper>
   );
 }

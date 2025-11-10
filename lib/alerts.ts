@@ -35,7 +35,7 @@ export class AlertService {
       icon: "warning",
       buttons: {
         confirm: {
-          text: confirmButtonText,
+          text: confirmButtonText,          
         },
         cancel: {
           text: cancelButtonText,

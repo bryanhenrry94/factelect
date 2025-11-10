@@ -1,34 +1,87 @@
 "use server";
 import { prisma } from "@/lib/prisma";
 import {
-  CreateInvoice,
+  InvoiceForm,
   Invoice,
   InvoiceResponse,
-  UpdateInvoice,
 } from "@/lib/validations/invoice";
-import {
-  InvoiceItem,
-  InvoiceItemResponse,
-} from "@/lib/validations/invoice-item";
+import { InvoiceItemResponse } from "@/lib/validations/invoice-item";
 import { InvoicePaymentMethod } from "@/lib/validations/invoice-payment-method";
 import { formatDate } from "@/utils/formatters";
+import { generateBarcodeBase64 } from "@/lib/barcode";
 
 export const createInvoice = async (
-  invoice: CreateInvoice,
-  items: InvoiceItem[],
-  paymentMethods: InvoicePaymentMethod[]
+  invoice: InvoiceForm,
+  tenantId: string
 ): Promise<{ success: boolean; data?: any; error?: string }> => {
   try {
+    if (!tenantId) throw new Error("El parametro tenantId es obligatorio");
+
+    // validar que el total de la factura sea mayor a cero
+    if (invoice.total <= 0) {
+      return {
+        success: false,
+        error: "El total de la factura debe ser mayor a cero",
+      };
+    }
+
+    // validar que el total de los items sea igual al total de la factura
+    const itemsTotal = invoice.items.reduce((acc, item) => acc + item.total, 0);
+    if (itemsTotal !== invoice.total) {
+      return {
+        success: false,
+        error: "El total de los items no coincide con el total de la factura",
+      };
+    }
+
+    // validar que el total de la factura sea igual a la suma de los metodos de pago
+    const paymentMethodsTotal = invoice.paymentMethods.reduce(
+      (acc, method) => acc + method.amount,
+      0
+    );
+    if (paymentMethodsTotal !== invoice.total) {
+      return {
+        success: false,
+        error:
+          "El total de los métodos de pago no coincide con el total de la factura",
+      };
+    }
+
+    // validar que el sequential sea unico por punto de emision
+    const existingInvoice = await prisma.invoice.findFirst({
+      where: {
+        emissionPointId: invoice.emissionPointId,
+        sequential: invoice.sequential,
+      },
+    });
+    if (existingInvoice) {
+      return {
+        success: false,
+        error:
+          "El número secuencial ya existe para el punto de emisión seleccionado",
+      };
+    }
+
     // Crear la factura
     const newInvoice = await prisma.invoice.create({
       data: {
-        ...invoice,
+        customerId: invoice.customerId,
+        establishmentId: invoice.establishmentId,
+        emissionPointId: invoice.emissionPointId,
+        sequential: invoice.sequential,
+        status: invoice.status,
+        issueDate: invoice.issueDate,
+        term: invoice.term,
+        dueDate: invoice.dueDate,
+        total: invoice.total,
+        description: invoice.description,
+        tenantId: tenantId,
       },
     });
 
     // Crear los items asociados a la factura
-    if (newInvoice && items.length > 0) {
-      const itemsData = items.map((item) => {
+    if (newInvoice && invoice.items.length > 0) {
+      const itemsData = invoice.items.map((item) => {
         return {
           invoiceId: newInvoice.id,
           productId: item.productId,
@@ -39,6 +92,7 @@ export const createInvoice = async (
           discountRate: item.discountRate,
           discountAmount: item.discountAmount,
           subtotal: item.subtotal,
+          total: item.total,
         };
       });
 
@@ -47,12 +101,14 @@ export const createInvoice = async (
       });
     }
 
-    if (newInvoice && paymentMethods.length > 0) {
-      const paymentMethodsData = paymentMethods.map((method) => {
-        const { id, ...methodWithoutId } = method;
+    if (newInvoice && invoice.paymentMethods.length > 0) {
+      const paymentMethodsData = invoice.paymentMethods.map((method) => {
         return {
-          ...methodWithoutId,
           invoiceId: newInvoice.id,
+          paymentMethod: method.paymentMethod,
+          term: method.term,
+          timeUnit: method.timeUnit,
+          amount: method.amount,
         };
       });
 
@@ -62,12 +118,12 @@ export const createInvoice = async (
     }
 
     // guarda InvoiceTax
-    if (newInvoice && items.length > 0) {
+    if (newInvoice && invoice.items.length > 0) {
       // Mapeo de tipos de impuesto a su configuración
       const taxConfig = {
         IVA_0: { code: "2", percentage_code: "0", percentage: 0 },
-        IVA_5: { code: "2", percentage_code: "6", percentage: 5 },
-        IVA_15: { code: "2", percentage_code: "5", percentage: 15 },
+        IVA_5: { code: "2", percentage_code: "5", percentage: 5 },
+        IVA_15: { code: "2", percentage_code: "4", percentage: 15 },
         NO_IVA: { code: "2", percentage_code: "6", percentage: 0 },
         EXENTO_IVA: { code: "2", percentage_code: "7", percentage: 0 },
       };
@@ -75,7 +131,7 @@ export const createInvoice = async (
       // Generar todos los datos de impuestos existentes
       const invoiceTaxes = Object.entries(taxConfig)
         .map(([taxType, { code, percentage_code, percentage }]) => {
-          const filtered = items.filter((item) => item.tax === taxType);
+          const filtered = invoice.items.filter((item) => item.tax === taxType);
           if (filtered.length === 0) return null;
 
           const base = filtered.reduce((sum, item) => sum + item.subtotal, 0);
@@ -114,14 +170,53 @@ export const createInvoice = async (
 
 export const updateInvoice = async (
   id: string,
-  invoiceData: Partial<UpdateInvoice>,
-  items: InvoiceItem[],
-  paymentMethods: InvoicePaymentMethod[]
+  invoice: InvoiceForm
 ): Promise<{ success: boolean; data?: Invoice; error?: string }> => {
   try {
-    const invoice = await prisma.invoice.update({
+    // validar que el total de la factura sea mayor a cero
+    if (invoice.total <= 0) {
+      return {
+        success: false,
+        error: "El total de la factura debe ser mayor a cero",
+      };
+    }
+
+    // validar que el total de los items sea igual al total de la factura
+    const itemsTotal = invoice.items.reduce((acc, item) => acc + item.total, 0);
+    if (itemsTotal !== invoice.total) {
+      return {
+        success: false,
+        error: "El total de los items no coincide con el total de la factura",
+      };
+    }
+
+    // validar que el total de la factura sea igual a la suma de los metodos de pago
+    const paymentMethodsTotal = invoice.paymentMethods.reduce(
+      (acc, method) => acc + method.amount,
+      0
+    );
+    if (paymentMethodsTotal !== invoice.total) {
+      return {
+        success: false,
+        error:
+          "El total de los métodos de pago no coincide con el total de la factura",
+      };
+    }
+
+    const invoiceUpdated = await prisma.invoice.update({
       where: { id },
-      data: invoiceData,
+      data: {
+        customerId: invoice.customerId,
+        establishmentId: invoice.establishmentId,
+        emissionPointId: invoice.emissionPointId,
+        sequential: invoice.sequential,
+        status: invoice.status,
+        issueDate: invoice.issueDate,
+        term: invoice.term,
+        dueDate: invoice.dueDate,
+        total: invoice.total,
+        description: invoice.description,
+      },
     });
 
     // Eliminar items existentes
@@ -130,10 +225,10 @@ export const updateInvoice = async (
     });
 
     // Crear nuevos items
-    if (invoice && items.length > 0) {
-      const itemsData = items.map((item) => {
+    if (invoice && invoice.items.length > 0) {
+      const itemsData = invoice.items.map((item) => {
         return {
-          invoiceId: invoice.id,
+          invoiceId: invoiceUpdated.id,
           productId: item.productId,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
@@ -142,6 +237,7 @@ export const updateInvoice = async (
           discountRate: item.discountRate,
           discountAmount: item.discountAmount,
           subtotal: item.subtotal,
+          total: item.total,
         };
       });
 
@@ -156,12 +252,14 @@ export const updateInvoice = async (
     });
 
     // Crear nuevos métodos de pago
-    if (invoice && paymentMethods.length > 0) {
-      const paymentMethodsData = paymentMethods.map((method) => {
-        const { id, ...methodWithoutId } = method;
+    if (invoice && invoice.paymentMethods.length > 0) {
+      const paymentMethodsData = invoice.paymentMethods.map((method) => {
         return {
-          ...methodWithoutId,
-          invoiceId: invoice.id,
+          invoiceId: invoiceUpdated.id,
+          paymentMethod: method.paymentMethod,
+          term: method.term,
+          timeUnit: method.timeUnit,
+          amount: method.amount,
         };
       });
 
@@ -176,12 +274,12 @@ export const updateInvoice = async (
     });
 
     // guarda InvoiceTax
-    if (invoice && items.length > 0) {
+    if (invoiceUpdated && invoice.items.length > 0) {
       // Mapeo de tipos de impuesto a su configuración
       const taxConfig = {
         IVA_0: { code: "2", percentage_code: "0", percentage: 0 },
-        IVA_5: { code: "2", percentage_code: "6", percentage: 5 },
-        IVA_15: { code: "2", percentage_code: "5", percentage: 15 },
+        IVA_5: { code: "2", percentage_code: "5", percentage: 5 },
+        IVA_15: { code: "2", percentage_code: "4", percentage: 15 },
         NO_IVA: { code: "2", percentage_code: "6", percentage: 0 },
         EXENTO_IVA: { code: "2", percentage_code: "7", percentage: 0 },
       };
@@ -189,14 +287,14 @@ export const updateInvoice = async (
       // Generar todos los datos de impuestos existentes
       const invoiceTaxes = Object.entries(taxConfig)
         .map(([taxType, { code, percentage_code, percentage }]) => {
-          const filtered = items.filter((item) => item.tax === taxType);
+          const filtered = invoice.items.filter((item) => item.tax === taxType);
           if (filtered.length === 0) return null;
 
           const base = filtered.reduce((sum, item) => sum + item.subtotal, 0);
           const amount = (base * percentage) / 100;
 
           return {
-            invoiceId: invoice.id,
+            invoiceId: id,
             code: code,
             percentage_code: percentage_code,
             base,
@@ -211,19 +309,7 @@ export const updateInvoice = async (
       );
     }
 
-    // Formatear la respuesta
-    const formattedInvoice: Invoice = {
-      ...invoice,
-      status: invoice.status as
-        | "DRAFT"
-        | "SIGNED"
-        | "SENT"
-        | "AUTHORIZED"
-        | "REJECTED"
-        | "CANCELED",
-    };
-
-    return { success: true, data: formattedInvoice };
+    return { success: true, data: invoiceUpdated };
   } catch (error) {
     console.error("Error updating invoice:", error);
     return { success: false, error: "Error updating invoice" };

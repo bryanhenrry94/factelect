@@ -1,37 +1,47 @@
-import { email, z } from "zod";
+import { $Enums } from "@/prisma/generated/prisma";
+import { z } from "zod";
+import { createInvoiceItemSchema } from "./invoice-item";
+import { createInvoicePaymentMethodSchema } from "./invoice-payment-method";
+
+const statusEnum = $Enums.InvoiceStatus;
 
 export const invoiceSchema = z.object({
   id: z.string().cuid().optional(),
-  customerId: z.string().min(1, "Customer ID is required"),
-  tenantId: z.string().min(1, "Tenant ID is required"),
+  customerId: z.string().min(1, "El cliente es obligatorio"),
 
   // Datos de emisión
-  emissionPointId: z.string().min(1, "Emission point ID is required"),
+  establishmentId: z.string().min(1, "El establecimiento es obligatorio"),
+  emissionPointId: z.string().min(1, "El punto de emisión es obligatorio"),
   sequential: z
     .number()
     .int()
-    .positive("Sequential must be a positive integer"),
-  accessKey: z.string().optional().nullable(),
-  authorizationNumber: z.string().optional().nullable(),
-  authorizationDate: z.date().optional().nullable(),
-  status: z
-    .enum(["DRAFT", "SIGNED", "SENT", "AUTHORIZED", "REJECTED", "CANCELED"])
-    .default("DRAFT"),
+    .positive("El número secuencial debe ser positivo"),
+
+  status: z.enum([
+    "DRAFT",
+    "SIGNED",
+    "SENT",
+    "PENDING_AUTHORIZATION",
+    "AUTHORIZED",
+    "REJECTED",
+    "CANCELED",
+  ]),
 
   // Fechas
   issueDate: z.date(),
-  term: z
-    .number()
-    .int()
-    .min(0, "Term must be a non-negative integer")
-    .default(0),
+  term: z.number().int().min(0, "El plazo no puede ser negativo"),
   dueDate: z.date(),
 
   // Totales
-  total: z.number().min(0, "Total must be non-negative").default(0),
+  total: z.number().min(0, "El total de la factura no puede ser negativo"),
 
   // Descripción o observaciones
   description: z.string().optional().nullable(),
+
+  // Datos autorizacion
+  accessKey: z.string().optional().nullable(),
+  authorizationNumber: z.string().optional().nullable(),
+  authorizationDate: z.date().optional().nullable(),
 
   // Archivos electrónicos
   xmlFilePath: z.string().optional().nullable(),
@@ -39,6 +49,8 @@ export const invoiceSchema = z.object({
   pdfFilePath: z.string().optional().nullable(),
   pdfFileUrl: z.string().optional().nullable(),
   sriResponse: z.any().optional().nullable(), // Json type
+
+  tenantId: z.string().min(1, "El tenant es obligatorio"),
 
   // Auditoría
   createdAt: z.date().default(() => new Date()),
@@ -58,11 +70,22 @@ export const InvoiceResponseSchema = invoiceSchema.extend({
 });
 
 // Schema para crear una nueva factura (sin campos auto-generados)
-export const createInvoiceSchema = invoiceSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const createInvoiceSchema = invoiceSchema
+  .omit({
+    id: true,
+    tenantId: true,
+    createdAt: true,
+    updatedAt: true,
+    canceledAt: true,
+  })
+  .extend({
+    items: z
+      .array(createInvoiceItemSchema)
+      .min(1, "El detalle de items es obligatorio"),
+    paymentMethods: z
+      .array(createInvoicePaymentMethodSchema)
+      .min(1, "Debe agregar al menos un método de pago"),
+  });
 
 // Schema para actualizar una factura
 export const updateInvoiceSchema = invoiceSchema.partial().omit({
@@ -75,3 +98,4 @@ export type Invoice = z.infer<typeof invoiceSchema>;
 export type CreateInvoice = z.infer<typeof createInvoiceSchema>;
 export type UpdateInvoice = z.infer<typeof updateInvoiceSchema>;
 export type InvoiceResponse = z.infer<typeof InvoiceResponseSchema>;
+export type InvoiceForm = z.infer<typeof createInvoiceSchema>;

@@ -5,8 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   Typography,
   Grid,
   Divider,

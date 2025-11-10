@@ -13,9 +13,7 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" },
         subdomain: { label: "Subdomain", type: "text" },
       },
-      async authorize(credentials, req) {
-        console.log("Credentials received:", credentials);
-
+      async authorize(credentials, req) {        
         if (
           !credentials?.email ||
           !credentials?.password ||
@@ -33,8 +31,7 @@ export const authOptions: AuthOptions = {
           where: { email: credentials.email, tenantId: tenant?.id },
           include: { tenant: true }, // cargar tenant
         });
-
-        console.log("User found:", user);
+        
         if (!user) return null;
 
         const isValid = await bcrypt.compare(

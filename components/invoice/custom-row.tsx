@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useEffect } from "react";
+import React, { memo, useState, useCallback, useEffect } from "react";
 import {
   TableRow,
   TableCell,
@@ -8,6 +8,9 @@ import {
   Stack,
 } from "@mui/material";
 import { PlusCircle, Delete } from "lucide-react";
+import { Controller, useFieldArray, useFormContext } from "react-hook-form";
+import { taxOptions } from "@/constants/tax";
+import { getProductById } from "@/app/actions";
 
 const taxRates: Record<string, number> = {
   IVA_0: 0,
@@ -20,14 +23,10 @@ const taxRates: Record<string, number> = {
 };
 
 interface CustomRowProps {
-  item: any;
+  field: any;
   index: number;
   products: any[];
-  taxOptions: { label: string; value: string; code: string }[];
-  setItems: React.Dispatch<React.SetStateAction<any[]>>;
-  getProductById: (id: string) => Promise<any>;
-  onDelete: (index: number) => void;
-  onOpenModal: () => void;
+  remove: (index: number) => void;
 }
 
 /**
@@ -37,194 +36,199 @@ interface CustomRowProps {
  * - Actualiza el array padre solo cuando es necesario.
  */
 const CustomRow: React.FC<CustomRowProps> = memo(
-  ({
-    item,
-    index,
-    products,
-    taxOptions,
-    setItems,
-    getProductById,
-    onDelete,
-    onOpenModal,
-  }) => {
-    const [localItem, setLocalItem] = useState(item);
+  ({ field, index, products, remove }) => {
+    const {
+      control,
+      formState: { errors },
+      watch,
+      setValue,
+    } = useFormContext(); // <- accedemos al contexto del formulario
 
-    // 🔁 Sincroniza cuando el padre cambia (por ejemplo, reset form)
-    useEffect(() => {
-      setLocalItem(item);
-    }, [item]);
+    // const items = watch("items");
+    // console.log("items: ", items);
 
-    const updateParent = useCallback(
-      (updated: any) => {
-        setItems((prev) => {
-          const newItems = [...prev];
-          newItems[index] = updated;
-          return newItems;
-        });
-      },
-      [index, setItems]
-    );
+    const handleChangeProduct = async (productId: string) => {
+      const productResponse = await getProductById(productId);
+      if (productResponse.success && productResponse.data) {
+        const product = productResponse.data;
 
-    // ✅ Cálculo de totales y descuentos
-    const recalc = useCallback(
-      (changes: Partial<typeof localItem>) => {
-        const updated = { ...localItem, ...changes };
-        const quantity = Number(updated.quantity) || 1;
-        const unitPrice = Number(updated.unitPrice) || 0;
-        const discountRate = Number(updated.discountRate) || 0;
-        const discountAmount = unitPrice * quantity * (discountRate / 100);
-        const subtotal = unitPrice * quantity - discountAmount;
+        setValue(`items.${index}.unitPrice`, product.price);
+        setValue(`items.${index}.tax`, product.tax);
+        setValue(`items.${index}.quantity`, 1);
+      }
+    };
 
-        const taxRate = taxRates[updated.tax] || 0;
-        const taxAmount = subtotal * taxRate;
-        // const total = subtotal + taxAmount;
+    // Calcular totales automáticamente con react-hook-form watch
+    const quantity = watch(`items.${index}.quantity`) ?? 0;
+    const unitPrice = watch(`items.${index}.unitPrice`) ?? 0;
+    const discountRate = watch(`items.${index}.discountRate`) ?? 0;
+    const tax = watch(`items.${index}.tax`) || "IVA_0";
 
-        const newItem = {
-          ...updated,
-          discountAmount,
-          subtotal,
-          taxAmount,
-          // total,
-        };
-
-        setLocalItem(newItem);
-        updateParent(newItem);
-      },
-      [localItem, updateParent]
-    );
-
-    const handleChangeItem = useCallback(
-      async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const value = event.target.value;
-        const response = await getProductById(value);
-
-        if (response.success && response.data) {
-          const product = response.data;
-          recalc({
-            productId: product.id ?? "",
-            unitPrice: product.price ?? 0,
-            tax: product.tax ?? "IVA_0",
-          });
-        }
-      },
-      [recalc, getProductById]
-    );
-
-    const handleChange = useCallback(
-      (field: keyof typeof localItem) =>
-        (event: React.ChangeEvent<HTMLInputElement>) => {
-          const value =
-            field === "discountRate" ||
-            field === "unitPrice" ||
-            field === "quantity"
-              ? parseFloat(event.target.value) || 0
-              : event.target.value;
-
-          recalc({ [field]: value });
-        },
-      [recalc]
-    );
-
-    const taxRate = taxRates[localItem.tax] || 0;
+    const subtotal = quantity * unitPrice;
+    const discountAmount = (subtotal * discountRate) / 100;
+    const subtotalAfterDiscount = subtotal - discountAmount;
+    const taxRate = taxRates[tax] || 0;
     const totalWithTax =
-      (localItem.subtotal ?? 0) + (localItem.subtotal ?? 0) * taxRate;
+      subtotalAfterDiscount + subtotalAfterDiscount * taxRate;
+
+    // Actualizar los valores calculados en el formulario
+    useEffect(() => {
+      setValue(`items.${index}.taxAmount`, subtotalAfterDiscount * taxRate);
+      setValue(`items.${index}.discountRate`, discountRate);
+      setValue(`items.${index}.discountAmount`, discountAmount);
+      setValue(`items.${index}.subtotal`, subtotalAfterDiscount);
+      setValue(`items.${index}.total`, totalWithTax);
+    }, [
+      discountAmount,
+      subtotalAfterDiscount,
+      taxRate,
+      totalWithTax,
+      index,
+      setValue,
+    ]);
 
     return (
-      <TableRow>
+      <TableRow
+        sx={{
+          "& td, & th": {
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            borderRight: "1px solid",
+            "&:last-child": {
+              borderRight: 0,
+            },
+          },
+        }}
+      >
         <TableCell>
           <Stack direction="row" gap={2}>
-            <TextField
-              fullWidth
-              size="small"
-              select
-              sx={{ width: 200 }}
-              value={localItem.productId || ""}
-              onChange={handleChangeItem}
-            >
-              {products.map((product) => (
-                <MenuItem key={product.id} value={product.id}>
-                  {product.description}
-                </MenuItem>
-              ))}
-            </TextField>
-            <IconButton onClick={onOpenModal} color="primary">
+            <Controller
+              control={control}
+              name={`items.${index}.productId`}
+              render={({ field }) => (
+                <TextField
+                  fullWidth
+                  size="small"
+                  select
+                  sx={{ width: 200 }}
+                  value={field.value || ""}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    handleChangeProduct(e.target.value);
+                  }}
+                >
+                  {products.map((product) => (
+                    <MenuItem key={product.id} value={product.id}>
+                      {product.description}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
+
+            <IconButton onClick={() => {}} color="primary">
               <PlusCircle />
             </IconButton>
           </Stack>
         </TableCell>
-
         <TableCell>
-          <TextField
-            type="number"
-            fullWidth
-            size="small"
-            value={localItem.quantity ?? 1}
-            onChange={handleChange("quantity")}
-            slotProps={{
-              htmlInput: {
-                min: 0,
-                step: "0.01", // permite decimales
-              },
-            }}
+          <Controller
+            control={control}
+            name={`items.${index}.quantity`}
+            render={({ field }) => (
+              <TextField
+                type="number"
+                fullWidth
+                size="small"
+                value={field.value ?? 1}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  field.onChange(isNaN(value) ? 0 : value);
+                }}
+                slotProps={{
+                  htmlInput: {
+                    min: 0,
+                    step: "0.01", // permite decimales
+                  },
+                }}
+              />
+            )}
           />
         </TableCell>
-
         <TableCell>
-          <TextField
-            type="number"
-            fullWidth
-            size="small"
-            value={localItem.unitPrice ?? 0}
-            onChange={handleChange("unitPrice")}
-            slotProps={{
-              htmlInput: {
-                min: 0,
-                step: "0.01", // permite decimales
-              },
-            }}
+          <Controller
+            control={control}
+            name={`items.${index}.unitPrice`}
+            render={({ field }) => (
+              <TextField
+                type="number"
+                fullWidth
+                size="small"
+                value={field.value ?? 0}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  field.onChange(isNaN(value) ? 0 : value);
+                }}
+                slotProps={{
+                  htmlInput: {
+                    min: 0,
+                    step: "0.01", // permite decimales
+                  },
+                }}
+              />
+            )}
           />
         </TableCell>
-
         <TableCell>
-          <TextField
-            fullWidth
-            size="small"
-            select
-            value={localItem.tax || ""}
-            onChange={handleChange("tax")}
-          >
-            {taxOptions.map(({ label, value, code }) => (
-              <MenuItem key={code} value={value}>
-                {label}
-              </MenuItem>
-            ))}
-          </TextField>
-        </TableCell>
-
-        <TableCell>
-          <TextField
-            type="number"
-            fullWidth
-            size="small"
-            value={localItem.discountRate ?? 0}
-            onChange={handleChange("discountRate")}
-            slotProps={{
-              htmlInput: {
-                min: 0,
-                max: 100,
-                step: "0.01",
-              },
-            }}
+          <Controller
+            control={control}
+            name={`items.${index}.tax`}
+            render={({ field }) => (
+              <TextField
+                fullWidth
+                size="small"
+                select
+                value={field.value || ""}
+                onChange={field.onChange}
+              >
+                {taxOptions.map(({ label, value, code }) => (
+                  <MenuItem key={code} value={value}>
+                    {label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
           />
         </TableCell>
-
-        <TableCell>{`$${(localItem.discountAmount ?? 0).toFixed(
-          2
-        )}`}</TableCell>
+        <TableCell>
+          <Controller
+            control={control}
+            name={`items.${index}.discountRate`}
+            render={({ field }) => (
+              <TextField
+                type="number"
+                fullWidth
+                size="small"
+                value={field.value ?? 0}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  field.onChange(isNaN(value) ? 0 : value);
+                }}
+                slotProps={{
+                  htmlInput: {
+                    min: 0,
+                    max: 100,
+                    step: "0.01",
+                  },
+                }}
+              />
+            )}
+          />
+        </TableCell>
+        <TableCell>{`$${(discountAmount ?? 0).toFixed(2)}`}</TableCell>
         <TableCell>{`$${totalWithTax.toFixed(2)}`}</TableCell>
-
         <TableCell>
-          <IconButton color="error" onClick={() => onDelete(index)}>
+          <IconButton color="error" onClick={() => remove(index)}>
             <Delete />
           </IconButton>
         </TableCell>

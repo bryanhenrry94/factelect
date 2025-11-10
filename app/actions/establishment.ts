@@ -61,7 +61,7 @@ export const deleteEstablishment = async (
 
 export const getEstablishmentsByTenant = async (
   tenantId: string
-): Promise<{ success: boolean; data?: Establishment[]; error?: string }> => {
+): Promise<{ success: boolean; data: Establishment[]; error?: string }> => {
   try {
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -69,7 +69,7 @@ export const getEstablishmentsByTenant = async (
     });
 
     if (!tenant || !tenant.sriConfig) {
-      return { success: false, error: "Tenant not found." };
+      return { success: false, error: "Tenant not found.", data: [] };
     }
 
     const establishments = await prisma.establishment.findMany({
@@ -78,6 +78,10 @@ export const getEstablishmentsByTenant = async (
 
     return { success: true, data: establishments };
   } catch (error) {
-    return { success: false, error: "Failed to fetch establishments." };
+    return {
+      success: false,
+      error: "Failed to fetch establishments.",
+      data: [],
+    };
   }
 };
