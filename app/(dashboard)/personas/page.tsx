@@ -70,14 +70,14 @@ export default function CustomersPage() {
   const handleDelete = (customerId: string) => {
     AlertService.showConfirm(
       "Confirmar eliminación",
-      "¿Estás seguro de que deseas eliminar este cliente? Esta acción no se puede deshacer.",
+      "¿Estás seguro de que deseas eliminar la persona seleccionada? Esta acción no se puede deshacer.",
       "Eliminar",
       "Cancelar"
     ).then(async (confirmed) => {
       if (confirmed) {
-        // Lógica para eliminar el cliente
+        // Lógica para eliminar la persona
         await deletePerson(customerId);
-        AlertService.showSuccess("Cliente eliminado exitosamente.");
+        AlertService.showSuccess("Persona eliminada exitosamente.");
         await loadPersons();
       }
     });
@@ -104,6 +104,12 @@ export default function CustomersPage() {
         <Button variant="contained" startIcon={<Plus />} onClick={handleAdd}>
           Agregar Persona
         </Button>
+      </Box>
+
+      {/* Filters */}
+      <Box sx={{ mb: 2 }}>
+        {/* Aquí puedes agregar componentes de filtro si es necesario */}
+        
       </Box>
 
       {/* DIALOGO FORMULARIO */}

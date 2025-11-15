@@ -39,6 +39,7 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
   tenantId,
   setError,
 }) => {
+  console.log("Editing Person:", editingPerson);
   const {
     register,
     handleSubmit,

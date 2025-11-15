@@ -78,7 +78,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
     >
       <form onSubmit={handleSubmit(handleFormSubmit)}>
         <DialogTitle>
-          {editingProduct ? "Editar Producto" : "Agregar Nuevo Producto"}
+          {editingProduct ? "Editar Producto" : "Agregar Producto"}
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
