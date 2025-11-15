@@ -4,7 +4,7 @@ import {
   TenantSriConfig,
   UpdateTenantSriConfig,
   updateTenantSriConfigSchema,
-} from "@/lib/validations/tenant-sri-config";
+} from "@/lib/validations/sri-config";
 
 export const getTenantSriConfig = async (
   tenantId: string

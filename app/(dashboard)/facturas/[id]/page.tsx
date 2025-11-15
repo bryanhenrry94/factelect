@@ -203,19 +203,21 @@ const InvoiceViewPage = () => {
                 Cliente
               </Typography>
               <Typography variant="body1" sx={{ fontWeight: "medium" }}>
-                {invoice.customer?.name || "N/A"}
+                {`${invoice.person?.firstName || ""} ${
+                  invoice.person?.lastName || ""
+                }` || "N/A"}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {invoice.customer?.identification || "N/A"}
+                {invoice.person?.identification || "N/A"}
               </Typography>
-              {invoice.customer?.email && (
+              {invoice.person?.email && (
                 <Typography variant="body2" color="text.secondary">
-                  {invoice.customer.email}
+                  {invoice.person.email}
                 </Typography>
               )}
-              {invoice.customer?.phone && (
+              {invoice.person?.phone && (
                 <Typography variant="body2" color="text.secondary">
-                  {invoice.customer.phone}
+                  {invoice.person.phone}
                 </Typography>
               )}
             </Box>

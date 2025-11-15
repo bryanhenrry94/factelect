@@ -1,4 +1,11 @@
-import { Copy, LayoutDashboard, Package, Settings, Users } from "lucide-react";
+import {
+  Banknote,
+  Copy,
+  LayoutDashboard,
+  Package,
+  Settings,
+  Users,
+} from "lucide-react";
 
 import { uniqueId } from "lodash";
 
@@ -20,15 +27,25 @@ const Menuitems = [
   },
   {
     id: uniqueId(),
-    title: "Clientes",
+    title: "Personas",
     icon: Users,
-    href: "/clientes",
+    href: "/personas",
   },
   {
     id: uniqueId(),
     title: "Productos",
     icon: Package,
     href: "/productos",
+  },
+  {
+    navlabel: true,
+    subheader: "TRANSACCIONES",
+  },
+  {
+    id: uniqueId(),
+    title: "Transacciones",
+    icon: Banknote,
+    href: "/transacciones",
   },
   {
     navlabel: true,

@@ -9,24 +9,31 @@ datasource db {
 }
 
 model Tenant {
-  id                  String                                         @id @default(uuid())
-  name                String            @map("name")
-  subdomain           String                                         @unique
-  legalName           String?           @map("legal_name")
-  ruc                 String?
-  phone               String?           @map("phone")
-  contactEmail        String?           @map("contact_email")
-  address             String?           @map("address")
-  logoUrl             String?           @map("logo_url")
-  sriConfig           SRIConfiguration?
-  obligatedAccounting Boolean           @map("obligated_accounting") @default(false)
+  id                   String                                             @id @default(uuid())
+  name                 String                @map("name")
+  subdomain            String                                             @unique
+  legalName            String?               @map("legal_name")
+  ruc                  String?
+  phone                String?               @map("phone")
+  contactEmail         String?               @map("contact_email")
+  address              String?               @map("address")
+  logoUrl              String?               @map("logo_url")
+  sriConfig            SRIConfiguration?
+  obligatedAccounting  Boolean               @map("obligated_accounting") @default(false)
 
-  createdAt           DateTime          @map("created_at")           @default(now())
-  updatedAt           DateTime          @map("updated_at")           @updatedAt
-  users               User[]
-  products            Product[]
-  clients             Customer[]
-  invoices            Invoice[]
+  createdAt            DateTime              @map("created_at")           @default(now())
+  updatedAt            DateTime              @map("updated_at")           @updatedAt
+
+  //                   Relaciones
+  users                User[]
+  products             Product[]
+  persons              Person[]
+  invoices             Invoice[]
+  cashes               Cash[]
+  transactions         Transaction[]
+  payments             Payment[]
+  bankAccounts         BankAccount[]
+  transactionDocuments TransactionDocument[]
 
   @@map("tenant")
 }
@@ -92,29 +99,6 @@ model User {
   @@map("user")
 }
 
-enum UserRole {
-  ADMIN
-  USER
-}
-
-model Customer {
-  id                 String             @map("id")                  @id @default(cuid())
-  identificationType IdentificationType @map("identification_type")
-  identification     String             @map("identification")      @unique
-  name               String             @map("name")
-  email              String             @map("email")               @unique
-  phone              String?            @map("phone")
-  address            String?            @map("address")
-  notes              String?            @map("notes")
-  tenantId           String             @map("tenant_id")
-  createdAt          DateTime           @map("created_at")          @default(now())
-  updatedAt          DateTime           @map("updated_at")          @updatedAt
-  tenant             Tenant             @relation(fields: [tenantId], references: [id])
-  Invoice            Invoice[]
-
-  @@map("customer")
-}
-
 model Product {
   id          String        @map("id")          @id @default(cuid())
   code        String        @map("code")        @unique
@@ -130,19 +114,9 @@ model Product {
   @@map("product")
 }
 
-enum InvoiceStatus {
-  DRAFT        // Borrador, editable
-  SIGNED       // Firmada digitalmente
-  SENT         // Enviada al SRI
-  PENDING_AUTHORIZATION // En espera de autorización del SRI
-  AUTHORIZED   // Autorizada por el SRI
-  REJECTED     // Rechazada por el SRI
-  CANCELED     // Anulada o cancelada por el emisor
-}
-
 model Invoice {
   id                                                       String        @map("id")                                                                         @id @default(cuid())
-  customerId                                               String        @map("customer_id")
+  personId                                                 String        @map("person_id")
   tenantId                                                 String        @map("tenant_id")
 
   // Datos de emisión
@@ -181,13 +155,14 @@ model Invoice {
   tenant                                                   Tenant        @relation(fields: [tenantId], references: [id])
   establishment                                            Establishment @relation(fields: [establishmentId], references: [id])
   emissionPoint                                            EmissionPoint @relation(fields: [emissionPointId], references: [id])
-  customer                                                 Customer      @relation(fields: [customerId], references: [id])
+  person                                                   Person        @relation(fields: [personId], references: [id])
   items          InvoiceItem[] // Productos o servicios
   taxes          InvoiceTax[] // 🔹 relación con impuestos
   paymentMethods InvoicePaymentMethod[] // Formas de pago
+  Payment                                                  Payment[]
 
   @@index([tenantId])
-  @@index([customerId])
+  @@index([personId])
   @@map("invoice")
 }
 
@@ -248,6 +223,128 @@ model PasswordResetToken {
   @@map("password_reset_token")
 }
 
+model Payment {
+  id        String                           @id @default(cuid())
+  invoiceId String        @map("invoice_id")
+  amount    Float
+  date      DateTime                         @default(now())
+  method    PaymentMethod
+  createdAt DateTime      @map("created_at") @default(now())
+
+  tenantId  String        @map("tenant_id")
+  tenant    Tenant        @relation(fields: [tenantId], references: [id])
+  invoice   Invoice       @relation(fields: [invoiceId], references: [id])
+
+  @@map("payment")
+}
+
+model Transaction {
+  id            String                                                                           @id @default(cuid())
+  type          TransactionType
+  method        PaymentMethod
+  issueDate     DateTime              @map("issue_date")
+  reference     String?
+  description   String?
+
+  tenantId      String                @map("tenant_id")
+  tenant        Tenant                @relation(fields: [tenantId], references: [id])
+
+  //            Relations
+  personId      String                @map("person_id")
+  person        Person                @relation(fields: [personId], references: [id])
+
+  // Dynamic relations depending on payment method:
+  cashId        String?               @map("cash_id") // For cash income or payments
+  cash          Cash?                 @relation(fields: [cashId], references: [id])
+
+  bankAccountId String?               @map("bank_account_id") // For transfer income or payments
+  bankAccount   BankAccount?          @relation(fields: [bankAccountId], references: [id])
+
+  // Documents associated (incomes or expenses)
+  documents     TransactionDocument[]
+
+  createdAt     DateTime                                                                         @default(now())
+  updatedAt     DateTime                                                                         @updatedAt
+
+  @@map("transaction")
+}
+
+model TransactionDocument {
+  id            String                             @id @default(cuid())
+  transactionId String      @map("transaction_id")
+  documentId    String      @map("document_id")
+  amount        Float
+  tenantId      String      @map("tenant_id")
+  createdAt     DateTime    @map("created_at")     @default(now())
+  updatedAt     DateTime    @map("updated_at")     @updatedAt
+
+  tenant        Tenant      @relation(fields: [tenantId], references: [id])
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+}
+
+model Person {
+  id                 String                                         @id @default(cuid())
+  identificationType IdentificationType @map("identification_type")
+  identification     String             @map("identification")      @unique
+  firstName          String             @map("first_name")
+  lastName           String             @map("last_name")
+  email              String             @map("email")               @unique
+  phone              String?            @map("phone")
+  address            String?            @map("address")
+  roles              PersonRole[]                                   @default([])
+
+  tenantId           String             @map("tenant_id")
+  createdAt          DateTime           @map("created_at")          @default(now())
+  updatedAt          DateTime           @map("updated_at")          @updatedAt
+  tenant             Tenant             @relation(fields: [tenantId], references: [id])
+
+  transactions       Transaction[]
+  Invoice            Invoice[]
+
+  @@map("person")
+}
+
+model Cash {
+  id           String                           @id @default(cuid())
+  name         String
+  balance      Float
+  tenantId     String        @map("tenant_id")
+  transactions Transaction[]
+  createdAt    DateTime      @map("created_at") @default(now())
+  updatedAt    DateTime      @map("updated_at") @updatedAt
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+
+  @@map("cash")
+}
+
+model BankAccount {
+  id            String                               @id @default(cuid())
+  name          String
+  accountNumber String        @map("account_number")
+  accountType   String        @map("account_type")
+  bankName      String        @map("bank_name")
+  balance       Float
+  tenantId      String        @map("tenant_id")
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  transactions  Transaction[]
+  createdAt     DateTime      @map("created_at")     @default(now())
+  updatedAt     DateTime      @map("updated_at")     @updatedAt
+
+  @@map("bank_account")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum ReferenceType {
+  INVOICE
+  EXPENSE
+  BANK
+  OTHER
+}
+
 enum IdentificationType {
   RUC
   CEDULA
@@ -265,4 +362,32 @@ enum taxType {
   IVA_15
   NO_IVA
   EXENTO_IVA
+}
+
+enum TransactionType {
+  INCOME // Cobro
+  EXPENSE // Pago
+}
+
+enum PaymentMethod {
+  CASH // Caja
+  TRANSFER // Transferencia
+  PETTY_CASH // Caja chica (solo para pagos)
+  CREDIT_CARD // Tarjeta crédito (solo para pagos)
+}
+
+enum InvoiceStatus {
+  DRAFT // Borrador, editable
+  SIGNED // Firmada digitalmente
+  SENT // Enviada al SRI
+  PENDING_AUTHORIZATION // En espera de autorización del SRI
+  AUTHORIZED // Autorizada por el SRI
+  REJECTED // Rechazada por el SRI
+  CANCELED // Anulada o cancelada por el emisor
+}
+
+enum PersonRole {
+  CLIENT
+  SUPPLIER
+  SELLER
 }

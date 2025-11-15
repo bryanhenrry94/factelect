@@ -65,7 +65,7 @@ export const createInvoice = async (
     // Crear la factura
     const newInvoice = await prisma.invoice.create({
       data: {
-        customerId: invoice.customerId,
+        personId: invoice.personId,
         establishmentId: invoice.establishmentId,
         emissionPointId: invoice.emissionPointId,
         sequential: invoice.sequential,
@@ -206,7 +206,7 @@ export const updateInvoice = async (
     const invoiceUpdated = await prisma.invoice.update({
       where: { id },
       data: {
-        customerId: invoice.customerId,
+        personId: invoice.personId,
         establishmentId: invoice.establishmentId,
         emissionPointId: invoice.emissionPointId,
         sequential: invoice.sequential,
@@ -323,7 +323,7 @@ export const getInvoices = async (
     const invoices = await prisma.invoice.findMany({
       where: { tenantId },
       include: {
-        customer: true,
+        person: true,
         emissionPoint: {
           include: {
             establishment: true,
@@ -342,12 +342,13 @@ export const getInvoices = async (
         | "AUTHORIZED"
         | "REJECTED"
         | "CANCELED",
-      customer: {
-        id: invoice.customer.id,
-        name: invoice.customer.name,
-        identification: invoice.customer.identification,
-        email: invoice.customer.email,
-        phone: invoice.customer.phone,
+      person: {
+        id: invoice.person.id,
+        firstName: invoice.person.firstName,
+        lastName: invoice.person.lastName,
+        identification: invoice.person.identification,
+        email: invoice.person.email,
+        phone: invoice.person.phone,
       },
       document: `${invoice.emissionPoint.establishment.code}-${
         invoice.emissionPoint.code
@@ -382,7 +383,7 @@ export const getInvoice = async (
     const invoice = await prisma.invoice.findUnique({
       where: { id },
       include: {
-        customer: true,
+        person: true,
         emissionPoint: {
           include: {
             establishment: true,
@@ -407,12 +408,13 @@ export const getInvoice = async (
         | "AUTHORIZED"
         | "REJECTED"
         | "CANCELED",
-      customer: {
-        id: invoice.customer.id,
-        name: invoice.customer.name,
-        identification: invoice.customer.identification,
-        email: invoice.customer.email,
-        phone: invoice.customer.phone,
+      person: {
+        id: invoice.person.id,
+        firstName: invoice.person.firstName,
+        lastName: invoice.person.lastName,
+        identification: invoice.person.identification,
+        email: invoice.person.email,
+        phone: invoice.person.phone,
       },
       document: `${invoice.emissionPoint.establishment.code}-${
         invoice.emissionPoint.code
@@ -499,7 +501,7 @@ export const getInvoiceDataForPDF = async (
             sriConfig: true,
           },
         },
-        customer: true,
+        person: true,
         emissionPoint: {
           include: { establishment: true },
         },
@@ -608,11 +610,11 @@ export const getInvoiceDataForPDF = async (
         fechaAutorizacion: invoice.authorizationDate?.toISOString() || "",
       },
       comprador: {
-        razonSocial: invoice.customer.name,
-        identificacion: invoice.customer.identification,
-        direccion: invoice.customer.address || "",
-        telefono: invoice.customer.phone,
-        correo: invoice.customer.email,
+        razonSocial: `${invoice.person.firstName} ${invoice.person.lastName}`,
+        identificacion: invoice.person.identification,
+        direccion: invoice.person.address || "",
+        telefono: invoice.person.phone,
+        correo: invoice.person.email,
       },
       infoFactura: {
         fechaEmision: formatDate(invoice.issueDate.toISOString()),

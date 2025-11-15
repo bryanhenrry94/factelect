@@ -167,13 +167,14 @@ export default function InvoicesPage() {
                               variant="body2"
                               sx={{ fontWeight: "normal" }}
                             >
-                              {invoice.customer?.name || "N/A"}
+                              {`${invoice.person.firstName} ${invoice.person.lastName}` ||
+                                "N/A"}
                             </Typography>
                             <Typography
                               variant="caption"
                               color="text.secondary"
                             >
-                              {invoice.customer?.identification || "N/A"}
+                              {invoice.person?.identification || "N/A"}
                             </Typography>
                           </Box>
                         </TableCell>

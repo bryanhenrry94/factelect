@@ -34,7 +34,7 @@ export async function sendToSRI(
       where: { id: invoiceId },
       include: {
         tenant: true,
-        customer: true,
+        person: true,
         emissionPoint: { include: { establishment: true } },
         taxes: true,
         items: { include: { product: true } },

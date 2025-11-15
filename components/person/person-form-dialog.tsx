@@ -1,11 +1,12 @@
-import { createCustomer, updateCustomer } from "@/app/actions/customer";
+import { createPerson, updatePerson } from "@/app/actions";
 import { identificationOptions } from "@/constants/identification";
 import { AlertService } from "@/lib/alerts";
 import {
-  CustomerCreate,
-  CustomerCreateSchema,
-  CustomerReponse,
-} from "@/lib/validations/customer";
+  CreatePersonInput,
+  createPersonSchema,
+  PersonInput,
+} from "@/lib/validations/person";
+import { getRoleLabel } from "@/utils/person";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
@@ -19,22 +20,22 @@ import {
   Typography,
 } from "@mui/material";
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
-interface CustomerFormDialogProps {
+interface PersonFormDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => Promise<void>;
-  editingCustomer: CustomerReponse | null;
+  editingPerson: PersonInput | null;
   tenantId: string;
   setError: (error: string | null) => void;
 }
 
-const CustomerFormDialog: React.FC<CustomerFormDialogProps> = ({
+const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
   open,
   onClose,
   onSuccess,
-  editingCustomer,
+  editingPerson,
   tenantId,
   setError,
 }) => {
@@ -44,46 +45,49 @@ const CustomerFormDialog: React.FC<CustomerFormDialogProps> = ({
     formState: { errors, isSubmitting },
     reset,
     watch,
-  } = useForm<CustomerCreate>({
-    resolver: zodResolver(CustomerCreateSchema),
-    defaultValues: editingCustomer ?? {
+    control,
+  } = useForm<CreatePersonInput>({
+    resolver: zodResolver(createPersonSchema),
+    defaultValues: editingPerson ?? {
       identificationType: "CEDULA",
       identification: "",
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
       phone: "",
       address: "",
-      notes: "",
+      roles: ["CLIENT"],
     },
   });
 
   // Rellena el formulario si se está editando
   useEffect(() => {
-    if (editingCustomer) {
-      reset(editingCustomer);
+    if (editingPerson) {
+      reset(editingPerson);
     } else {
       reset({
         identificationType: "CEDULA",
         identification: "",
-        name: "",
+        firstName: "",
+        lastName: "",
         email: "",
         phone: "",
         address: "",
-        notes: "",
+        roles: ["CLIENT"],
       });
     }
-  }, [editingCustomer, reset]);
+  }, [editingPerson, reset]);
 
-  const onSubmit = async (data: CustomerCreate) => {
+  const onSubmit = async (data: CreatePersonInput) => {
     setError(null);
 
-    const action = editingCustomer
-      ? await updateCustomer(editingCustomer.id, data)
-      : await createCustomer(data, tenantId);
+    const action = editingPerson
+      ? await updatePerson(editingPerson.id ?? "", data)
+      : await createPerson(data, tenantId);
 
     if (action.success) {
       AlertService.showSuccess(
-        editingCustomer ? "Cliente actualizado" : "Cliente creado"
+        editingPerson ? "Persona actualizado" : "Persona creado"
       );
       await onSuccess();
       onClose();
@@ -96,14 +100,14 @@ const CustomerFormDialog: React.FC<CustomerFormDialogProps> = ({
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogTitle>
-          {editingCustomer ? "Editar Cliente" : "Agregar Cliente"}
+          {editingPerson ? "Editar Persona" : "Agregar Persona"}
         </DialogTitle>
 
         <DialogContent sx={{ display: "grid", gap: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            {editingCustomer
-              ? "Actualiza la información del cliente."
-              : "Agrega un nuevo cliente a tu base de datos."}
+            {editingPerson
+              ? "Actualiza la información de la persona."
+              : "Agrega una nueva persona a tu base de datos."}
           </Typography>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 6 }}>
@@ -133,15 +137,20 @@ const CustomerFormDialog: React.FC<CustomerFormDialogProps> = ({
               />
             </Grid>
           </Grid>
-
           <TextField
-            label="Nombre"
-            {...register("name")}
-            error={!!errors.name}
-            helperText={errors.name?.message}
+            label="Nombres"
+            {...register("firstName")}
+            error={!!errors.firstName}
+            helperText={errors.firstName?.message}
             fullWidth
           />
-
+          <TextField
+            label="Apellidos"
+            {...register("lastName")}
+            error={!!errors.lastName}
+            helperText={errors.lastName?.message}
+            fullWidth
+          />
           <TextField
             label="Correo electrónico"
             type="email"
@@ -150,15 +159,32 @@ const CustomerFormDialog: React.FC<CustomerFormDialogProps> = ({
             helperText={errors.email?.message}
             fullWidth
           />
-
           <TextField label="Teléfono" {...register("phone")} fullWidth />
           <TextField label="Dirección" {...register("address")} fullWidth />
-          <TextField
-            label="Notas"
-            {...register("notes")}
-            multiline
-            rows={3}
-            fullWidth
+
+          <Controller
+            name="roles"
+            control={control}
+            defaultValue={[]} // obligatorio cuando es multiple
+            render={({ field }) => (
+              <TextField
+                select
+                label="Roles"
+                {...field}
+                error={!!errors.roles}
+                helperText={errors.roles?.message}
+                SelectProps={{
+                  multiple: true,
+                }}
+                fullWidth
+              >
+                {["CLIENT", "SUPPLIER", "SELLER"].map((role) => (
+                  <MenuItem key={role} value={role}>
+                    {getRoleLabel(role)}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
           />
         </DialogContent>
 
@@ -167,7 +193,7 @@ const CustomerFormDialog: React.FC<CustomerFormDialogProps> = ({
             Cancelar
           </Button>
           <Button type="submit" variant="contained" disabled={isSubmitting}>
-            {editingCustomer ? "Actualizar" : "Agregar"}
+            {editingPerson ? "Actualizar" : "Agregar"}
           </Button>
         </DialogActions>
       </form>
@@ -175,4 +201,4 @@ const CustomerFormDialog: React.FC<CustomerFormDialogProps> = ({
   );
 };
 
-export default CustomerFormDialog;
+export default PersonFormDialog;

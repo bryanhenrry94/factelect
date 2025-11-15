@@ -1,13 +1,10 @@
-import { $Enums } from "@/prisma/generated/prisma";
 import { z } from "zod";
 import { createInvoiceItemSchema } from "./invoice-item";
 import { createInvoicePaymentMethodSchema } from "./invoice-payment-method";
 
-const statusEnum = $Enums.InvoiceStatus;
-
 export const invoiceSchema = z.object({
   id: z.string().cuid().optional(),
-  customerId: z.string().min(1, "El cliente es obligatorio"),
+  personId: z.string().min(1, "El cliente es obligatorio"),
 
   // Datos de emisión
   establishmentId: z.string().min(1, "El establecimiento es obligatorio"),
@@ -59,9 +56,10 @@ export const invoiceSchema = z.object({
 });
 
 export const InvoiceResponseSchema = invoiceSchema.extend({
-  customer: z.object({
+  person: z.object({
     id: z.string().cuid(),
-    name: z.string(),
+    firstName: z.string(),
+    lastName: z.string(),
     identification: z.string(),
     email: z.string().email().optional().nullable(),
     phone: z.string().optional().nullable(),

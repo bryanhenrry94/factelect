@@ -1,5 +1,5 @@
 export * from "./auth";
-export * from "./customer";
+export * from "./person";
 export * from "./dashboard";
 export * from "./emission-point";
 export * from "./establishment";

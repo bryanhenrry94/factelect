@@ -55,7 +55,7 @@ const initialItemsState: CreateInvoiceItem[] = [
 ];
 
 const initialState: CreateInvoice = {
-  customerId: "",
+  personId: "",
   establishmentId: "",
   emissionPointId: "",
   sequential: 0,
@@ -159,7 +159,7 @@ export default function InvoiceForm({
         console.log("response.data: ", response.data);
 
         const data: CreateInvoice = {
-          customerId: response.data.customerId,
+          personId: response.data.personId,
           establishmentId: response.data.establishmentId,
           emissionPointId: response.data.emissionPointId,
           sequential: response.data.sequential,

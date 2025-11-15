@@ -19,45 +19,52 @@ import {
 import { Edit, Delete, Users, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
 
-import { deleteCustomer, getCustomersByTenant } from "@/app/actions/customer";
-import { CustomerReponse } from "@/lib/validations/customer";
-import ClientFormDialog from "@/components/customer/customer-form-dialog";
+import { deletePerson, getPersonsByTenant } from "@/app/actions/person";
 import { AlertService } from "@/lib/alerts";
 import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PersonFilter } from "@/types";
+import { PersonInput } from "@/lib/validations/person";
+import PersonFormDialog from "@/components/person/person-form-dialog";
+import { getRoleLabel } from "@/utils/person";
 
 export default function CustomersPage() {
   const { data: session } = useSession();
 
-  const [customers, setCustomers] = useState<CustomerReponse[]>([]);
+  const [persons, setPersons] = useState<PersonInput[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingCustomer, setEditingCustomer] =
-    useState<CustomerReponse | null>(null);
+  const [editingPerson, setEditingPerson] = useState<PersonInput | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCustomers = useCallback(async () => {
+  const loadPersons = useCallback(async () => {
     if (!session?.user?.tenantId) return;
-    const response = await getCustomersByTenant(session.user.tenantId);
-    if (response.success) setCustomers(response.data);
+
+    const filter: PersonFilter = {
+      tenantId: session.user.tenantId,
+      role: "CLIENT",
+    };
+
+    const response = await getPersonsByTenant(filter);
+    if (response.success) setPersons(response.data);
   }, [session?.user?.tenantId]);
 
   useEffect(() => {
-    loadCustomers();
-  }, [loadCustomers]);
+    loadPersons();
+  }, [loadPersons]);
 
   const handleAdd = () => {
-    setEditingCustomer(null);
+    setEditingPerson(null);
     setDialogOpen(true);
   };
 
-  const handleEdit = (customer: CustomerReponse) => {
-    setEditingCustomer(customer);
+  const handleEdit = (person: PersonInput) => {
+    setEditingPerson(person);
     setDialogOpen(true);
   };
 
   const handleClose = () => {
     setDialogOpen(false);
-    setEditingCustomer(null);
+    setEditingPerson(null);
   };
 
   const handleDelete = (customerId: string) => {
@@ -69,21 +76,20 @@ export default function CustomersPage() {
     ).then(async (confirmed) => {
       if (confirmed) {
         // Lógica para eliminar el cliente
-        await deleteCustomer(customerId);
+        await deletePerson(customerId);
         AlertService.showSuccess("Cliente eliminado exitosamente.");
-        // Recargar la lista de clientes después de la eliminación
-        await loadCustomers();
+        await loadPersons();
       }
     });
   };
 
   return (
     <PageContainer
-      title="Clientes"
-      description="Administra las relaciones con tus clientes"
+      title="Personas"
+      description="Administra las relaciones de tus contactos"
     >
       {/* HEADER */}
-      <PageHeader title="Clientes" />
+      <PageHeader title="Personas" />
 
       <Box
         sx={{
@@ -94,18 +100,18 @@ export default function CustomersPage() {
           gap: 2,
         }}
       >
-        <TextField label="Buscar clientes" variant="outlined" size="small" />
+        <TextField label="Buscar personas" variant="outlined" size="small" />
         <Button variant="contained" startIcon={<Plus />} onClick={handleAdd}>
-          Agregar Cliente
+          Agregar Persona
         </Button>
       </Box>
 
       {/* DIALOGO FORMULARIO */}
-      <ClientFormDialog
+      <PersonFormDialog
         open={dialogOpen}
         onClose={handleClose}
-        onSuccess={loadCustomers}
-        editingCustomer={editingCustomer}
+        onSuccess={loadPersons}
+        editingPerson={editingPerson}
         tenantId={session?.user?.tenantId ?? ""}
         setError={setError}
       />
@@ -113,14 +119,14 @@ export default function CustomersPage() {
       {/* TABLA */}
       <Card sx={{ mt: 3 }}>
         <CardContent>
-          {customers.length === 0 ? (
+          {persons.length === 0 ? (
             <Box textAlign="center" py={6}>
               <Users />
               <Typography variant="h6" mt={2}>
-                No hay clientes aún
+                No hay personas aún
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Agrega tu primer cliente
+                Agrega la primera persona
               </Typography>
             </Box>
           ) : (
@@ -141,34 +147,40 @@ export default function CustomersPage() {
                     <TableCell>
                       <strong>Teléfono</strong>
                     </TableCell>
+                    <TableCell>
+                      <strong>Rol</strong>
+                    </TableCell>
                     <TableCell align="right">
                       <strong>Acciones</strong>
                     </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {customers.map((customer) => (
+                  {persons.map((person) => (
                     <TableRow
-                      key={customer.id}
+                      key={person.id}
                       hover
                       sx={{
                         "&:last-child td, &:last-child th": { border: 0 },
                       }}
                     >
-                      <TableCell>{customer.identification}</TableCell>
-                      <TableCell>{customer.name}</TableCell>
-                      <TableCell>{customer.email}</TableCell>
-                      <TableCell>{customer.phone || "-"}</TableCell>
+                      <TableCell>{person.identification}</TableCell>
+                      <TableCell>{`${person.firstName} ${person.lastName}`}</TableCell>
+                      <TableCell>{person.email}</TableCell>
+                      <TableCell>{person.phone || "-"}</TableCell>
+                      <TableCell>
+                        {person.roles.map(getRoleLabel).join(", ")}
+                      </TableCell>
                       <TableCell align="right">
                         <IconButton
                           color="primary"
-                          onClick={() => handleEdit(customer)}
+                          onClick={() => handleEdit(person)}
                         >
                           <Edit />
                         </IconButton>
                         <IconButton
                           color="error"
-                          onClick={() => handleDelete(customer.id)}
+                          onClick={() => handleDelete(person.id)}
                         >
                           <Delete />
                         </IconButton>

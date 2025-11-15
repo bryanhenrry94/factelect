@@ -9,12 +9,13 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import InvoiceForm from "@/components/invoice/InvoiceForm";
 
 import {
-  getCustomersByTenant,
+  getPersonsByTenant,
   getEstablishmentsByTenant,
   getTenantSriConfig,
   getAllProducts,
 } from "@/app/actions";
 import { SRIConfiguration } from "@/prisma/generated/prisma";
+import { PersonFilter } from "@/types";
 
 export default function InvoicesEditPage() {
   const { data: session } = useSession();
@@ -28,9 +29,15 @@ export default function InvoicesEditPage() {
 
   useEffect(() => {
     if (!session?.user?.tenantId) return;
+
+    const personFilter: PersonFilter = {
+      tenantId: session.user.tenantId,
+      role: "CLIENT",
+    };
+
     const fetchData = async () => {
       const [c, p, e, s] = await Promise.all([
-        getCustomersByTenant(session.user.tenantId),
+        getPersonsByTenant(personFilter),
         getAllProducts(session.user.tenantId),
         getEstablishmentsByTenant(session.user.tenantId),
         getTenantSriConfig(session.user.tenantId),

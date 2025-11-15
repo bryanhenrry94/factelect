@@ -19,7 +19,7 @@ import {
   CreateTenantSriConfig,
   TenantSriConfig,
   TenantSriConfigInput,
-} from "@/lib/validations/tenant-sri-config";
+} from "@/lib/validations/sri-config";
 import { AlertService } from "@/lib/alerts";
 import { sriEnvironmentOptions } from "@/constants/sri";
 import { Establishment } from "@/lib/validations/establishment";

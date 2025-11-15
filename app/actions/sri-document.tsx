@@ -22,7 +22,7 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
       where: { id: invoiceId },
       include: {
         tenant: true,
-        customer: true,
+        person: true,
         emissionPoint: { include: { establishment: true } },
         taxes: true,
         items: { include: { product: true } },
@@ -68,7 +68,7 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
 
     // === 5. Tipo de identificación del comprador ===
     const buyerIdType = identificationOptions.find(
-      (opt) => opt.value === invoice.customer.identificationType
+      (opt) => opt.value === invoice.person.identificationType
     )?.sriCode;
 
     if (!buyerIdType)
@@ -110,8 +110,8 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
           dirEstablecimiento: invoice.emissionPoint.establishment.address,
           obligadoContabilidad: "SI",
           tipoIdentificacionComprador: buyerIdType,
-          razonSocialComprador: invoice.customer.name,
-          identificacionComprador: invoice.customer.identification,
+          razonSocialComprador: `${invoice.person.firstName} ${invoice.person.lastName}`,
+          identificacionComprador: invoice.person.identification,
           totalSinImpuestos: totalWithoutTaxes.toFixed(2),
           totalDescuento: totalDiscount.toFixed(2),
           totalConImpuestos: {
