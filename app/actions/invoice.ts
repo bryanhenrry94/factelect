@@ -74,6 +74,8 @@ export const createInvoice = async (
         term: invoice.term,
         dueDate: invoice.dueDate,
         total: invoice.total,
+        paidAmount: 0,
+        balance: invoice.total,
         description: invoice.description,
         tenantId: tenantId,
       },
@@ -200,6 +202,19 @@ export const updateInvoice = async (
         success: false,
         error:
           "El total de los métodos de pago no coincide con el total de la factura",
+      };
+    }
+
+    // Validar si tiene transacciones asociadas y no permitir cambiar el estado a DRAFT o SIGNED
+    const associatedTransactions = await prisma.transactionDocument.findFirst({
+      where: { documentId: id },
+    });
+
+    if (associatedTransactions) {
+      return {
+        success: false,
+        error:
+          "No se puede cambiar la factura porque existen transacciones asociadas.",
       };
     }
 

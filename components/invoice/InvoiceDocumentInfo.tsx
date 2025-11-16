@@ -100,13 +100,13 @@ export default function InvoiceDocumentInfo({
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Stack direction="row" spacing={1} alignItems="center">
                 <Controller
-                  name="customerId"
+                  name="personId"
                   control={control}
                   render={({ field: { onChange, value } }) => (
                     <Autocomplete
                       options={clients}
                       getOptionLabel={(option) =>
-                        `[${option.identification}] - ${option.name}`
+                        `[${option.identification}] - ${option.firstName} ${option.lastName}`
                       }
                       value={clients.find((c: any) => c.id === value) || null}
                       onChange={(_, newValue) => onChange(newValue?.id || "")}
@@ -118,9 +118,9 @@ export default function InvoiceDocumentInfo({
                           label="Cliente"
                           size="small"
                           fullWidth
-                          error={!!errors.customerId}
+                          error={!!errors.personId}
                           helperText={
-                            errors.customerId?.message?.toString() || ""
+                            errors.personId?.message?.toString() || ""
                           }
                         />
                       )}

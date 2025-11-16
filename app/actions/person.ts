@@ -82,7 +82,7 @@ export async function getPersonsByTenant(
 ): Promise<{ success: boolean; data: PersonInput[] }> {
   try {
     const persons = await prisma.person.findMany({
-      where: { tenantId: filter.tenantId },
+      where: { tenantId: filter.tenantId, roles: { has: filter.role } },
       orderBy: { createdAt: "desc" },
     });
 
@@ -101,8 +101,8 @@ export async function getPersonsByTenant(
   }
 }
 
-export async function getPersonById(customerId: string) {
+export async function getPersonById(personId: string) {
   return prisma.person.findUnique({
-    where: { id: customerId },
+    where: { id: personId },
   });
 }

@@ -1,4 +1,5 @@
 "use client";
+
 import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
@@ -8,41 +9,73 @@ import {
   Card,
   CardContent,
   IconButton,
-  Paper,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
   TextField,
   Typography,
+  TableContainer,
+  Paper,
+  CircularProgress,
+  Table,
 } from "@mui/material";
-import { Delete, Edit, File, Plus, Table } from "lucide-react";
+import { Delete, Edit, File, Plus } from "lucide-react";
 import React from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { getTransaction, getTransactions } from "@/app/actions";
+import { TransactionInput } from "@/lib/validations";
+import { formatDate } from "@/utils/formatters";
+import { getTransactionTypeLabel } from "@/utils/transaction";
+import { getPaymentMethodLabel } from "@/utils/paymentMethods";
 
-const CashRegistersPage = () => {
-  const [cashRegisters, setCashRegisters] = React.useState<any[]>([]);
+const TransactionsPage = () => {
+  const { data: session } = useSession();
+  const [transactions, setTransactions] = React.useState<TransactionInput[]>(
+    []
+  );
   const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState<boolean>(false);
+  const router = useRouter();
 
-  const handleAdd = () => {
-    // Lógica para agregar una nueva caja
+  const handleAdd = () => router.push("/transacciones/nueva");
+
+  const handleEdit = (t: TransactionInput) => {};
+
+  const handleDelete = (id: string) => {};
+
+  const fetchTransactions = async () => {
+    try {
+      if (!session?.user?.tenantId) return;
+      setLoading(true);
+
+      const res = await getTransactions(session.user.tenantId);
+
+      if (res.success && res.data) {
+        setTransactions(res.data);
+      } else {
+        setTransactions([]);
+      }
+    } catch (err) {
+      setError("No se pudieron obtener las transacciones.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleEdit = (cashRegister: any) => {
-    // Lógica para editar una caja existente
-  };
-
-  const handleDelete = (id: string) => {
-    // Lógica para eliminar una caja
-  };
+  React.useEffect(() => {
+    fetchTransactions();
+  }, [session?.user?.tenantId]);
 
   return (
     <PageContainer
-      title="Movimientos"
-      description="Administra los movimientos de tu negocio"
+      title="Transacciones"
+      description="Administra las transacciones de tu negocio"
     >
-      {/* HEADER */}
-      <PageHeader title="Movimientos" />
+      <PageHeader title="Transacciones" />
 
+      {/* Header actions */}
       <Box
         sx={{
           mb: 2,
@@ -52,83 +85,100 @@ const CashRegistersPage = () => {
           gap: 2,
         }}
       >
-        <TextField label="Buscar movimientos" variant="outlined" size="small" />
+        <TextField
+          label="Buscar transacciones"
+          variant="outlined"
+          size="small"
+          fullWidth={false}
+        />
+
         <Button variant="contained" startIcon={<Plus />} onClick={handleAdd}>
-          Nuevo Movimiento
+          Nueva Transacción
         </Button>
       </Box>
 
-      {/* Card Caja */}
-
-      {/* TABLA */}
-      <Card sx={{ mt: 3 }}>
+      {/* Main content */}
+      <Card sx={{ mt: 2 }}>
         <CardContent>
-          {cashRegisters.length === 0 ? (
+          {loading ? (
+            <Box py={6} textAlign="center">
+              <CircularProgress />
+              <Typography variant="body2" mt={2} color="text.secondary">
+                Cargando transacciones...
+              </Typography>
+            </Box>
+          ) : transactions.length === 0 ? (
             <Box textAlign="center" py={6}>
-              <File />
+              <File size={42} />
               <Typography variant="h6" mt={2}>
-                No hay movimientos aún
+                No hay transacciones registradas
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Agrega tu primer movimiento
+                Agrega tu primera transacción para comenzar
               </Typography>
             </Box>
           ) : (
-            <Box>
-              {/* <TableContainer component={Paper} variant="outlined"> */}
+            <TableContainer component={Paper} elevation={0}>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>
-                      <strong>Identificación</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Nombre</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Correo</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Teléfono</strong>
-                    </TableCell>
-                    <TableCell align="right">
-                      <strong>Acciones</strong>
-                    </TableCell>
+                    {[
+                      "Tipo",
+                      "Método",
+                      "Persona",
+                      "Fecha",
+                      "Referencia",
+                      "Descripción",
+                      "Acciones",
+                    ].map((label) => (
+                      <TableCell key={label} sx={{ fontWeight: 600 }}>
+                        {label}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 </TableHead>
+
                 <TableBody>
-                  {cashRegisters.map((cashRegister) => (
+                  {transactions.map((t) => (
                     <TableRow
-                      key={cashRegister.id}
+                      key={t.id}
                       hover
                       sx={{
-                        "&:last-child td, &:last-child th": { border: 0 },
+                        "&:last-child td": { border: 0 },
+                        "&:nth-of-type(odd)": {
+                          backgroundColor: "rgba(0,0,0,0.015)",
+                        },
                       }}
                     >
-                      <TableCell>{cashRegister.identification}</TableCell>
-                      <TableCell>{cashRegister.name}</TableCell>
-                      <TableCell>{cashRegister.email}</TableCell>
-                      <TableCell>{cashRegister.phone || "-"}</TableCell>
+                      <TableCell>{getTransactionTypeLabel(t.type)}</TableCell>
+                      <TableCell>{getPaymentMethodLabel(t.method)}</TableCell>
+                      <TableCell>{t.personId}</TableCell>
+                      <TableCell>
+                        {formatDate(t.issueDate.toString())}
+                      </TableCell>
+                      <TableCell>{t.reference || "-"}</TableCell>
+                      <TableCell>{t.description || "-"}</TableCell>
+
                       <TableCell align="right">
                         <IconButton
                           color="primary"
-                          onClick={() => handleEdit(cashRegister)}
+                          onClick={() => handleEdit(t)}
                         >
-                          <Edit />
+                          <Edit size={18} />
                         </IconButton>
+
                         <IconButton
                           color="error"
-                          onClick={() => handleDelete(cashRegister.id)}
+                          onClick={() => handleDelete(t.id || "")}
                         >
-                          <Delete />
+                          <Delete size={18} />
                         </IconButton>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-              {/* </TableContainer> */}
-            </Box>
+            </TableContainer>
           )}
         </CardContent>
       </Card>
@@ -142,4 +192,4 @@ const CashRegistersPage = () => {
   );
 };
 
-export default CashRegistersPage;
+export default TransactionsPage;

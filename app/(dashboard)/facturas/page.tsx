@@ -26,6 +26,7 @@ import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import InvoiceStatusLabel from "@/components/invoice/InvoiceStatusLabel";
 import { useRouter } from "next/navigation";
+import { formatCurrency } from "@/utils/formatters";
 
 export default function InvoicesPage() {
   const router = useRouter();
@@ -141,6 +142,8 @@ export default function InvoicesPage() {
                       <TableCell>Fecha de Emisión</TableCell>
                       <TableCell>Fecha de Vencimiento</TableCell>
                       <TableCell>Importe</TableCell>
+                      <TableCell>Pagos</TableCell>
+                      <TableCell>Saldo</TableCell>
                       <TableCell>Estado</TableCell>
                       <TableCell align="right">Acciones</TableCell>
                     </TableRow>
@@ -184,7 +187,11 @@ export default function InvoicesPage() {
                         <TableCell>
                           {new Date(invoice.dueDate).toLocaleDateString()}
                         </TableCell>
-                        <TableCell>${invoice.total.toFixed(2)}</TableCell>
+                        <TableCell>{formatCurrency(invoice.total)}</TableCell>
+                        <TableCell>
+                          {formatCurrency(invoice.paidAmount)}
+                        </TableCell>
+                        <TableCell>{formatCurrency(invoice.balance)}</TableCell>
                         <TableCell>
                           <InvoiceStatusLabel status={invoice.status} />
                         </TableCell>

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createTransactionDocumentSchema } from "./transaction-document";
 
 export const transactionSchema = z.object({
   id: z.string().cuid().optional(),
@@ -9,10 +10,18 @@ export const transactionSchema = z.object({
   description: z.string().nullable().optional(),
   tenantId: z.string(),
   personId: z.string(),
-  cashId: z.string().nullable().optional(),
-  bankAccountId: z.string().nullable().optional(),
+  accountId: z.string(),
+  documents: z.array(createTransactionDocumentSchema).optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
 
+export const createTransactionSchema = transactionSchema.omit({
+  id: true,
+  tenantId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type TransactionInput = z.infer<typeof transactionSchema>;
+export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;

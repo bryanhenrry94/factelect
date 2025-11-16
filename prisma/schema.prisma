@@ -29,11 +29,10 @@ model Tenant {
   products             Product[]
   persons              Person[]
   invoices             Invoice[]
-  cashes               Cash[]
   transactions         Transaction[]
-  payments             Payment[]
-  bankAccounts         BankAccount[]
   transactionDocuments TransactionDocument[]
+  accounts             Account[]
+  movements            Movement[]
 
   @@map("tenant")
 }
@@ -89,6 +88,7 @@ model User {
   email               String               @map("email")      @unique
   password            String               @map("password")
   name                String?              @map("name")
+  role                UserRole             @map("role")       @default(USER)
 
   tenantId            String               @map("tenant_id")
   createdAt           DateTime             @map("created_at") @default(now())
@@ -104,12 +104,12 @@ model Product {
   code        String        @map("code")        @unique
   description String        @map("description")
   price       Float         @map("price")
-  tax         taxType       @map("tax")         @default(IVA_0)
+  tax         TaxType       @map("tax")         @default(IVA_0)
   tenantId    String        @map("tenant_id")
   createdAt   DateTime      @map("created_at")  @default(now())
   updatedAt   DateTime      @map("updated_at")  @updatedAt
   tenant      Tenant        @relation(fields: [tenantId], references: [id])
-  InvoiceItem InvoiceItem[]
+  invoiceItem InvoiceItem[]
 
   @@map("product")
 }
@@ -135,6 +135,8 @@ model Invoice {
 
   //                                                       Totales
   total                                                    Float                                                                                            @default(0)
+  paidAmount                                               Float         @map("paid_amount")                                                                @default(0)
+  balance                                                  Float         @map("balance")                                                                    @default(0)
 
   // Descripción o observaciones
   description                                              String?       @map("description")
@@ -159,7 +161,6 @@ model Invoice {
   items          InvoiceItem[] // Productos o servicios
   taxes          InvoiceTax[] // 🔹 relación con impuestos
   paymentMethods InvoicePaymentMethod[] // Formas de pago
-  Payment                                                  Payment[]
 
   @@index([tenantId])
   @@index([personId])
@@ -185,7 +186,7 @@ model InvoiceItem {
   productId      String  @map("product_id")
   quantity       Float   @map("quantity")                         @default(1)
   unitPrice      Float   @map("unit_price")
-  tax            taxType @map("tax")                              @default(IVA_0)
+  tax            TaxType @map("tax")                              @default(IVA_0)
   taxAmount      Float   @map("tax_amount")                       @default(0)
   discountRate   Float   @map("discount_rate") // Ej: 0%, 5%, 10% @default(0)
   discountAmount Float   @map("discount_amount")                  @default(0)
@@ -223,48 +224,30 @@ model PasswordResetToken {
   @@map("password_reset_token")
 }
 
-model Payment {
-  id        String                           @id @default(cuid())
-  invoiceId String        @map("invoice_id")
-  amount    Float
-  date      DateTime                         @default(now())
-  method    PaymentMethod
-  createdAt DateTime      @map("created_at") @default(now())
-
-  tenantId  String        @map("tenant_id")
-  tenant    Tenant        @relation(fields: [tenantId], references: [id])
-  invoice   Invoice       @relation(fields: [invoiceId], references: [id])
-
-  @@map("payment")
-}
-
 model Transaction {
-  id            String                                                                           @id @default(cuid())
-  type          TransactionType
-  method        PaymentMethod
-  issueDate     DateTime              @map("issue_date")
-  reference     String?
-  description   String?
+  id          String                                   @id @default(cuid())
+  type        TransactionType
+  method      PaymentMethod
+  issueDate   DateTime              @map("issue_date")
+  reference   String?
+  description String?
 
-  tenantId      String                @map("tenant_id")
-  tenant        Tenant                @relation(fields: [tenantId], references: [id])
+  tenantId    String                @map("tenant_id")
+  tenant      Tenant                @relation(fields: [tenantId], references: [id])
 
-  //            Relations
-  personId      String                @map("person_id")
-  person        Person                @relation(fields: [personId], references: [id])
+  //          Relations
+  personId    String                @map("person_id")
+  person      Person                @relation(fields: [personId], references: [id])
 
-  // Dynamic relations depending on payment method:
-  cashId        String?               @map("cash_id") // For cash income or payments
-  cash          Cash?                 @relation(fields: [cashId], references: [id])
-
-  bankAccountId String?               @map("bank_account_id") // For transfer income or payments
-  bankAccount   BankAccount?          @relation(fields: [bankAccountId], references: [id])
+  accountId   String                @map("account_id")
+  account     Account               @relation(fields: [accountId], references: [id])
 
   // Documents associated (incomes or expenses)
-  documents     TransactionDocument[]
+  documents   TransactionDocument[]
 
-  createdAt     DateTime                                                                         @default(now())
-  updatedAt     DateTime                                                                         @updatedAt
+  createdAt   DateTime                                 @default(now())
+  updatedAt   DateTime                                 @updatedAt
+  movement    Movement[]
 
   @@map("transaction")
 }
@@ -280,6 +263,61 @@ model TransactionDocument {
 
   tenant        Tenant      @relation(fields: [tenantId], references: [id])
   transaction   Transaction @relation(fields: [transactionId], references: [id])
+
+  @@map("transaction_document")
+}
+
+model Account {
+  id                                                                     String                           @id @default(cuid())
+  tenantId                                                               String        @map("tenant_id")
+  name                                                                   String
+  type                                                                   AccountType
+  balance                                                                Float                            @default(0)
+  currency                                                               String                           @default("USD")
+
+  // datos opcionales según el tipo
+  bank   String? // Banco Pichincha, etc.
+  number String? // Número de cuenta
+  last4  String? // Para tarjetas
+
+  transactions                                                           Transaction[]
+  movements    Movement[] // BankMovement o CashMovement si los unificas
+
+  createdAt                                                              DateTime      @map("created_at") @default(now())
+  tenant                                                                 Tenant        @relation(fields: [tenantId], references: [id])
+
+  @@map("account")
+}
+
+model Movement {
+  id                                                              String                              @id @default(cuid())
+  tenantId                                                        String       @map("tenant_id")
+
+  accountId                                                       String       @map("account_id")
+  account                                                         Account      @relation(fields: [accountId], references: [id])
+
+  transactionId                                                   String?      @map("transaction_id")
+  transaction                                                     Transaction? @relation(fields: [transactionId], references: [id])
+
+  type   MovementType // IN | OUT
+  amount                                                          Float                               @default(0)
+
+  date                                                            DateTime                            @default(now()) // fecha real del movimiento
+  description                                                     String?
+
+  // Soporte para conciliación futura
+  reference    String? // # de transferencia, #depósito, #voucher
+  reconciled                                                      Boolean                             @default(false)
+  reconciledAt                                                    DateTime?    @map("reconciled_at")
+
+  createdAt                                                       DateTime     @map("created_at")     @default(now())
+  updatedAt                                                       DateTime     @map("updated_at")     @updatedAt
+  tenant                                                          Tenant       @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([accountId])
+  @@index([transactionId])
+  @@map("movement")
 }
 
 model Person {
@@ -299,50 +337,14 @@ model Person {
   tenant             Tenant             @relation(fields: [tenantId], references: [id])
 
   transactions       Transaction[]
-  Invoice            Invoice[]
+  invoice            Invoice[]
 
   @@map("person")
-}
-
-model Cash {
-  id           String                           @id @default(cuid())
-  name         String
-  balance      Float
-  tenantId     String        @map("tenant_id")
-  transactions Transaction[]
-  createdAt    DateTime      @map("created_at") @default(now())
-  updatedAt    DateTime      @map("updated_at") @updatedAt
-  tenant       Tenant        @relation(fields: [tenantId], references: [id])
-
-  @@map("cash")
-}
-
-model BankAccount {
-  id            String                               @id @default(cuid())
-  name          String
-  accountNumber String        @map("account_number")
-  accountType   String        @map("account_type")
-  bankName      String        @map("bank_name")
-  balance       Float
-  tenantId      String        @map("tenant_id")
-  tenant        Tenant        @relation(fields: [tenantId], references: [id])
-  transactions  Transaction[]
-  createdAt     DateTime      @map("created_at")     @default(now())
-  updatedAt     DateTime      @map("updated_at")     @updatedAt
-
-  @@map("bank_account")
 }
 
 enum UserRole {
   ADMIN
   USER
-}
-
-enum ReferenceType {
-  INVOICE
-  EXPENSE
-  BANK
-  OTHER
 }
 
 enum IdentificationType {
@@ -354,7 +356,7 @@ enum IdentificationType {
   PLACA
 }
 
-enum taxType {
+enum TaxType {
   IVA_0
   IVA_5
   IVA_12
@@ -390,4 +392,17 @@ enum PersonRole {
   CLIENT
   SUPPLIER
   SELLER
+}
+
+enum AccountType {
+  BANK
+  CASH
+  CREDIT_CARD
+  // WALLET
+  // PAYMENT_GATEWAY
+}
+
+enum MovementType {
+  IN // Aumenta saldo
+  OUT // Disminuye saldo
 }

@@ -31,6 +31,8 @@ export const invoiceSchema = z.object({
 
   // Totales
   total: z.number().min(0, "El total de la factura no puede ser negativo"),
+  paidAmount: z.number().min(0, "El monto pagado no puede ser negativo"),
+  balance: z.number().min(0, "El saldo no puede ser negativo"),
 
   // Descripción o observaciones
   description: z.string().optional().nullable(),

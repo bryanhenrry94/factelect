@@ -120,6 +120,7 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
                 helperText={errors.identificationType?.message}
                 value={watch("identificationType") || "CEDULA"}
                 fullWidth
+                size="small"
               >
                 {identificationOptions.map((opt) => (
                   <MenuItem key={opt.value} value={opt.value}>
@@ -135,6 +136,7 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
                 error={!!errors.identification}
                 helperText={errors.identification?.message}
                 fullWidth
+                size="small"
               />
             </Grid>
           </Grid>
@@ -144,6 +146,7 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
             error={!!errors.firstName}
             helperText={errors.firstName?.message}
             fullWidth
+            size="small"
           />
           <TextField
             label="Apellidos"
@@ -151,6 +154,7 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
             error={!!errors.lastName}
             helperText={errors.lastName?.message}
             fullWidth
+            size="small"
           />
           <TextField
             label="Correo electrónico"
@@ -159,9 +163,20 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
             error={!!errors.email}
             helperText={errors.email?.message}
             fullWidth
+            size="small"
           />
-          <TextField label="Teléfono" {...register("phone")} fullWidth />
-          <TextField label="Dirección" {...register("address")} fullWidth />
+          <TextField
+            label="Teléfono"
+            {...register("phone")}
+            fullWidth
+            size="small"
+          />
+          <TextField
+            label="Dirección"
+            {...register("address")}
+            fullWidth
+            size="small"
+          />
 
           <Controller
             name="roles"
@@ -178,6 +193,7 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
                   multiple: true,
                 }}
                 fullWidth
+                size="small"
               >
                 {["CLIENT", "SUPPLIER", "SELLER"].map((role) => (
                   <MenuItem key={role} value={role}>

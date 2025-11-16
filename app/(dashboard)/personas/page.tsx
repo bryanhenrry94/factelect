@@ -28,7 +28,7 @@ import { PersonInput } from "@/lib/validations/person";
 import PersonFormDialog from "@/components/person/person-form-dialog";
 import { getRoleLabel } from "@/utils/person";
 
-export default function CustomersPage() {
+export default function PersonsPage() {
   const { data: session } = useSession();
 
   const [persons, setPersons] = useState<PersonInput[]>([]);
@@ -67,7 +67,7 @@ export default function CustomersPage() {
     setEditingPerson(null);
   };
 
-  const handleDelete = (customerId: string) => {
+  const handleDelete = (personId: string) => {
     AlertService.showConfirm(
       "Confirmar eliminación",
       "¿Estás seguro de que deseas eliminar la persona seleccionada? Esta acción no se puede deshacer.",
@@ -76,7 +76,7 @@ export default function CustomersPage() {
     ).then(async (confirmed) => {
       if (confirmed) {
         // Lógica para eliminar la persona
-        await deletePerson(customerId);
+        await deletePerson(personId);
         AlertService.showSuccess("Persona eliminada exitosamente.");
         await loadPersons();
       }

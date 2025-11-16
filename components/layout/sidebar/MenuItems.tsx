@@ -1,10 +1,11 @@
 import {
-  Banknote,
   Copy,
   LayoutDashboard,
   Package,
   Settings,
   Users,
+  Wallet,
+  ArrowLeftRight,
 } from "lucide-react";
 
 import { uniqueId } from "lodash";
@@ -23,7 +24,7 @@ const Menuitems = [
   },
   {
     navlabel: true,
-    subheader: "MANTENIMIENTO",
+    subheader: "CATÁLOGOS",
   },
   {
     id: uniqueId(),
@@ -39,13 +40,19 @@ const Menuitems = [
   },
   {
     navlabel: true,
-    subheader: "TRANSACCIONES",
+    subheader: "FINANZAS",
   },
   {
     id: uniqueId(),
     title: "Transacciones",
-    icon: Banknote,
+    icon: ArrowLeftRight,
     href: "/transacciones",
+  },
+  {
+    id: uniqueId(),
+    title: "Movimientos de Cuenta",
+    icon: Wallet,
+    href: "/movimientos",
   },
   {
     navlabel: true,

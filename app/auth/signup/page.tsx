@@ -1,6 +1,6 @@
 "use client";
 
-import { createAccount } from "@/app/actions/auth";
+import { registerAccount } from "@/app/actions/auth";
 import { AccountStep } from "@/components/auth/signup/AccountStep";
 import { TenantStep } from "@/components/auth/signup/TenantStep";
 import { TermsStep } from "@/components/auth/signup/TermsStep";
@@ -85,7 +85,7 @@ export default function SignupPage() {
     try {
       setIsLoading(true);
 
-      const response = await createAccount(data);
+      const response = await registerAccount(data);
 
       if (!response.success) {
         setError(response.error || "Error al crear la cuenta.");

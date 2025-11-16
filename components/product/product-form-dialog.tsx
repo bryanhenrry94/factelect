@@ -94,6 +94,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
               {...register("code")}
               error={!!errors.code}
               helperText={errors.code?.message}
+              size="small"
             />
 
             <TextField
@@ -104,6 +105,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
               {...register("description")}
               error={!!errors.description}
               helperText={errors.description?.message}
+              size="small"
             />
 
             <TextField
@@ -114,6 +116,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
               {...register("price", { valueAsNumber: true })}
               error={!!errors.price}
               helperText={errors.price?.message}
+              size="small"
             />
             <Controller
               name="tax"
@@ -122,12 +125,12 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
               render={({ field }) => (
                 <TextField
                   fullWidth
-                  size="small"
                   select
                   label="IVA"
                   {...field}
                   error={!!errors.tax}
                   helperText={errors.tax?.message}
+                  size="small"
                 >
                   {taxOptions.map(({ label, value, code }) => (
                     <MenuItem key={code} value={value}>

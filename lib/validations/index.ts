@@ -1,5 +1,5 @@
 export * from "./transaction";
-export * from "./cash";
+export * from "./account";
 export * from "./customer";
 export * from "./emission-point";
 export * from "./establishment";
@@ -10,3 +10,5 @@ export * from "./payment";
 export * from "./product";
 export * from "./sri-config";
 export * from "./tenant";
+export * from "./account";
+export * from "./movement";

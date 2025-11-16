@@ -131,7 +131,7 @@ type FormValues = {
   acceptTerms: boolean;
 };
 
-export const createAccount = async (
+export const registerAccount = async (
   data: FormValues
 ): Promise<{ success: boolean; error?: string; data?: any }> => {
   try {
