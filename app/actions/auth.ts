@@ -202,6 +202,23 @@ export const registerAccount = async (
       };
     }
 
+    const account = await prisma.account.create({
+      data: {
+        tenantId: tenant.id,
+        name: "Caja Principal",
+        type: "CASH",
+        currency: "USD",
+        balance: 0,
+      },
+    });
+
+    if (!account) {
+      return {
+        success: false,
+        error: "Hubo un error al crear la cuenta principal",
+      };
+    }
+
     return { success: true, data: "Cuenta registrada exitosamente!" };
   } catch (error) {
     console.error(`Error al momento de crear la cuenta: ${error}`);
