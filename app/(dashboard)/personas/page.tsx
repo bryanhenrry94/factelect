@@ -78,7 +78,7 @@ export default function CustomersPage() {
   }, [search, persons]);
 
   const handleAdd = () => {
-    setEditingPerson(null); // 🚀 LIMPIA EL FORMULARIO
+    setEditingPerson(null); //  LIMPIA EL FORMULARIO
     setDialogOpen(true);
   };
 
@@ -95,7 +95,7 @@ export default function CustomersPage() {
   const handleDelete = (customerId: string) => {
     AlertService.showConfirm(
       "Confirmar eliminación",
-      "¿Estás seguro de que deseas eliminar la persona seleccionada?",
+      "¿Estás seguro de que deseas eliminar la persona seleccionada? Esta acción no se puede deshacer.",
       "Eliminar",
       "Cancelar"
     ).then(async (confirmed) => {
