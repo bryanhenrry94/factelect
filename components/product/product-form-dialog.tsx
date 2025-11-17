@@ -25,7 +25,7 @@ interface ProductFormDialogProps {
   isDialogOpen: boolean;
   handleCloseDialog: () => void;
   editingProduct: Product | null;
-  onSubmit: (data: CreateProduct) => Promise<void> | void; // Maneja tanto crear como editar
+  onSubmit: (data: CreateProduct) => Promise<void> | void;
 }
 
 export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
@@ -51,10 +51,15 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
     },
   });
 
-  // Cargar datos al editar
+  // 🔄 Cargar datos al editar
   useEffect(() => {
     if (editingProduct) {
-      reset(editingProduct);
+      reset({
+        code: editingProduct.code,
+        description: editingProduct.description,
+        price: editingProduct.price,
+        tax: editingProduct.tax,
+      });
     } else {
       reset({
         code: "",
@@ -65,6 +70,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
     }
   }, [editingProduct, reset]);
 
+  // 📌 Enviar formulario
   const handleFormSubmit = async (data: CreateProduct) => {
     await onSubmit(data);
   };
@@ -80,6 +86,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
         <DialogTitle>
           {editingProduct ? "Editar Producto" : "Agregar Producto"}
         </DialogTitle>
+
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {editingProduct
@@ -88,6 +95,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
           </Typography>
 
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}>
+            {/* Código */}
             <TextField
               label="Código"
               fullWidth
@@ -96,6 +104,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
               helperText={errors.code?.message}
             />
 
+            {/* Descripción */}
             <TextField
               label="Descripción"
               fullWidth
@@ -106,6 +115,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
               helperText={errors.description?.message}
             />
 
+            {/* Precio */}
             <TextField
               label="Precio"
               type="number"
@@ -115,10 +125,12 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
               error={!!errors.price}
               helperText={errors.price?.message}
             />
+
+            {/* IVA */}
             <Controller
               name="tax"
               control={control}
-              defaultValue={editingProduct?.tax ? editingProduct.tax : "IVA_0"}
+              defaultValue={editingProduct?.tax ?? "IVA_0"}
               render={({ field }) => (
                 <TextField
                   fullWidth
@@ -139,6 +151,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
             />
           </Box>
         </DialogContent>
+
         <DialogActions sx={{ px: 3, mb: 2 }}>
           <Button onClick={handleCloseDialog}>Cancelar</Button>
           <Button type="submit" variant="contained" disabled={isSubmitting}>

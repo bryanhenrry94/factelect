@@ -15,6 +15,7 @@ import {
   Box,
   Alert,
   TextField,
+  Pagination,
 } from "@mui/material";
 import { Edit, Delete, Users, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -32,9 +33,15 @@ export default function CustomersPage() {
   const { data: session } = useSession();
 
   const [persons, setPersons] = useState<PersonInput[]>([]);
+  const [search, setSearch] = useState("");
+  const [filteredPersons, setFilteredPersons] = useState<PersonInput[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPerson, setEditingPerson] = useState<PersonInput | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 5;
 
   const loadPersons = useCallback(async () => {
     if (!session?.user?.tenantId) return;
@@ -45,15 +52,33 @@ export default function CustomersPage() {
     };
 
     const response = await getPersonsByTenant(filter);
-    if (response.success) setPersons(response.data);
+
+    if (response.success) {
+      setPersons(response.data);
+      setFilteredPersons(response.data);
+    }
   }, [session?.user?.tenantId]);
 
   useEffect(() => {
     loadPersons();
   }, [loadPersons]);
 
+  // Real-time search filter
+  useEffect(() => {
+    const lower = search.toLowerCase().trim();
+
+    const results = persons.filter((p) =>
+      [p.identification, p.firstName, p.lastName, p.email, p.phone]
+        .filter(Boolean)
+        .some((field) => field!.toLowerCase().includes(lower))
+    );
+
+    setFilteredPersons(results);
+    setPage(1);
+  }, [search, persons]);
+
   const handleAdd = () => {
-    setEditingPerson(null);
+    setEditingPerson(null); // 🚀 LIMPIA EL FORMULARIO
     setDialogOpen(true);
   };
 
@@ -70,12 +95,11 @@ export default function CustomersPage() {
   const handleDelete = (customerId: string) => {
     AlertService.showConfirm(
       "Confirmar eliminación",
-      "¿Estás seguro de que deseas eliminar la persona seleccionada? Esta acción no se puede deshacer.",
+      "¿Estás seguro de que deseas eliminar la persona seleccionada?",
       "Eliminar",
       "Cancelar"
     ).then(async (confirmed) => {
       if (confirmed) {
-        // Lógica para eliminar la persona
         await deletePerson(customerId);
         AlertService.showSuccess("Persona eliminada exitosamente.");
         await loadPersons();
@@ -83,12 +107,22 @@ export default function CustomersPage() {
     });
   };
 
+  const handlePageChange = (_event: any, value: number) => {
+    setPage(value);
+  };
+
+  // CALCULAR REGISTROS MOSTRADOS
+  const startIndex = (page - 1) * rowsPerPage;
+  const visibleRows = filteredPersons.slice(
+    startIndex,
+    startIndex + rowsPerPage
+  );
+
   return (
     <PageContainer
       title="Personas"
       description="Administra las relaciones de tus contactos"
     >
-      {/* HEADER */}
       <PageHeader title="Personas" />
 
       <Box
@@ -100,23 +134,31 @@ export default function CustomersPage() {
           gap: 2,
         }}
       >
-        <TextField label="Buscar personas" variant="outlined" size="small" />
+        <TextField
+          label="Buscar personas"
+          variant="outlined"
+          size="small"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
         <Button variant="contained" startIcon={<Plus />} onClick={handleAdd}>
           Agregar Persona
         </Button>
       </Box>
 
-      {/* Filters */}
-      <Box sx={{ mb: 2 }}>
-        {/* Aquí puedes agregar componentes de filtro si es necesario */}
-        
-      </Box>
-
-      {/* DIALOGO FORMULARIO */}
+      {/* FORMULARIO */}
       <PersonFormDialog
         open={dialogOpen}
         onClose={handleClose}
-        onSuccess={loadPersons}
+        onSuccess={async (isUpdate) => {
+          await loadPersons();
+          AlertService.showSuccess(
+            isUpdate
+              ? "Persona actualizada correctamente."
+              : "Persona creada correctamente."
+          );
+        }}
         editingPerson={editingPerson}
         tenantId={session?.user?.tenantId ?? ""}
         setError={setError}
@@ -125,19 +167,18 @@ export default function CustomersPage() {
       {/* TABLA */}
       <Card sx={{ mt: 3 }}>
         <CardContent>
-          {persons.length === 0 ? (
+          {filteredPersons.length === 0 ? (
             <Box textAlign="center" py={6}>
               <Users />
               <Typography variant="h6" mt={2}>
-                No hay personas aún
+                No hay personas que coincidan
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Agrega la primera persona
+                Intenta buscar con otro término
               </Typography>
             </Box>
           ) : (
-            <Box>
-              {/* <TableContainer component={Paper} variant="outlined"> */}
+            <>
               <Table>
                 <TableHead>
                   <TableRow>
@@ -161,22 +202,20 @@ export default function CustomersPage() {
                     </TableCell>
                   </TableRow>
                 </TableHead>
+
                 <TableBody>
-                  {persons.map((person) => (
-                    <TableRow
-                      key={person.id}
-                      hover
-                      sx={{
-                        "&:last-child td, &:last-child th": { border: 0 },
-                      }}
-                    >
+                  {visibleRows.map((person) => (
+                    <TableRow key={person.id} hover>
                       <TableCell>{person.identification}</TableCell>
-                      <TableCell>{`${person.firstName} ${person.lastName}`}</TableCell>
+                      <TableCell>
+                        {person.firstName + " " + person.lastName}
+                      </TableCell>
                       <TableCell>{person.email}</TableCell>
                       <TableCell>{person.phone || "-"}</TableCell>
                       <TableCell>
                         {person.roles.map(getRoleLabel).join(", ")}
                       </TableCell>
+
                       <TableCell align="right">
                         <IconButton
                           color="primary"
@@ -184,6 +223,7 @@ export default function CustomersPage() {
                         >
                           <Edit />
                         </IconButton>
+
                         <IconButton
                           color="error"
                           onClick={() => handleDelete(person.id)}
@@ -195,8 +235,17 @@ export default function CustomersPage() {
                   ))}
                 </TableBody>
               </Table>
-              {/* </TableContainer> */}
-            </Box>
+
+              {/* PAGINACIÓN */}
+              <Box display="flex" justifyContent="center" mt={3}>
+                <Pagination
+                  count={Math.ceil(filteredPersons.length / rowsPerPage)}
+                  page={page}
+                  onChange={handlePageChange}
+                  color="primary"
+                />
+              </Box>
+            </>
           )}
         </CardContent>
       </Card>

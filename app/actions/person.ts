@@ -1,5 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/prisma/generated/prisma";
 import {
   CreatePersonInput,
   createPersonSchema,
@@ -24,6 +25,24 @@ export async function createPerson(
       return { success: false, error: "Invalid customer data" };
     }
 
+    // Verificar si ya existe una persona con la misma identificación en el mismo tenant
+    const existing = await prisma.person.findFirst({
+      where: { identification: parsed.identification, tenantId },
+    });
+    if (existing) {
+      return { success: false, error: "La identificación ya existe" };
+    }
+
+    // Verificar si ya existe una persona con el mismo email (email es único en el esquema)
+    if (parsed.email) {
+      const emailExists = await prisma.person.findUnique({
+        where: { email: parsed.email },
+      });
+      if (emailExists) {
+        return { success: false, error: "El correo electrónico ya está registrado" };
+      }
+    }
+
     const person = await prisma.person.create({
       data: {
         ...parsed,
@@ -36,6 +55,21 @@ export async function createPerson(
     return { success: true, data: person };
   } catch (error) {
     console.error("Error creating customer:", error);
+    // Manejar error de constraint único (identification, email)
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const target = (error.meta as any)?.target;
+      if (Array.isArray(target) && target.includes("identification")) {
+        return { success: false, error: "La identificación ya existe" };
+      }
+      if (Array.isArray(target) && target.includes("email")) {
+        return { success: false, error: "El correo electrónico ya está registrado" };
+      }
+      return { success: false, error: "Violación de restricción única en la base de datos" };
+    }
+
     return { success: false, error: "Hubo un error al crear el cliente" };
   }
 }
@@ -55,6 +89,26 @@ export async function updatePerson(
       return { success: false, error: "Invalid customer data" };
     }
 
+    // Si se está actualizando la identificación, verificar duplicado
+    if (data.identification) {
+      const existing = await prisma.person.findFirst({
+        where: { identification: data.identification },
+      });
+      if (existing && existing.id !== personId) {
+        return { success: false, error: "La identificación ya existe" };
+      }
+    }
+
+    // Si se está actualizando el email, verificar duplicado
+    if (data.email) {
+      const emailExisting = await prisma.person.findUnique({
+        where: { email: data.email },
+      });
+      if (emailExisting && emailExisting.id !== personId) {
+        return { success: false, error: "El correo electrónico ya está registrado" };
+      }
+    }
+
     const person = await prisma.person.update({
       where: { id: personId },
       data: {
@@ -67,6 +121,20 @@ export async function updatePerson(
     return { success: true, data: person };
   } catch (error) {
     console.error("Error updating person:", error);
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const target = (error.meta as any)?.target;
+      if (Array.isArray(target) && target.includes("identification")) {
+        return { success: false, error: "La identificación ya existe" };
+      }
+      if (Array.isArray(target) && target.includes("email")) {
+        return { success: false, error: "El correo electrónico ya está registrado" };
+      }
+      return { success: false, error: "Violación de restricción única en la base de datos" };
+    }
+
     return { success: false, error: "Hubo un error al actualizar el cliente" };
   }
 }

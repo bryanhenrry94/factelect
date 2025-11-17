@@ -5,6 +5,7 @@ import {
   CreatePersonInput,
   createPersonSchema,
   PersonInput,
+  personSchema,
 } from "@/lib/validations/person";
 import { getRoleLabel } from "@/utils/person";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,11 +22,12 @@ import {
 } from "@mui/material";
 import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 
 interface PersonFormDialogProps {
   open: boolean;
   onClose: () => void;
-  onSuccess: () => Promise<void>;
+  onSuccess: (isUpdate: boolean) => Promise<void>;
   editingPerson: PersonInput | null;
   tenantId: string;
   setError: (error: string | null) => void;
@@ -39,7 +41,6 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
   tenantId,
   setError,
 }) => {
-  console.log("Editing Person:", editingPerson);
   const {
     register,
     handleSubmit,
@@ -48,9 +49,40 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
     watch,
     control,
   } = useForm<CreatePersonInput>({
-    resolver: zodResolver(createPersonSchema),
-    defaultValues: editingPerson ?? {
-      identificationType: "CEDULA",
+    resolver: zodResolver(
+      personSchema
+        .omit({
+          id: true,
+          tenantId: true,
+          createdAt: true,
+          updatedAt: true,
+        })
+        .extend({
+          identification: z.string(),
+        })
+        .superRefine((data, ctx) => {
+          const val = data.identification ?? "";
+          const type = data.identificationType;
+          if (type === "RUC") {
+            if (!/^\d{13}$/.test(val)) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["identification"],
+                message: "El RUC debe contener exactamente 13 dígitos numéricos",
+              });
+            }
+          } else if (type === "CEDULA") {
+            if (!/^\d{10}$/.test(val)) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["identification"],
+                message: "La cédula debe contener exactamente 10 dígitos numéricos",
+              });
+            }
+          }
+        })
+    ),
+    defaultValues: {
       identification: "",
       firstName: "",
       lastName: "",
@@ -61,13 +93,15 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
     },
   });
 
-  // Rellena el formulario si se está editando
+  // Rellena o limpia el formulario cuando cambia editingPerson
   useEffect(() => {
     if (editingPerson) {
-      reset(editingPerson);
+      reset({
+        ...editingPerson,
+        roles: editingPerson.roles.length ? editingPerson.roles : ["CLIENT"],
+      });
     } else {
       reset({
-        identificationType: "CEDULA",
         identification: "",
         firstName: "",
         lastName: "",
@@ -77,23 +111,25 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
         roles: ["CLIENT"],
       });
     }
-  }, [editingPerson, reset]);
+  }, [editingPerson, reset, open]);
 
   const onSubmit = async (data: CreatePersonInput) => {
     setError(null);
 
-    const action = editingPerson
-      ? await updatePerson(editingPerson.id ?? "", data)
-      : await createPerson(data, tenantId);
+    let action;
+    const isUpdate = !!editingPerson;
+
+    if (isUpdate) {
+      action = await updatePerson(editingPerson!.id ?? "", data);
+    } else {
+      action = await createPerson(data, tenantId);
+    }
 
     if (action.success) {
-      AlertService.showSuccess(
-        editingPerson ? "Persona actualizado" : "Persona creado"
-      );
-      await onSuccess();
+      await onSuccess(isUpdate);
       onClose();
     } else {
-      setError(action.error || "Error al guardar el cliente");
+      setError(action.error || "Ocurrió un error al guardar.");
     }
   };
 
@@ -110,6 +146,7 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
               ? "Actualiza la información de la persona."
               : "Agrega una nueva persona a tu base de datos."}
           </Typography>
+
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
@@ -118,7 +155,6 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
                 {...register("identificationType")}
                 error={!!errors.identificationType}
                 helperText={errors.identificationType?.message}
-                value={watch("identificationType") || "CEDULA"}
                 fullWidth
               >
                 {identificationOptions.map((opt) => (
@@ -128,6 +164,7 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
                 ))}
               </TextField>
             </Grid>
+
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 label="Identificación"
@@ -135,9 +172,11 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
                 error={!!errors.identification}
                 helperText={errors.identification?.message}
                 fullWidth
+                disabled={!watch("identificationType")}
               />
             </Grid>
           </Grid>
+
           <TextField
             label="Nombres"
             {...register("firstName")}
@@ -145,6 +184,7 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
             helperText={errors.firstName?.message}
             fullWidth
           />
+
           <TextField
             label="Apellidos"
             {...register("lastName")}
@@ -152,6 +192,7 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
             helperText={errors.lastName?.message}
             fullWidth
           />
+
           <TextField
             label="Correo electrónico"
             type="email"
@@ -160,13 +201,14 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
             helperText={errors.email?.message}
             fullWidth
           />
+
           <TextField label="Teléfono" {...register("phone")} fullWidth />
           <TextField label="Dirección" {...register("address")} fullWidth />
 
           <Controller
             name="roles"
             control={control}
-            defaultValue={[]} // obligatorio cuando es multiple
+            defaultValue={["CLIENT"]}
             render={({ field }) => (
               <TextField
                 select
