@@ -26,6 +26,7 @@ model Tenant {
 
   //                   Relaciones
   users                User[]
+  documents            Document[]
   products             Product[]
   persons              Person[]
   invoices             Invoice[]
@@ -33,52 +34,54 @@ model Tenant {
   transactionDocuments TransactionDocument[]
   accounts             Account[]
   movements            Movement[]
+  establishments       Establishment[]
+  emissionPoints       EmissionPoint[]
 
   @@map("tenant")
 }
 
 model SRIConfiguration {
-  id                  String                                                                                  @id @default(uuid())
-  tenantId            String          @map("tenant_id")                                                       @unique
-  sriEnvironment      String          @map("sri_environment") // 1 Sandbox | 2 Producción                     @default("1")
-  p12CertificatePath  String?         @map("p12_certificate_path") // Ruta o nombre del archivo subido (.p12)
-  p12CertificateUrl   String?         @map("p12_certificate_url") // URL pública del archivo .p12
-  certificatePassword String?         @map("certificate_password") // Password para el archivo .p12
-  establishments      Establishment[]
-  emissionPoints      EmissionPoint[]
+  id                  String                                                                             @id @default(uuid())
+  tenantId            String         @map("tenant_id")                                                   @unique
+  environment         SRIEnvironment @map("sri_environment") // 1 Sandbox | 2 Producción                 @default("1")
+  certificatePath     String?        @map("certificate_path") // Ruta o nombre del archivo subido (.p12)
+  certificateUrl      String?        @map("certificate_url") // URL pública del archivo .p12
+  certificatePassword String?        @map("certificate_password") // Password para el archivo .p12
 
-  createdAt           DateTime        @map("created_at")                                                      @default(now())
-  updatedAt           DateTime        @map("updated_at")                                                      @updatedAt
+  createdAt           DateTime       @map("created_at")                                                  @default(now())
+  updatedAt           DateTime       @map("updated_at")                                                  @updatedAt
 
   //                  Relaciones
-  tenant              Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant              Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("sri_configuration")
 }
 
 model Establishment {
-  id             String                                                @id @default(cuid())
-  sriConfigId    String           @map("sri_configuration_id")
-  code           String           @map("code") // 3 dígitos, ej: '001'
-  address        String           @map("address")
-  sriConfig      SRIConfiguration @relation(fields: [sriConfigId], references: [id])
-  emissionPoints EmissionPoint[]
-  invoices       Invoice[]
+  id                 String                                                    @id @default(cuid())
+  tenantId           String               @map("tenant_id")
+  tenant             Tenant               @relation(fields: [tenantId], references: [id])
+  code               String               @map("code") // 3 dígitos, ej: '001'
+  address            String               @map("address")
+  invoices           Invoice[]
+  documentFiscalInfo DocumentFiscalInfo[]
+  emissionPoints     EmissionPoint[]
 
   @@map("establishment")
 }
 
 model EmissionPoint {
-  id                     String                                                @id @default(cuid())
-  sriConfigId            String           @map("sri_configuration_id")
-  establishmentId        String           @map("establishment_id")
-  code                   String           @map("code") // 3 dígitos, ej: '002'
-  description            String?          @map("description")
-  currentInvoiceSequence Int                                                   @default(1)
-  isActive               Boolean                                               @default(true)
-  sriConfig              SRIConfiguration @relation(fields: [sriConfigId], references: [id])
-  establishment          Establishment    @relation(fields: [establishmentId], references: [id])
+  id                     String                                                    @id @default(cuid())
+  tenantId               String               @map("tenant_id")
+  tenant                 Tenant               @relation(fields: [tenantId], references: [id])
+  establishmentId        String               @map("establishment_id")
+  code                   String               @map("code") // 3 dígitos, ej: '002'
+  description            String?              @map("description")
+  currentInvoiceSequence Int                                                       @default(1)
+  isActive               Boolean                                                   @default(true)
+  establishment          Establishment        @relation(fields: [establishmentId], references: [id])
   invoices               Invoice[]
+  documentFiscalInfo     DocumentFiscalInfo[]
 
   @@map("emission_point")
 }
@@ -100,23 +103,126 @@ model User {
 }
 
 model Product {
-  id          String        @map("id")          @id @default(cuid())
-  code        String        @map("code")        @unique
-  description String        @map("description")
-  price       Float         @map("price")
-  tax         TaxType       @map("tax")         @default(IVA_0)
-  tenantId    String        @map("tenant_id")
-  createdAt   DateTime      @map("created_at")  @default(now())
-  updatedAt   DateTime      @map("updated_at")  @updatedAt
-  tenant      Tenant        @relation(fields: [tenantId], references: [id])
-  invoiceItem InvoiceItem[]
+  id            String         @map("id")          @id @default(cuid())
+  code          String         @map("code")        @unique
+  description   String         @map("description")
+  price         Float          @map("price")
+  tax           TaxType        @map("tax")         @default(IVA_0)
+  tenantId      String         @map("tenant_id")
+  createdAt     DateTime       @map("created_at")  @default(now())
+  updatedAt     DateTime       @map("updated_at")  @updatedAt
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  invoiceItems  InvoiceItem[]
+  documentItems DocumentItem[]
 
   @@map("product")
+}
+
+model Document {
+  id                 String                                                                          @id @default(cuid())
+  tenantId           String              @map("tenant_id")
+  entityType         EntityType                                                                      @default(CUSTOMER) // Cliente | Proveedor
+  documentType       DocumentType
+  number             String?
+  issueDate          DateTime            @map("issue_date")                                          @default(now())
+  dueDate            DateTime?           @map("due_date")                                            @default(now())
+  status             DocumentStatus                                                                  @default(DRAFT) // draft | confirmed | canceled
+  personId           String              @map("person_id") // Cliente (opcional si es venta abierta)
+
+  //                 Totales
+  subtotal           Float                                                                           @default(0)
+  taxTotal           Float               @map("tax_total")                                           @default(0)
+  discount           Float                                                                           @default(0)
+  total              Float                                                                           @default(0)
+  paidAmount         Float               @map("paid_amount")                                         @default(0)
+  balance            Float                                                                           @default(0)
+
+  description        String?             @map("description")
+
+  //                 Auditoría
+  createdAt          DateTime            @map("created_at")                                          @default(now())
+  updatedAt          DateTime            @map("updated_at")                                          @updatedAt
+
+  //                 Relaciones
+  tenant             Tenant              @relation(fields: [tenantId], references: [id])
+  person             Person              @relation(fields: [personId], references: [id])
+
+  items              DocumentItem[]
+  taxes              DocumentTax[]
+  transactions       Transaction[]
+  invoices           Invoice[]
+  documentFiscalInfo DocumentFiscalInfo?
+
+  @@index([tenantId])
+  @@index([personId])
+  @@map("document")
+}
+
+model DocumentItem {
+  id             String                           @id @default(cuid())
+  documentId     String   @map("document_id")
+  document       Document @relation(fields: [documentId], references: [id])
+
+  productId      String   @map("product_id")
+  product        Product  @relation(fields: [productId], references: [id])
+
+  quantity       Float                            @default(1)
+  unitPrice      Float
+  tax            TaxType                          @default(IVA_0)
+  taxAmount      Float                            @default(0)
+  discountRate   Float    @map("discount_rate")   @default(0)
+  discountAmount Float    @map("discount_amount") @default(0)
+  subtotal       Float
+  total          Float
+
+  @@map("document_item")
+}
+
+model DocumentTax {
+  id              String                           @id @default(cuid())
+  documentId      String   @map("document_id")
+  code            String   @map("code")
+  percentage_code String   @map("percentage_code")
+  base            Float                            @default(0)
+  amount          Float                            @default(0)
+
+  document        Document @relation(fields: [documentId], references: [id])
+
+  @@map("sale_tax")
+}
+
+model DocumentFiscalInfo {
+  id                String                                                             @id @default(cuid())
+
+  documentId        String         @map("document_id")                                 @unique
+  document          Document       @relation(fields: [documentId], references: [id])
+
+  establishmentId   String         @map("establishment_id") // 001
+  establishment     Establishment  @relation(fields: [establishmentId], references: [id])
+  emissionPointId   String         @map("emission_point_id") // 002
+  emissionPoint     EmissionPoint  @relation(fields: [emissionPointId], references: [id])
+  sequence          Int
+
+  accessKey         String?        @map("access_key") // Clave de acceso
+  authorization     String?        @map("authorization") // Número de autorización
+  authorizationDate DateTime?      @map("authorization_date") // Fecha de autorización
+
+  sriStatus         SRIStatus      @map("sri_status")                                  @default(PENDING)
+  environment       SRIEnvironment                                                     @default(TEST) // 1 pruebas, 2 producción
+
+  generatedXmlUrl   String?        @map("generated_xml_url") // URL al XML firmado
+  authorizedXmlUrl  String?        @map("authorized_xml_url") // URL XML autorizado
+  pdfUrl            String?        @map("pdf_url") // URL del PDF RIDE
+
+  @@map("document_fiscal_info")
 }
 
 model Invoice {
   id                                                       String        @map("id")                                                                         @id @default(cuid())
   personId                                                 String        @map("person_id")
+  documentId                                               String?       @map("document_id")
+  document                                                 Document?     @relation(fields: [documentId], references: [id])
+
   tenantId                                                 String        @map("tenant_id")
 
   // Datos de emisión
@@ -248,6 +354,8 @@ model Transaction {
   createdAt   DateTime                                 @default(now())
   updatedAt   DateTime                                 @updatedAt
   movement    Movement[]
+  Document    Document?             @relation(fields: [documentId], references: [id])
+  documentId  String?
 
   @@map("transaction")
 }
@@ -338,6 +446,7 @@ model Person {
 
   transactions       Transaction[]
   invoice            Invoice[]
+  Document           Document[]
 
   @@map("person")
 }
@@ -378,6 +487,12 @@ enum PaymentMethod {
   CREDIT_CARD // Tarjeta crédito (solo para pagos)
 }
 
+enum DocumentStatus {
+  DRAFT
+  CONFIRMED
+  CANCELED
+}
+
 enum InvoiceStatus {
   DRAFT // Borrador, editable
   SIGNED // Firmada digitalmente
@@ -405,4 +520,27 @@ enum AccountType {
 enum MovementType {
   IN // Aumenta saldo
   OUT // Disminuye saldo
+}
+
+enum EntityType {
+  CUSTOMER
+  SUPPLIER
+}
+
+enum DocumentType {
+  INVOICE
+  CREDIT_NOTE
+  DEBIT_NOTE
+}
+
+enum SRIStatus {
+  PENDING // Lista para enviar
+  SENT // XML enviado
+  AUTHORIZED // Autorizada
+  REJECTED // Rechazada por SRI
+}
+
+enum SRIEnvironment {
+  TEST
+  PRODUCTION
 }

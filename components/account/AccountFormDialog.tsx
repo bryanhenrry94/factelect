@@ -94,7 +94,7 @@ export const AccountFormDialog = ({
   }, [initialData, reset]);
 
   return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
       <Box sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom>
           {modeEdit ? "Editar Cuenta" : "Agregar Cuenta"}
@@ -115,9 +115,10 @@ export const AccountFormDialog = ({
                   {...field}
                   label="Nombre de la Cuenta"
                   fullWidth
-                  margin="normal"
+                  margin="dense"
                   error={!!errors.name}
                   helperText={errors.name ? errors.name.message : ""}
+                  size="small"
                 />
               )}
             />
@@ -130,11 +131,12 @@ export const AccountFormDialog = ({
                   label="Tipo de Cuenta"
                   type="text"
                   fullWidth
-                  margin="normal"
+                  margin="dense"
                   error={!!errors.type}
                   helperText={errors.type ? errors.type.message : ""}
                   select
                   value={field.value || ""}
+                  size="small"
                 >
                   {accountTypes.map((option) => (
                     <MenuItem key={option.value} value={option.value}>
@@ -153,10 +155,11 @@ export const AccountFormDialog = ({
                     {...field}
                     label="Número de Cuenta"
                     fullWidth
-                    margin="normal"
+                    margin="dense"
                     error={!!errors.number}
                     helperText={errors.number ? errors.number.message : ""}
                     value={field.value || ""}
+                    size="small"
                   />
                 )}
               />
@@ -170,10 +173,11 @@ export const AccountFormDialog = ({
                     {...field}
                     label="Últimos 4 Dígitos"
                     fullWidth
-                    margin="normal"
+                    margin="dense"
                     error={!!errors.last4}
                     helperText={errors.last4 ? errors.last4.message : ""}
                     value={field.value || ""}
+                    size="small"
                   />
                 )}
               />
@@ -187,10 +191,11 @@ export const AccountFormDialog = ({
                   {...field}
                   label="Moneda"
                   fullWidth
-                  margin="normal"
+                  margin="dense"
                   error={!!errors.currency}
                   helperText={errors.currency ? errors.currency.message : ""}
                   value={field.value || ""}
+                  size="small"
                 />
               )}
             />

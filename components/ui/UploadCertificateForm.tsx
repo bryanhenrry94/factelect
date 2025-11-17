@@ -29,13 +29,13 @@ const VisuallyHiddenInput = styled("input")({
 
 interface UploadCertificateFormProps {
   tenantId: string;
-  p12CertificatePath: string | null;
+  certificatePath: string | null;
   onSave: () => void;
 }
 
 const UploadCertificateForm: React.FC<UploadCertificateFormProps> = ({
   tenantId,
-  p12CertificatePath,
+  certificatePath,
   onSave,
 }) => {
   const [isPending, startTransition] = useTransition();
@@ -72,7 +72,7 @@ const UploadCertificateForm: React.FC<UploadCertificateFormProps> = ({
       }}
     >
       <form onSubmit={handleSubmit}>
-        {p12CertificatePath ? (
+        {certificatePath ? (
           <>
             <CloudCheck size={48} color="#1976d2" />
             <Typography variant="body2" fontWeight="medium">
@@ -98,7 +98,7 @@ const UploadCertificateForm: React.FC<UploadCertificateFormProps> = ({
           {isPending
             ? "Subiendo..."
             : `${
-                p12CertificatePath
+                certificatePath
                   ? "Actualizar Certificado .p12"
                   : "Subir Certificado .p12"
               }`}

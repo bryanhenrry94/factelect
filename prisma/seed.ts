@@ -25,8 +25,8 @@ async function main() {
     update: {},
     create: {
       tenantId: "0874303e-6795-46ef-8416-5d76bba8071b",
-      sriEnvironment: "1",
-      p12CertificatePath: "",
+      environment: "TEST",
+      certificatePath: "",
       certificatePassword: "",
     },
   });

@@ -14,7 +14,7 @@ const MSidebar = ({
 }: ItemType) => {
   const lgUp = useMediaQuery((theme: any) => theme.breakpoints.up("lg"));
 
-  const sidebarWidth = "270px";
+  const sidebarWidth = "290px";
 
   // Custom CSS for short scrollbar
   const scrollbarStyles = {
@@ -60,7 +60,7 @@ const MSidebar = ({
               height: "100%",
             }}
           >
-            <Box>
+            <Box sx={{ p: 2 }}>
               {/* ------------------------------------------- */}
               {/* Sidebar Items */}
               {/* ------------------------------------------- */}

@@ -611,7 +611,7 @@ export const getInvoiceDataForPDF = async (
       },
       infoTributaria: {
         ambiente:
-          invoice.tenant.sriConfig?.sriEnvironment === "1"
+          invoice.tenant.sriConfig?.environment === "TEST"
             ? "PRUEBAS"
             : "PRODUCCIÓN",
         tipoEmision: "NORMAL",

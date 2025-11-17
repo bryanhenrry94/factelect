@@ -1,13 +1,13 @@
+import { useEffect, useState } from "react";
 import {
   createEmissionPoint,
   updateEmissionPoint,
 } from "@/app/actions/emission-point";
-import { AlertService } from "@/lib/alerts";
 import {
   CreateEmissionPoint,
-  createEmissionPointSchema,
   EmissionPoint,
 } from "@/lib/validations/emission-point";
+import { AlertService } from "@/lib/alerts";
 import { Establishment } from "@/lib/validations/establishment";
 import {
   Box,
@@ -22,17 +22,15 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useSession } from "next-auth/react";
+import { getEstablishments } from "@/app/actions";
 
 interface EmissionPointDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => Promise<void>;
   editingData: EmissionPoint | null;
-  sriConfigId: string;
-  establishments: Establishment[];
 }
 
 const EmissionPointDialog: React.FC<EmissionPointDialogProps> = ({
@@ -40,16 +38,16 @@ const EmissionPointDialog: React.FC<EmissionPointDialogProps> = ({
   onClose,
   onSuccess,
   editingData,
-  sriConfigId,
-  establishments,
 }) => {
+  const [establishments, setEstablishments] = useState<Establishment[]>([]);
+  const { data: session } = useSession();
+
   const {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<CreateEmissionPoint>({
-    // resolver: zodResolver(createEmissionPointSchema),
     defaultValues: {
       establishmentId: editingData?.establishmentId ?? "",
       code: editingData?.code ?? "",
@@ -70,13 +68,35 @@ const EmissionPointDialog: React.FC<EmissionPointDialogProps> = ({
     });
   }, [editingData, reset]);
 
-  // 💾 Crear o actualizar punto de emisión
+  useEffect(() => {
+    const fetchEstablishments = async () => {
+      if (!session?.user?.tenantId) return;
+      try {
+        const response = await getEstablishments(session.user.tenantId);
+        if (response.success) {
+          setEstablishments(response.data || []);
+        } else {
+          setEstablishments([]);
+        }
+      } catch (error) {
+        console.error("Error fetching establishments:", error);
+      }
+    };
+
+    fetchEstablishments();
+  }, [open, session?.user?.tenantId]);
+
   const onSubmit = async (data: CreateEmissionPoint) => {
     try {
+      if (!session?.user?.tenantId) {
+        AlertService.showError("No se encontró el tenantId en la sesión.");
+        return;
+      }
+
       const formattedData = {
         ...data,
-        sriConfigId,
         currentInvoiceSequence: Number(data.currentInvoiceSequence),
+        tenantId: session.user.tenantId,
       };
 
       const response = editingData

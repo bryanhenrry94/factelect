@@ -11,7 +11,7 @@ import { usePathname } from "next/navigation";
 import Menuitems from "./MenuItems";
 import Logo from "../shared/logo/Logo";
 
-const renderMenuItems = (items: any, pathDirect: any) => {
+const renderMenuItems = (items: any, pathDirect: any, isChild = false) => {
   return items.map((item: any) => {
     const Icon = item.icon ? item.icon : Dot;
 
@@ -23,8 +23,8 @@ const renderMenuItems = (items: any, pathDirect: any) => {
       />
     );
 
+    // Subheader
     if (item.subheader) {
-      // Display Subheader
       return (
         <Menu subHeading={item.subheader} key={item.subheader}>
           {null}
@@ -32,7 +32,7 @@ const renderMenuItems = (items: any, pathDirect: any) => {
       );
     }
 
-    //If the item has children (submenu)
+    // Submenu (tiene hijos)
     if (item.children) {
       return (
         <Submenu
@@ -41,15 +41,19 @@ const renderMenuItems = (items: any, pathDirect: any) => {
           icon={itemIcon}
           borderRadius="7px"
         >
-          {renderMenuItems(item.children, pathDirect)}
+          {renderMenuItems(item.children, pathDirect, true)}
         </Submenu>
       );
     }
 
-    // If the item has no children, render a MenuItem
-
+    // MenuItem sin hijos
     return (
-      <Box px={3} key={item.id}>
+      <Box
+        key={item.id}
+        sx={{
+          px: isChild ? 1 : 0, // ⭐ solo agrega padding si está dentro de un submenu
+        }}
+      >
         <MenuItem
           key={item.id}
           isSelected={pathDirect === item?.href}
@@ -77,9 +81,6 @@ const SidebarItems = () => {
         themeColor={"#5D87FF"}
         themeSecondaryColor={"#49beff"}
       >
-        {/* <Logo img="/images/logos/app-logo.svg" component={Link} href="/">
-          Modernize
-        </Logo> */}
         <Box sx={{ display: "flex", justifyContent: "center" }}>
           <Logo />
         </Box>
@@ -89,4 +90,5 @@ const SidebarItems = () => {
     </>
   );
 };
+
 export default SidebarItems;

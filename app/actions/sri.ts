@@ -25,9 +25,9 @@ export async function sendToSRI(
     if (!tenant.sriConfig)
       throw new Error("Configuración del SRI no encontrada");
 
-    const { p12CertificateUrl, certificatePassword, sriEnvironment } =
+    const { certificateUrl, certificatePassword, environment } =
       tenant.sriConfig;
-    if (!p12CertificateUrl || !certificatePassword)
+    if (!certificateUrl || !certificatePassword)
       throw new Error("Certificado SRI no configurado correctamente");
 
     const invoice = await prisma.invoice.findUnique({
@@ -61,7 +61,7 @@ export async function sendToSRI(
         throw new Error(xmlResult.error || "Error al generar XML");
 
       const responseSigned = await firmarFactura({
-        certUrl: p12CertificateUrl,
+        certUrl: certificateUrl,
         certPassword: certificatePassword,
         xmlDocument: xmlResult.xml,
         tenantId: tenant.id,
@@ -128,7 +128,7 @@ export async function sendToSRI(
     // ===============================================
     const resSriRecep = await enviarComprobanteAlSRI(
       xmlSigned.xmlContent || "",
-      sriEnvironment as "1" | "2"
+      environment === "TEST" ? "1" : "2"
     );
 
     console.log("Respuesta SRI Recepción:", resSriRecep);
@@ -171,7 +171,7 @@ export async function sendToSRI(
     // ===============================================
     const resSriAuth = await consultarAutorizacionSRI(
       invoice.accessKey!,
-      sriEnvironment as "1" | "2"
+      environment as "1" | "2"
     );
 
     console.log("Respuesta SRI Autorización:", resSriAuth);
@@ -258,7 +258,7 @@ export async function retryPendingAuthorizations() {
 
       const resAuth = await consultarAutorizacionSRI(
         invoice.accessKey!,
-        tenant.sriConfig.sriEnvironment as "1" | "2"
+        tenant.sriConfig.environment as "1" | "2"
       );
 
       console.log(

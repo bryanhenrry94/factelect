@@ -1,15 +1,8 @@
 import { z } from "zod";
 
-/**
- * 🧱 Esquema base — usado en formularios y validaciones generales
- * Incluye valores por defecto y coerción de números desde inputs.
- */
 export const tenantSriConfigBaseSchema = z.object({
-  sriEnvironment: z
-    .string()
-    .default("1")
-    .describe("1 = Sandbox, 2 = Producción"),
-  p12CertificatePath: z.string().nullable().optional(),
+  environment: z.enum(["TEST", "PRODUCTION"]),
+  certificatePath: z.string().nullable().optional(),
   certificatePassword: z.string().nullable().optional(),
 });
 

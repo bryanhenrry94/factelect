@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const establishmentSchema = z.object({
   id: z.string().cuid().optional(),
-  sriConfigId: z.string(),
+  tenantId: z.string(),
   code: z.string().length(3, "Code must be exactly 3 digits"),
   address: z.string().min(1, "Address is required"),
 });

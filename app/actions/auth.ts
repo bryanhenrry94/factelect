@@ -176,7 +176,7 @@ export const registerAccount = async (
     const sriConfig = await prisma.sRIConfiguration.create({
       data: {
         tenantId: tenant.id,
-        sriEnvironment: "1",
+        environment: "TEST",
       },
     });
 

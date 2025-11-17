@@ -1,13 +1,17 @@
 import {
-  Copy,
+  Files,
   LayoutDashboard,
   Package,
   Settings,
   Users,
   Wallet,
   ArrowLeftRight,
+  ShoppingCart,
+  FileText,
+  HandCoins,
+  Book,
+  CircleSmall,
 } from "lucide-react";
-
 import { uniqueId } from "lodash";
 
 const Menuitems = [
@@ -23,10 +27,6 @@ const Menuitems = [
     href: "/",
   },
   {
-    navlabel: true,
-    subheader: "CATÁLOGOS",
-  },
-  {
     id: uniqueId(),
     title: "Personas",
     icon: Users,
@@ -34,51 +34,134 @@ const Menuitems = [
   },
   {
     id: uniqueId(),
-    title: "Productos",
-    icon: Package,
-    href: "/productos",
-  },
-  {
-    navlabel: true,
-    subheader: "FINANZAS",
-  },
-  {
-    id: uniqueId(),
     title: "Transacciones",
     icon: ArrowLeftRight,
-    href: "/transacciones",
+    children: [
+      {
+        id: uniqueId(),
+        title: "Compra / Venta",
+        icon: ShoppingCart,
+        href: "/documentos",
+      },
+      {
+        id: uniqueId(),
+        title: "Cobros / Pagos",
+        icon: HandCoins,
+        href: "/transacciones",
+      },
+      {
+        id: uniqueId(),
+        title: "Movimientos",
+        icon: Wallet,
+        href: "/movimientos",
+      },
+    ],
   },
   {
     id: uniqueId(),
-    title: "Movimientos de Cuenta",
-    icon: Wallet,
-    href: "/movimientos",
-  },
-  {
-    navlabel: true,
-    subheader: "FACTURACIÓN ELECTRÓNICA",
+    title: "Inventario",
+    icon: Package,
+    children: [
+      {
+        id: uniqueId(),
+        title: "Productos / Servicios",
+        icon: Package,
+        href: "/productos",
+      },
+      {
+        id: uniqueId(),
+        title: "Entradas / Salidas",
+        icon: ArrowLeftRight,
+        href: "/inventario",
+      },
+      {
+        id: uniqueId(),
+        title: "Ajustes de Inventario",
+        icon: CircleSmall,
+        href: "/ajustes-inventario",
+      },
+    ],
   },
   {
     id: uniqueId(),
-    title: "Facturas",
-    icon: Copy,
-    href: "/facturas",
+    title: "Facturación Electrónica",
+    icon: Files,
+    children: [
+      {
+        id: uniqueId(),
+        title: "Facturas",
+        icon: CircleSmall,
+        href: "/facturas",
+      },
+      {
+        id: uniqueId(),
+        title: "Notas de Crédito",
+        icon: CircleSmall,
+        href: "/notas-credito",
+      },
+      {
+        id: uniqueId(),
+        title: "Notas de Débito",
+        icon: CircleSmall,
+        href: "/notas-debito",
+      },
+      {
+        id: uniqueId(),
+        title: "Guías de Remisión",
+        icon: CircleSmall,
+        href: "/guias-remision",
+      },
+      {
+        id: uniqueId(),
+        title: "Retenciones",
+        icon: CircleSmall,
+        href: "/retenciones",
+      },
+    ],
   },
   {
-    navlabel: true,
-    subheader: "CONFIGURACIÓN",
+    id: uniqueId(),
+    title: "Contabilidad",
+    icon: Book,
+    children: [
+      {
+        id: uniqueId(),
+        title: "Plan Contable",
+        icon: CircleSmall,
+        href: "/plan-contable",
+      },
+      {
+        id: uniqueId(),
+        title: "Asientos Contables",
+        icon: CircleSmall,
+        href: "/asientos-contables",
+      },
+      {
+        id: uniqueId(),
+        title: "Reportes",
+        icon: CircleSmall,
+        href: "/reportes",
+      },
+    ],
   },
   {
     id: uniqueId(),
     title: "Configuración",
     icon: Settings,
-    href: "/configuracion",
-  },
-  {
-    id: uniqueId(),
-    title: "Cuenta",
-    icon: Settings,
-    href: "/cuenta",
+    children: [
+      {
+        id: uniqueId(),
+        title: "General",
+        icon: CircleSmall,
+        href: "/configuracion",
+      },
+      {
+        id: uniqueId(),
+        title: "Cuenta",
+        icon: CircleSmall,
+        href: "/cuenta",
+      },
+    ],
   },
 ];
 

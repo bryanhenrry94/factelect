@@ -16,14 +16,16 @@ import {
 } from "@/app/actions";
 import { SRIConfiguration } from "@/prisma/generated/prisma";
 import { PersonFilter } from "@/types";
+import { PersonInput } from "@/lib/validations/person";
+import { Product } from "@/lib/validations";
 
 export default function InvoicesEditPage() {
   const { data: session } = useSession();
   const { id } = useParams();
 
   const [error, setError] = useState<string | null>(null);
-  const [clients, setClients] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
+  const [persons, setPersons] = useState<PersonInput[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [establishments, setEstablishments] = useState<any[]>([]);
   const [sriConfig, setSriConfig] = useState<SRIConfiguration | null>(null);
 
@@ -42,7 +44,7 @@ export default function InvoicesEditPage() {
         getEstablishmentsByTenant(session.user.tenantId),
         getTenantSriConfig(session.user.tenantId),
       ]);
-      if (c.success) setClients(c.data);
+      if (c.success) setPersons(c.data);
       if (p.success) setProducts(p.data);
       if (e.success) setEstablishments(e.data);
       if (s.success) setSriConfig(s.data);
@@ -63,7 +65,7 @@ export default function InvoicesEditPage() {
 
         <InvoiceForm
           invoiceId={id as string}
-          clients={clients}
+          persons={persons}
           products={products}
           establishments={establishments}
           sriConfig={sriConfig}

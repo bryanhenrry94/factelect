@@ -6,7 +6,7 @@ import {
 } from "@/lib/validations/emission-point";
 
 export const getEmissionPoints = async (
-  sriConfigId: string
+  tenantId: string
 ): Promise<{
   success: boolean;
   data?: EmissionPointWithEstablishmentSchema[];
@@ -14,7 +14,7 @@ export const getEmissionPoints = async (
 }> => {
   try {
     const emissionPoints = await prisma.emissionPoint.findMany({
-      where: { sriConfigId },
+      where: { tenantId },
       include: {
         establishment: true,
       },
@@ -97,6 +97,13 @@ export const getNextSequenceDocumentNumber = async (
   error?: string;
 }> => {
   try {
+    console.log(
+      "Fetching next sequence for emissionPointId:",
+      emissionPointId,
+      "and documentType:",
+      documentType
+    );
+
     const emissionPoint = await prisma.emissionPoint.findUnique({
       where: { id: emissionPointId },
     });

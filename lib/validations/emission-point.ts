@@ -3,7 +3,7 @@ import { establishmentSchema } from "./establishment";
 
 export const emissionPointSchema = z.object({
   id: z.string().cuid().optional(),
-  sriConfigId: z.string().cuid(),
+  tenantId: z.string().cuid(),
   establishmentId: z.string(),
   code: z.string().length(3, "Code must be exactly 3 digits"),
   description: z.string().optional().nullable(),

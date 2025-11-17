@@ -13,12 +13,6 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import PageContainer from "@/components/container/PageContainer";
 import TabPanel from "@/components/ui/TabPanel";
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
 export default function SettingsPage() {
   const { data: session } = useSession();
 

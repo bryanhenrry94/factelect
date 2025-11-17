@@ -14,8 +14,8 @@ export const sriUrls = {
 } as const;
 
 export const sriEnvironmentOptions = [
-  { value: "1", label: "SANDBOX" },
-  { value: "2", label: "PRODUCCION" },
+  { value: "TEST", label: "SANDBOX" },
+  { value: "PRODUCTION", label: "PRODUCCION" },
 ];
 export const sriPaymentMethods = [
   { value: "01", label: "SIN UTILIZACION DEL SISTEMA FINANCIERO" },
@@ -39,4 +39,3 @@ export const sriEmissionTypes = {
   CONTINGENCY: "2",
   OFFLINE: "3",
 } as const;
-

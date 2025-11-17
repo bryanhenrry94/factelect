@@ -1,6 +1,6 @@
 "use client";
 import { Box, Tabs, Tab, Alert, Stack } from "@mui/material";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import InvoiceHeaderActions from "./InvoiceHeaderActions";
 import InvoiceDocumentInfo from "./InvoiceDocumentInfo";
 import InvoiceItemsTable from "./InvoiceItemsTable";
@@ -30,6 +30,8 @@ import LoadingSRI from "../ui/LoadingSRI";
 import { pdf } from "@react-pdf/renderer";
 import InvoicePDF from "@/components/pdf/InvoicePDF";
 import { generateBarcodeBase64 } from "@/lib/barcode";
+import { PersonInput } from "@/lib/validations/person";
+import { Product } from "@/lib/validations";
 
 const initialPaymentMethodsState: CreateInvoicePaymentMethod[] = [
   {
@@ -73,8 +75,8 @@ const initialState: CreateInvoice = {
 
 interface InvoiceFormProps {
   invoiceId?: string;
-  clients: any[];
-  products: any[];
+  persons: PersonInput[];
+  products: Product[];
   establishments: any[];
   sriConfig: any;
   setError?: (error: string | null) => void;
@@ -82,7 +84,7 @@ interface InvoiceFormProps {
 
 export default function InvoiceForm({
   invoiceId,
-  clients,
+  persons,
   products,
   establishments,
   sriConfig,
@@ -330,7 +332,7 @@ export default function InvoiceForm({
         )}
 
         <InvoiceDocumentInfo
-          clients={clients}
+          persons={persons}
           establishments={establishments}
           modeEdit={modeEdit}
         />

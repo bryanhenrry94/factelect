@@ -59,7 +59,7 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
       new Date(invoice.issueDate),
       sriDocumentTypes.INVOICE,
       invoice.tenant.ruc ?? "",
-      sriConfig.sriEnvironment || "1",
+      sriConfig.environment || "TEST",
       `${serie1}${serie2}`,
       sequential,
       "12345678", // TODO: generar código numérico aleatorio
@@ -93,7 +93,7 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
         "@id": "comprobante",
         "@version": "1.1.0",
         infoTributaria: {
-          ambiente: sriConfig.sriEnvironment,
+          ambiente: sriConfig.environment === "TEST" ? "1" : "2",
           tipoEmision: "1",
           razonSocial: invoice.tenant.name,
           ruc: invoice.tenant.ruc,

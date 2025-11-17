@@ -7,6 +7,8 @@ import { Tenant, tenantSchema } from "@/lib/validations/tenant";
 import { updateTenant } from "@/app/actions/tenant";
 import { AlertService } from "@/lib/alerts";
 import UploadLogoForm from "../ui/UploadLogoForm";
+import { EstablishmentForm } from "../establishment/EstablishmentForm";
+import { EmissionPointForm } from "../emission-point/EmissionPointForm";
 
 interface CompanyFormProps {
   initialData: Tenant | null;
@@ -31,10 +33,6 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
       logoUrl: "",
     },
   });
-
-  /** 🔄 Reestablece el formulario si cambian los datos iniciales */
-  // Si tu componente puede recibir nuevos datos dinámicamente:
-  // useEffect(() => reset(initialData), [initialData, reset]);
 
   const onSubmit = async (data: Tenant) => {
     try {
@@ -195,6 +193,12 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
             />
 
             <UploadLogoForm logoUrl={watch("logoUrl")} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <EstablishmentForm />
+          </Grid>
+          <Grid size={{ xs: 12, md: 8 }}>
+            <EmissionPointForm />
           </Grid>
         </Grid>
 

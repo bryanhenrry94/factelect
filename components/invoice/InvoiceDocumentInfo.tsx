@@ -20,13 +20,13 @@ import { EmissionPointWithEstablishmentSchema } from "@/lib/validations/emission
 import { useFormContext } from "react-hook-form";
 
 interface InvoiceDocumentInfoProps {
-  clients: any[];
+  persons: any[];
   establishments: any[];
   modeEdit: boolean;
 }
 
 export default function InvoiceDocumentInfo({
-  clients,
+  persons,
   establishments,
   modeEdit,
 }: InvoiceDocumentInfoProps) {
@@ -104,11 +104,11 @@ export default function InvoiceDocumentInfo({
                   control={control}
                   render={({ field: { onChange, value } }) => (
                     <Autocomplete
-                      options={clients}
+                      options={persons}
                       getOptionLabel={(option) =>
                         `[${option.identification}] - ${option.firstName} ${option.lastName}`
                       }
-                      value={clients.find((c: any) => c.id === value) || null}
+                      value={persons.find((c: any) => c.id === value) || null}
                       onChange={(_, newValue) => onChange(newValue?.id || "")}
                       fullWidth
                       // disabled={modeEdit}

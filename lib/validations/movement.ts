@@ -8,24 +8,20 @@ export const movementSchema = z.object({
   accountId: z.string().min(1, "El account es requerido"),
   transactionId: z.string().nullable().optional(),
   type: MovementTypeEnum,
-  amount: z.number().min(0, "El monto es requerido").default(0),
-  date: z
-    .date()
-    .optional()
-    .default(() => new Date()),
+  amount: z.number().min(0, "El monto es requerido"),
+  date: z.date(),
   description: z.string().nullable().optional(),
   reference: z.string().nullable().optional(),
   reconciled: z.boolean().default(false),
   reconciledAt: z.date().nullable().optional(),
-  createdAt: z
-    .date()
-    .optional()
-    .default(() => new Date()),
+  createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
 
 export const createMovementSchema = movementSchema.omit({
   id: true,
+  tenantId: true,
+  reconciledAt: true,
   createdAt: true,
   updatedAt: true,
 });

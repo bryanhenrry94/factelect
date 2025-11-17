@@ -18,6 +18,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { useSession } from "next-auth/react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 
@@ -25,17 +26,17 @@ interface EstablishmentDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  editingEstablishment: Establishment | null;
-  sriConfigId: string;
+  establishmentSelected: Establishment | null;
 }
 
 const EstablishmentDialog: React.FC<EstablishmentDialogProps> = ({
   open,
   onClose,
   onSuccess,
-  editingEstablishment,
-  sriConfigId,
+  establishmentSelected,
 }) => {
+  const { data: session } = useSession();
+
   const {
     register,
     handleSubmit,
@@ -44,41 +45,46 @@ const EstablishmentDialog: React.FC<EstablishmentDialogProps> = ({
   } = useForm<CreateEstablishment>({
     // resolver: zodResolver(createEstablishmentSchema),
     defaultValues: {
-      sriConfigId: editingEstablishment?.sriConfigId ?? "",
-      code: editingEstablishment?.code ?? "",
-      address: editingEstablishment?.address ?? "",
+      tenantId: establishmentSelected?.tenantId ?? "",
+      code: establishmentSelected?.code ?? "",
+      address: establishmentSelected?.address ?? "",
     },
   });
 
   // 🔁 Rellena o limpia el formulario al cambiar el modo (editar o crear)
   useEffect(() => {
-    if (editingEstablishment) {
+    if (establishmentSelected) {
       reset({
-        sriConfigId: editingEstablishment.sriConfigId ?? "",
-        code: editingEstablishment.code ?? "",
-        address: editingEstablishment.address ?? "",
+        tenantId: establishmentSelected.tenantId ?? "",
+        code: establishmentSelected.code ?? "",
+        address: establishmentSelected.address ?? "",
       });
     } else {
       reset({
-        sriConfigId: "",
+        tenantId: "",
         code: "",
         address: "",
       });
     }
-  }, [editingEstablishment, reset]);
+  }, [establishmentSelected, reset]);
 
   // 💾 Acción de crear o actualizar
   const onSubmit = async (data: CreateEstablishment) => {
     try {
-      const formattedData = { ...data, sriConfigId };
+      if (!session?.user?.tenantId) {
+        AlertService.showError("No se encontró la información del usuario.");
+        return;
+      }
 
-      const response = editingEstablishment
-        ? await updateEstablishment(editingEstablishment.id!, formattedData)
+      const formattedData = { ...data, tenantId: session.user.tenantId };
+
+      const response = establishmentSelected
+        ? await updateEstablishment(establishmentSelected.id!, formattedData)
         : await createEstablishment(formattedData);
 
       if (response.success) {
         AlertService.showSuccess(
-          editingEstablishment
+          establishmentSelected
             ? "Establecimiento actualizado correctamente"
             : "Establecimiento creado correctamente"
         );
@@ -100,14 +106,14 @@ const EstablishmentDialog: React.FC<EstablishmentDialogProps> = ({
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <DialogTitle>
-          {editingEstablishment
+          {establishmentSelected
             ? "Editar Establecimiento"
             : "Agregar Establecimiento"}
         </DialogTitle>
 
         <DialogContent sx={{ display: "grid", gap: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            {editingEstablishment
+            {establishmentSelected
               ? "Actualiza la información del establecimiento."
               : "Agrega un nuevo establecimiento a tu base de datos."}
           </Typography>
@@ -140,7 +146,7 @@ const EstablishmentDialog: React.FC<EstablishmentDialogProps> = ({
             Cancelar
           </Button>
           <Button type="submit" variant="contained" disabled={isSubmitting}>
-            {editingEstablishment ? "Actualizar" : "Agregar"}
+            {establishmentSelected ? "Actualizar" : "Agregar"}
           </Button>
         </DialogActions>
       </form>

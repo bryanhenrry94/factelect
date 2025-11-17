@@ -16,11 +16,13 @@ export const generateAccessKey = (
     pad(issueDate.getMonth() + 1, 2) +
     issueDate.getFullYear().toString();
 
+  const codeEnvironment = environment === "TEST" ? "1" : "2";
+
   const rawKey =
     formattedDate +
     pad(documentType, 2) +
     pad(ruc, 13) +
-    pad(environment, 1) +
+    pad(codeEnvironment, 1) +
     pad(series, 6) +
     pad(sequential, 9) +
     pad(numericCode, 8) +

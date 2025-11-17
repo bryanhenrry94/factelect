@@ -12,3 +12,6 @@ export * from "./sri-config";
 export * from "./tenant";
 export * from "./account";
 export * from "./movement";
+export * from "./document";
+export * from "./document-item";
+export * from "./document-tax";

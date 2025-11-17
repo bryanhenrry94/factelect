@@ -3,11 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { Establishment } from "@/lib/validations/establishment";
 
 export const getEstablishments = async (
-  sriConfigId: string
+  tenantId: string
 ): Promise<{ success: boolean; data?: Establishment[]; error?: string }> => {
   try {
     const establishments = await prisma.establishment.findMany({
-      where: { sriConfigId },
+      where: { tenantId },
     });
     return { success: true, data: establishments };
   } catch (error) {
@@ -73,7 +73,7 @@ export const getEstablishmentsByTenant = async (
     }
 
     const establishments = await prisma.establishment.findMany({
-      where: { sriConfigId: tenant.sriConfig?.id },
+      where: { tenantId: tenant.sriConfig?.id },
     });
 
     return { success: true, data: establishments };

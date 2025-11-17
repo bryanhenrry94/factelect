@@ -159,3 +159,18 @@ export const getTransactions = async (
     return { success: false, error: "Error fetching transactions" };
   }
 };
+
+export const deleteTransaction = async (
+  transactionId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    await prisma.transaction.delete({
+      where: { id: transactionId },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting transaction:", error);
+    return { success: false, error: "Error deleting transaction" };
+  }
+};
