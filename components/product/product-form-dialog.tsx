@@ -51,7 +51,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
     },
   });
 
-  // 🔄 Cargar datos al editar
+  //  Cargar datos al editar
   useEffect(() => {
     if (editingProduct) {
       reset({
@@ -70,7 +70,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
     }
   }, [editingProduct, reset]);
 
-  // 📌 Enviar formulario
+  //  Enviar formulario
   const handleFormSubmit = async (data: CreateProduct) => {
     await onSubmit(data);
   };
