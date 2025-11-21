@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -21,6 +21,11 @@ import {
   Product,
 } from "@/lib/validations/product";
 import { taxOptions } from "@/constants/tax";
+import { Category } from "@/lib/validations/category";
+import { Unit } from "@/lib/validations/unit";
+import { getAllCategories } from "@/app/actions/category";
+import { useSession } from "next-auth/react";
+import { getUnits } from "@/app/actions/unit";
 
 interface ProductFormDialogProps {
   isDialogOpen: boolean;
@@ -35,6 +40,40 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
   editingProduct,
   onSubmit,
 }) => {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
+
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    fetchCategories();
+    fetchUnits();
+  }, [session?.user.tenantId]);
+
+  const fetchCategories = async () => {
+    try {
+      if (!session?.user.tenantId) return;
+      const response = await getAllCategories(session?.user.tenantId);
+      if (response.success) {
+        setCategories(response.data || []);
+      }
+    } catch (error) {
+      console.error("Error loading categories:", error);
+    }
+  };
+
+  const fetchUnits = async () => {
+    try {
+      if (!session?.user.tenantId) return;
+      const res = await getUnits(session?.user.tenantId);
+      if (res.success) {
+        setUnits(res.data || []);
+      }
+    } catch (error) {
+      console.error("Error loading units:", error);
+    }
+  };
+
   const {
     register,
     handleSubmit,
@@ -53,7 +92,6 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
       type: "PRODUCT",
       barcode: null,
       cost: 0,
-      isInventoriable: true,
     },
   });
 
@@ -94,6 +132,16 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
           </Typography>
 
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}>
+            {Object.entries(errors).length > 0 && (
+              <Box sx={{ mb: 1 }}>
+                {Object.entries(errors).map(([key, error]) => (
+                  <Typography key={key} color="error" variant="body2">
+                    {error?.message?.toString()}
+                  </Typography>
+                ))}
+              </Box>
+            )}
+
             <Stack direction="row" spacing={2}>
               <TextField
                 label="Código"
@@ -207,6 +255,11 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
                     {...field}
                     error={!!errors.cost}
                     helperText={errors.cost?.message}
+                    value={field.value || 0}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      field.onChange(isNaN(value) ? 0 : value);
+                    }}
                     size="small"
                   />
                 )}
@@ -230,8 +283,11 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
                   size="small"
                   select
                 >
-                  <MenuItem value="">Sin categoría</MenuItem>
-                  {/* Aquí puedes mapear las categorías disponibles */}
+                  {categories.map(({ id, name }) => (
+                    <MenuItem key={id} value={id}>
+                      {name}
+                    </MenuItem>
+                  ))}
                 </TextField>
               )}
             />
@@ -251,8 +307,11 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
                   size="small"
                   select
                 >
-                  <MenuItem value="">Sin unidad</MenuItem>
-                  {/* Aquí puedes mapear las unidades de medida disponibles */}
+                  {units.map(({ id, name, symbol }) => (
+                    <MenuItem key={id} value={id}>
+                      {`${name} (${symbol})`}
+                    </MenuItem>
+                  ))}
                 </TextField>
               )}
             />

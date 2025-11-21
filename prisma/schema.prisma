@@ -136,10 +136,9 @@ model Product {
   type                    ProductType                                   @default(PRODUCT) // PRODUCT | SERVICE
   barcode                 String?                                       @unique
   cost                    Float                                         @default(0) // costo promedio o estándar
-  isInventoriable         Boolean                                       @default(true)
 
-  unitId                  String?
-  unit                    Unit?                     @relation(fields: [unitId], references: [id])
+  unitId                  String
+  unit                    Unit                      @relation(fields: [unitId], references: [id])
 
   categoryId              String                    @map("category_id")
   category                Category                  @relation(fields: [categoryId], references: [id])

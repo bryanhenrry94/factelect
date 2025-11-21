@@ -32,6 +32,7 @@ export async function createProduct(
       data: {
         ...parsed,
         tenantId,
+        barcode: parsed.barcode || null,
       },
     });
 
@@ -96,11 +97,22 @@ export async function getProductById(
 }
 
 export async function getAllProducts(
-  tenantId: string
+  tenantId: string,
+  search?: string
 ): Promise<{ success: boolean; data: Product[]; error?: string }> {
   try {
     const products = await prisma.product.findMany({
-      where: { tenantId },
+      where: {
+        tenantId,
+        ...(search
+          ? {
+              OR: [
+                { description: { contains: search, mode: "insensitive" } },
+                { code: { contains: search, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
       orderBy: { createdAt: "asc" },
     });
 
