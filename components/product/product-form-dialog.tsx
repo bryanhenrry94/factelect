@@ -132,16 +132,6 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
           </Typography>
 
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}>
-            {Object.entries(errors).length > 0 && (
-              <Box sx={{ mb: 1 }}>
-                {Object.entries(errors).map(([key, error]) => (
-                  <Typography key={key} color="error" variant="body2">
-                    {error?.message?.toString()}
-                  </Typography>
-                ))}
-              </Box>
-            )}
-
             <Stack direction="row" spacing={2}>
               <TextField
                 label="Código"
