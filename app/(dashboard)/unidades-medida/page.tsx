@@ -244,6 +244,7 @@ const UnitsPage = () => {
                     .map((unit) => (
                       <TableRow key={unit.id} hover>
                         <TableCell>{unit.name}</TableCell>
+                        <TableCell>{unit.symbol}</TableCell>
                         <TableCell align="right">
                           <IconButton
                             color="primary"
