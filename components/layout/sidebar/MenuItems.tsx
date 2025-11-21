@@ -7,10 +7,18 @@ import {
   Wallet,
   ArrowLeftRight,
   ShoppingCart,
-  FileText,
+  PiggyBank,
   HandCoins,
   Book,
   CircleSmall,
+  CreditCard,
+  Building,
+  KeyRound,
+  Banknote,
+  Receipt,
+  BarChart3,
+  Calculator,
+  Boxes,
 } from "lucide-react";
 import { uniqueId } from "lodash";
 
@@ -20,43 +28,186 @@ const Menuitems = [
     subheader: "INICIO",
   },
 
+  // Dashboard
   {
     id: uniqueId(),
     title: "Panel de Control",
     icon: LayoutDashboard,
     href: "/",
   },
+
+  // Personas
   {
     id: uniqueId(),
     title: "Personas",
     icon: Users,
-    href: "/personas",
-  },
-  {
-    id: uniqueId(),
-    title: "Transacciones",
-    icon: ArrowLeftRight,
     children: [
       {
         id: uniqueId(),
-        title: "Compra / Venta",
-        icon: ShoppingCart,
+        title: "Clientes",
+        icon: CircleSmall,
+        href: "/personas?tipo=cliente",
+      },
+      {
+        id: uniqueId(),
+        title: "Proveedores",
+        icon: CircleSmall,
+        href: "/personas?tipo=proveedor",
+      },
+    ],
+  },
+  {
+    id: uniqueId(),
+    title: "Productos / Servicios",
+    icon: Boxes,
+    children: [
+      {
+        id: uniqueId(),
+        title: "Productos / Servicios",
+        icon: CircleSmall,
+        href: "/productos",
+      },
+      {
+        id: uniqueId(),
+        title: "Categorías",
+        icon: CircleSmall,
+        href: "/categorias-productos",
+      },
+      {
+        id: uniqueId(),
+        title: "Unidades de Medida",
+        icon: CircleSmall,
+        href: "/unidades-medida",
+      },
+    ],
+  },
+  // Ventas
+  {
+    id: uniqueId(),
+    title: "Ventas",
+    icon: PiggyBank,
+    children: [
+      {
+        id: uniqueId(),
+        title: "Ventas",
+        icon: Receipt,
         href: "/documentos",
       },
       {
         id: uniqueId(),
-        title: "Cobros / Pagos",
-        icon: HandCoins,
+        title: "Cobros",
+        icon: Wallet,
         href: "/transacciones",
       },
       {
         id: uniqueId(),
-        title: "Movimientos",
-        icon: Wallet,
-        href: "/movimientos",
+        title: "Estado de Cuenta",
+        icon: CircleSmall,
+        href: "/estado-cuenta-clientes",
+      },
+      {
+        id: uniqueId(),
+        title: "Proformas",
+        icon: CircleSmall,
+        href: "/proformas",
       },
     ],
   },
+
+  // Compras
+  {
+    id: uniqueId(),
+    title: "Compras",
+    icon: CreditCard,
+    children: [
+      {
+        id: uniqueId(),
+        title: "Compras",
+        icon: ShoppingCart,
+        href: "/compras",
+      },
+      {
+        id: uniqueId(),
+        title: "Pagos",
+        icon: HandCoins,
+        href: "/pagos",
+      },
+      {
+        id: uniqueId(),
+        title: "Estado de Cuenta",
+        icon: CircleSmall,
+        href: "/estado-cuenta-proveedores",
+      },
+      {
+        id: uniqueId(),
+        title: "Ordenes de Compra",
+        icon: CircleSmall,
+        href: "/ordenes-compra",
+      },
+    ],
+  },
+
+  // Bancos / Tesorería
+  {
+    id: uniqueId(),
+    title: "Bancos",
+    icon: Banknote,
+    children: [
+      {
+        id: uniqueId(),
+        title: "Cuentas Bancarias",
+        icon: CircleSmall,
+        href: "/bancos/cuentas",
+      },
+      {
+        id: uniqueId(),
+        title: "Movimientos Bancarios",
+        icon: CircleSmall,
+        href: "/bancos/movimientos",
+      },
+      {
+        id: uniqueId(),
+        title: "Conciliación Bancaria",
+        icon: CircleSmall,
+        href: "/bancos/conciliacion",
+      },
+      {
+        id: uniqueId(),
+        title: "Transferencias",
+        icon: ArrowLeftRight,
+        href: "/bancos/transferencias",
+      },
+    ],
+  },
+
+  // Caja chica
+  {
+    id: uniqueId(),
+    title: "Caja Chica",
+    icon: Calculator,
+    children: [
+      {
+        id: uniqueId(),
+        title: "Gastos",
+        icon: CircleSmall,
+        href: "/caja-chica/gastos",
+      },
+      {
+        id: uniqueId(),
+        title: "Ingresos",
+        icon: CircleSmall,
+        href: "/caja-chica/ingresos",
+      },
+      {
+        id: uniqueId(),
+        title: "Arqueo",
+        icon: CircleSmall,
+        href: "/caja-chica/arqueo",
+      },
+    ],
+  },
+
+  // Inventario
   {
     id: uniqueId(),
     title: "Inventario",
@@ -64,15 +215,9 @@ const Menuitems = [
     children: [
       {
         id: uniqueId(),
-        title: "Productos / Servicios",
-        icon: Package,
-        href: "/productos",
-      },
-      {
-        id: uniqueId(),
-        title: "Entradas / Salidas",
+        title: "Movimientos (Kardex)",
         icon: ArrowLeftRight,
-        href: "/inventario",
+        href: "/inventario-movimientos",
       },
       {
         id: uniqueId(),
@@ -80,8 +225,16 @@ const Menuitems = [
         icon: CircleSmall,
         href: "/ajustes-inventario",
       },
+      {
+        id: uniqueId(),
+        title: "Inventario Valorizado",
+        icon: CircleSmall,
+        href: "/inventario-valorizado",
+      },
     ],
   },
+
+  // Facturación Electrónica
   {
     id: uniqueId(),
     title: "Facturación Electrónica",
@@ -91,7 +244,7 @@ const Menuitems = [
         id: uniqueId(),
         title: "Facturas",
         icon: CircleSmall,
-        href: "/facturas",
+        href: "/facturas-electronicas",
       },
       {
         id: uniqueId(),
@@ -117,8 +270,16 @@ const Menuitems = [
         icon: CircleSmall,
         href: "/retenciones",
       },
+      {
+        id: uniqueId(),
+        title: "Logs SRI",
+        icon: CircleSmall,
+        href: "/sri/logs",
+      },
     ],
   },
+
+  // Contabilidad
   {
     id: uniqueId(),
     title: "Contabilidad",
@@ -138,12 +299,98 @@ const Menuitems = [
       },
       {
         id: uniqueId(),
-        title: "Reportes",
+        title: "Libro Diario",
         icon: CircleSmall,
-        href: "/reportes",
+        href: "/libro-diario",
+      },
+      {
+        id: uniqueId(),
+        title: "Libro Mayor",
+        icon: CircleSmall,
+        href: "/libro-mayor",
+      },
+      {
+        id: uniqueId(),
+        title: "Balance General",
+        icon: CircleSmall,
+        href: "/balance-general",
+      },
+      {
+        id: uniqueId(),
+        title: "Estado de Resultados",
+        icon: CircleSmall,
+        href: "/estado-resultados",
       },
     ],
   },
+
+  // Finanzas
+  {
+    id: uniqueId(),
+    title: "Finanzas",
+    icon: Calculator,
+    children: [
+      {
+        id: uniqueId(),
+        title: "Flujo de Caja",
+        icon: CircleSmall,
+        href: "/finanzas/flujo-caja",
+      },
+      {
+        id: uniqueId(),
+        title: "Presupuestos",
+        icon: CircleSmall,
+        href: "/finanzas/presupuestos",
+      },
+      {
+        id: uniqueId(),
+        title: "Indicadores Financieros",
+        icon: CircleSmall,
+        href: "/finanzas/indicadores",
+      },
+    ],
+  },
+
+  // Reportes
+  {
+    id: uniqueId(),
+    title: "Reportes",
+    icon: BarChart3,
+    children: [
+      {
+        id: uniqueId(),
+        title: "Reporte de Ventas",
+        icon: CircleSmall,
+        href: "/reportes/ventas",
+      },
+      {
+        id: uniqueId(),
+        title: "Reporte de Compras",
+        icon: CircleSmall,
+        href: "/reportes/compras",
+      },
+      {
+        id: uniqueId(),
+        title: "Productos Más Vendidos",
+        icon: CircleSmall,
+        href: "/reportes/productos-mas-vendidos",
+      },
+      {
+        id: uniqueId(),
+        title: "Rentabilidad",
+        icon: CircleSmall,
+        href: "/reportes/rentabilidad",
+      },
+      {
+        id: uniqueId(),
+        title: "Inventario Valorizado",
+        icon: CircleSmall,
+        href: "/reportes/inventario-valorizado",
+      },
+    ],
+  },
+
+  // Configuración
   {
     id: uniqueId(),
     title: "Configuración",
@@ -157,9 +404,45 @@ const Menuitems = [
       },
       {
         id: uniqueId(),
-        title: "Cuenta",
+        title: "Perfil",
         icon: CircleSmall,
-        href: "/cuenta",
+        href: "/perfil",
+      },
+      {
+        id: uniqueId(),
+        title: "Usuarios y Permisos",
+        icon: CircleSmall,
+        href: "/usuarios",
+      },
+      {
+        id: uniqueId(),
+        title: "Catálogos",
+        icon: CircleSmall,
+        href: "/catalogos",
+      },
+      {
+        id: uniqueId(),
+        title: "Sucursales y Puntos de Emisión",
+        icon: Building,
+        href: "/establecimientos",
+      },
+      {
+        id: uniqueId(),
+        title: "Certificados Digitales",
+        icon: KeyRound,
+        href: "/certificados",
+      },
+      {
+        id: uniqueId(),
+        title: "Integraciones",
+        icon: CircleSmall,
+        href: "/integraciones",
+      },
+      {
+        id: uniqueId(),
+        title: "Auditoría",
+        icon: CircleSmall,
+        href: "/auditoria",
       },
     ],
   },

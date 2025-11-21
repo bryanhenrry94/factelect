@@ -1,13 +1,16 @@
 import { z } from "zod";
 
 export const establishmentSchema = z.object({
-  id: z.string().cuid().optional(),
+  id: z.cuid().optional(),
   tenantId: z.string(),
-  code: z.string().length(3, "Code must be exactly 3 digits"),
-  address: z.string().min(1, "Address is required"),
+  code: z
+    .string()
+    .length(3, "El código del establecimiento debe tener 3 caracteres"),
+  address: z.string().min(1, "La dirección es obligatoria"),
 });
 
 export const createEstablishmentSchema = establishmentSchema.omit({
+  tenantId: true,
   id: true,
 });
 

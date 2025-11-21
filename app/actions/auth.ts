@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 import bcrypt from "bcrypt";
+import { $Enums } from "@/prisma/generated/prisma";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -202,22 +203,18 @@ export const registerAccount = async (
       };
     }
 
-    const account = await prisma.account.create({
+    // registramos consumidor final
+    await prisma.person.create({
       data: {
+        personKind: "LEGAL",
+        identificationType: $Enums.IdentificationType.VENTA_A_CONSUMIDOR_FINAL,
+        identification: "9999999999999",
+        firstName: "CONSUMIDOR",
+        lastName: "FINAL",
+        email: "noemail@example.com",
         tenantId: tenant.id,
-        name: "Caja Principal",
-        type: "CASH",
-        currency: "USD",
-        balance: 0,
       },
     });
-
-    if (!account) {
-      return {
-        success: false,
-        error: "Hubo un error al crear la cuenta principal",
-      };
-    }
 
     return { success: true, data: "Cuenta registrada exitosamente!" };
   } catch (error) {

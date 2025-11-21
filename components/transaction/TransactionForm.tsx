@@ -24,7 +24,6 @@ import {
 } from "@/lib/validations";
 import {
   createTransaction,
-  getAccounts,
   getPersonsByTenant,
   getTransaction,
   updateTransaction,
@@ -37,13 +36,18 @@ import { PersonFilter } from "@/types/person";
 import { useSession } from "next-auth/react";
 
 const initialState: CreateTransactionInput = {
+  personId: "",
   type: "INCOME",
   method: "CASH",
+  amount: 0,
   issueDate: new Date(),
   reference: null,
   description: null,
-  personId: "",
-  accountId: "",
+  documents: [],
+  reconciled: false,
+  reconciledAt: null,
+  bankAccountId: null,
+  cashBoxId: null,
 };
 
 interface TransactionFormProps {
@@ -87,7 +91,6 @@ export default function TransactionForm({
 
   useEffect(() => {
     loadPersons("CLIENT");
-    loadAccounts();
   }, [session?.user?.tenantId]);
 
   const loadPersons = async (role: string) => {
@@ -107,19 +110,6 @@ export default function TransactionForm({
     }
   };
 
-  const loadAccounts = async () => {
-    if (!session?.user?.tenantId) return;
-
-    // Implement getAccounts action similar to getCashes
-    const response = await getAccounts(session.user.tenantId);
-
-    if (response.success && response.data) {
-      setAccounts(response.data);
-    } else {
-      setAccounts([]);
-    }
-  };
-
   const handleChangeType = (type: string) => {
     const role = type === "INCOME" ? "CLIENT" : "SUPPLIER";
     loadPersons(role);
@@ -135,13 +125,18 @@ export default function TransactionForm({
         setModeEdit(true);
 
         const data: CreateTransactionInput = {
+          personId: response.data.personId,
           type: response.data.type,
           method: response.data.method,
+          amount: response.data.amount,
           issueDate: response.data.issueDate,
           reference: response.data.reference,
           description: response.data.description,
-          personId: response.data.personId,
-          accountId: response.data.accountId,
+          documents: response.data.documents,
+          reconciled: response.data.reconciled ?? false,
+          reconciledAt: response.data.reconciledAt ?? null,
+          bankAccountId: response.data.bankAccountId ?? null,
+          cashBoxId: response.data.cashBoxId ?? null,
         };
 
         reset(data);
@@ -296,27 +291,6 @@ export default function TransactionForm({
                     {persons.map((person) => (
                       <MenuItem key={person.id} value={person.id}>
                         {`${person.firstName} ${person.lastName}`}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                )}
-              />
-
-              <Controller
-                name="accountId"
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Cuenta"
-                    fullWidth
-                    margin="dense"
-                    value={field.value || ""}
-                    size="small"
-                    select
-                  >
-                    {accounts.map((account) => (
-                      <MenuItem key={account.id} value={account.id}>
-                        {account.name} - {account.number}
                       </MenuItem>
                     ))}
                   </TextField>

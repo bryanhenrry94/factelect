@@ -79,7 +79,6 @@ export const EmissionPointForm = () => {
                   <TableCell>Establecimiento</TableCell>
                   <TableCell>Punto</TableCell>
                   <TableCell>Descripción</TableCell>
-                  <TableCell>Secuencia</TableCell>
                   <TableCell>Estado</TableCell>
                   <TableCell align="right">Acción</TableCell>
                 </TableRow>
@@ -97,7 +96,6 @@ export const EmissionPointForm = () => {
                       <TableCell>{item.establishment?.code}</TableCell>
                       <TableCell>{item.code}</TableCell>
                       <TableCell>{item.description}</TableCell>
-                      <TableCell>{item.currentInvoiceSequence}</TableCell>
                       <TableCell>
                         <Chip
                           label={item.isActive ? "Activo" : "Inactivo"}

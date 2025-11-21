@@ -1,16 +1,16 @@
 import { z } from "zod";
 
 export const accountSchema = z.object({
-  id: z.string().cuid().optional(),
+  id: z.string().uuid().optional(),
   tenantId: z.string(),
+  code: z.string().min(1, "Code is required"),
   name: z.string().min(1, "Name is required"),
   type: z.enum(["BANK", "CASH", "CREDIT_CARD"]), // Ajusta según tu enum AccountType
-  balance: z.number(),
-  currency: z.string(),
-  bank: z.string().nullable().optional(),
-  number: z.string().nullable().optional(),
-  last4: z.string().length(4).nullable().optional(),
-  createdAt: z.date().optional(),
+  parentId: z.string().uuid().nullable().optional(),
+  isAuxiliary: z.boolean().optional(),
+  allowCustomer: z.boolean().optional(),
+  allowSupplier: z.boolean().optional(),
+  // Relaciones inversas y arrays pueden omitirse o representarse como empty arrays or omitted for validation
 });
 
 export const createAccountSchema = accountSchema.omit({

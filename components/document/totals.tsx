@@ -1,4 +1,4 @@
-import { InvoiceItem } from "@/lib/validations/invoice-item";
+import { DocumentItem } from "@/lib/validations/document-item";
 import {
   Table,
   TableBody,
@@ -8,10 +8,10 @@ import {
 } from "@mui/material";
 
 interface InvoiceTotalsProps {
-  items: InvoiceItem[];
+  items: DocumentItem[];
 }
 
-export const InvoiceTotals: React.FC<InvoiceTotalsProps> = ({ items }) => {
+export const DocumentTotals: React.FC<InvoiceTotalsProps> = ({ items }) => {
   const subtotal15 = items
     .filter((item) => item.tax === "IVA_15")
     .reduce((sum, item) => sum + item.subtotal, 0);
@@ -79,5 +79,3 @@ export const InvoiceTotals: React.FC<InvoiceTotalsProps> = ({ items }) => {
     </TableContainer>
   );
 };
-
-export default InvoiceTotals;

@@ -3,7 +3,7 @@
 import type React from "react";
 import { useEffect, useState } from "react";
 import { Tabs, Tab, Box, Card } from "@mui/material";
-import { Building2, FileText } from "lucide-react";
+import { Building2, CreditCard, FileText } from "lucide-react";
 import CompanyForm from "@/components/setting/company-form";
 import SRIConfigForm from "@/components/setting/sri-config-form";
 import { getTenantById } from "@/app/actions/tenant";
@@ -12,6 +12,7 @@ import { Tenant } from "@/lib/validations/tenant";
 import { PageHeader } from "@/components/ui/PageHeader";
 import PageContainer from "@/components/container/PageContainer";
 import TabPanel from "@/components/ui/TabPanel";
+import { BillingForm } from "@/components/billing/BillingForm";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
@@ -65,6 +66,11 @@ export default function SettingsPage() {
               iconPosition="start"
               label="Facturación Electrónica"
             />
+            <Tab
+              icon={<CreditCard className="w-5 h-5" />}
+              iconPosition="start"
+              label="Facturación"
+            />
           </Tabs>
         </Box>
 
@@ -76,6 +82,10 @@ export default function SettingsPage() {
         {/* Electronic Invoicing Tab */}
         <TabPanel value={tabValue} index={1}>
           <SRIConfigForm tenantId={tenant?.id || ""} />
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={2}>
+          <BillingForm />
         </TabPanel>
       </Card>
     </PageContainer>

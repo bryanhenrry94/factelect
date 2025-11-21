@@ -30,19 +30,21 @@ export async function sendToSRI(
     if (!certificateUrl || !certificatePassword)
       throw new Error("Certificado SRI no configurado correctamente");
 
-    const invoice = await prisma.invoice.findUnique({
+    const document = await prisma.document.findUnique({
       where: { id: invoiceId },
       include: {
         tenant: true,
         person: true,
-        emissionPoint: { include: { establishment: true } },
+        documentFiscalInfo: {
+          include: { establishment: true, emissionPoint: true },
+        },
         taxes: true,
         items: { include: { product: true } },
-        paymentMethods: true,
+        documentPayments: true,
       },
     });
 
-    if (!invoice) throw new Error("Factura no encontrada");
+    if (!document) throw new Error("Factura no encontrada");
 
     // ===============================================
     // 🧩 1. Generar XML y firmar si está en DRAFT
@@ -55,7 +57,7 @@ export async function sendToSRI(
       error?: string;
     } = { success: false };
 
-    if (invoice.status === "DRAFT") {
+    if (document.status === "DRAFT") {
       const xmlResult = await generateXmlSRI(invoiceId);
       if (!xmlResult.success || !xmlResult.xml)
         throw new Error(xmlResult.error || "Error al generar XML");
@@ -86,16 +88,21 @@ export async function sendToSRI(
         throw new Error("Clave de acceso no encontrada en el XML firmado");
 
       // Asignar clave de acceso a la factura en memoria para uso posterior
-      invoice.accessKey = accessKey;
+      document.documentFiscalInfo!.accessKey = accessKey;
+
+      await prisma.documentFiscalInfo.update({
+        where: { documentId: invoiceId },
+        data: {
+          accessKey,
+          generatedXmlUrl: responseSigned.xmlFileUrl,
+        },
+      });
 
       // Guardar estado firmado
-      await prisma.invoice.update({
+      await prisma.document.update({
         where: { id: invoiceId },
         data: {
-          xmlFilePath: responseSigned.xmlFilePath,
-          xmlFileUrl: responseSigned.xmlFileUrl,
-          status: "SIGNED",
-          accessKey,
+          status: "CONFIRMED",
         },
       });
 
@@ -110,16 +117,16 @@ export async function sendToSRI(
     // ===============================================
     // 🧩 2. Si ya está firmado, obtener XML
     // ===============================================
-    if (invoice.status === "SIGNED") {
-      const resDownloadXml = await getXmlSignedByPath(invoice.xmlFilePath!);
+    if (document.status === "CONFIRMED") {
+      const resDownloadXml = await getXmlSignedByPath(
+        document.documentFiscalInfo!.generatedXmlUrl!
+      );
       if (!resDownloadXml.success || !resDownloadXml.xmlSigned)
         throw new Error(resDownloadXml.error || "Error al obtener XML firmado");
 
       xmlSigned = {
         success: true,
         xmlContent: resDownloadXml.xmlSigned,
-        xmlFilePath: invoice.xmlFilePath!,
-        xmlFileUrl: invoice.xmlFileUrl!,
       };
     }
 
@@ -134,23 +141,20 @@ export async function sendToSRI(
     console.log("Respuesta SRI Recepción:", resSriRecep);
 
     if (!resSriRecep.success) {
-      await prisma.invoice.update({
+      await prisma.documentFiscalInfo.update({
         where: { id: invoiceId },
         data: {
-          status: "PENDING_AUTHORIZATION",
-          sriResponse: JSON.stringify(resSriRecep.raw || resSriRecep),
-          sriError: resSriRecep.error,
+          sriStatus: "SENT",
         },
       });
       throw new Error("Error en la recepción del SRI: " + resSriRecep.error);
     }
 
     if (resSriRecep.estado !== "RECIBIDA") {
-      await prisma.invoice.update({
+      await prisma.documentFiscalInfo.update({
         where: { id: invoiceId },
         data: {
-          status: "PENDING_AUTHORIZATION",
-          sriResponse: JSON.stringify(resSriRecep.raw || resSriRecep),
+          sriStatus: "REJECTED",
         },
       });
       throw new Error(
@@ -158,9 +162,9 @@ export async function sendToSRI(
       );
     }
 
-    await prisma.invoice.update({
+    await prisma.documentFiscalInfo.update({
       where: { id: invoiceId },
-      data: { status: "SENT" },
+      data: { sriStatus: "PENDING" },
     });
 
     // Espera unos segundos antes de autorizar
@@ -170,30 +174,27 @@ export async function sendToSRI(
     // 🧩 4. Consultar autorización
     // ===============================================
     const resSriAuth = await consultarAutorizacionSRI(
-      invoice.accessKey!,
+      document.documentFiscalInfo!.accessKey!,
       environment as "1" | "2"
     );
 
     console.log("Respuesta SRI Autorización:", resSriAuth);
 
     if (!resSriAuth.success) {
-      await prisma.invoice.update({
+      await prisma.documentFiscalInfo.update({
         where: { id: invoiceId },
         data: {
-          status: "PENDING_AUTHORIZATION",
-          sriResponse: JSON.stringify(resSriAuth.raw || resSriAuth),
-          sriError: resSriAuth.error,
+          sriStatus: "PENDING",
         },
       });
       throw new Error("Error al consultar autorización: " + resSriAuth.error);
     }
 
     if (resSriAuth.estado !== "AUTORIZADO") {
-      await prisma.invoice.update({
+      await prisma.documentFiscalInfo.update({
         where: { id: invoiceId },
         data: {
-          status: "PENDING_AUTHORIZATION",
-          sriResponse: JSON.stringify(resSriAuth.raw || resSriAuth),
+          sriStatus: "PENDING",
         },
       });
       throw new Error(`Factura no autorizada. Estado: ${resSriAuth.estado}`);
@@ -202,15 +203,14 @@ export async function sendToSRI(
     // ===============================================
     // 🧩 5. Factura AUTORIZADA ✅
     // ===============================================
-    await prisma.invoice.update({
+    await prisma.documentFiscalInfo.update({
       where: { id: invoiceId },
       data: {
-        status: "AUTHORIZED",
-        authorizationNumber: resSriAuth.numeroAutorizacion || "",
+        sriStatus: "AUTHORIZED",
+        authorization: resSriAuth.numeroAutorizacion || "",
         authorizationDate: resSriAuth.fechaAutorizacion
           ? new Date(resSriAuth.fechaAutorizacion)
           : null,
-        sriResponse: JSON.stringify(resSriAuth.raw),
       },
     });
 
@@ -227,11 +227,10 @@ export async function sendToSRI(
       error.message
     );
 
-    await prisma.invoice.update({
+    await prisma.documentFiscalInfo.update({
       where: { id: invoiceId },
       data: {
-        status: "PENDING_AUTHORIZATION",
-        sriError: error.message,
+        sriStatus: "PENDING",
       },
     });
 
@@ -243,61 +242,58 @@ export async function sendToSRI(
 }
 
 export async function retryPendingAuthorizations() {
-  const pendingInvoices = await prisma.invoice.findMany({
-    where: { status: "PENDING_AUTHORIZATION" },
+  const pendingDocuments = await prisma.documentFiscalInfo.findMany({
+    where: { sriStatus: "PENDING" },
+    include: { document: true },
   });
 
-  for (const invoice of pendingInvoices) {
+  for (const document of pendingDocuments) {
     try {
       const tenant = await prisma.tenant.findUnique({
-        where: { id: invoice.tenantId },
+        where: { id: document.document.tenantId },
         include: { sriConfig: true },
       });
 
       if (!tenant?.sriConfig) continue;
 
       const resAuth = await consultarAutorizacionSRI(
-        invoice.accessKey!,
+        document.accessKey!,
         tenant.sriConfig.environment as "1" | "2"
       );
 
       console.log(
-        `Reintentando autorización para factura ${invoice.id}:`,
+        `Reintentando autorización para factura ${document.id}:`,
         resAuth
       );
 
       if (resAuth.success && resAuth.estado === "AUTORIZADO") {
-        await prisma.invoice.update({
-          where: { id: invoice.id },
+        await prisma.documentFiscalInfo.update({
+          where: { id: document.id },
           data: {
-            status: "AUTHORIZED",
-            authorizationNumber: resAuth.numeroAutorizacion || "",
+            sriStatus: "AUTHORIZED",
+            authorization: resAuth.numeroAutorizacion || "",
             authorizationDate: resAuth.fechaAutorizacion
               ? new Date(resAuth.fechaAutorizacion)
               : null,
-            sriResponse: JSON.stringify(resAuth.raw),
           },
         });
       } else if (resAuth.success && resAuth.estado === "NO AUTORIZADO") {
-        await prisma.invoice.update({
-          where: { id: invoice.id },
+        await prisma.documentFiscalInfo.update({
+          where: { id: document.id },
           data: {
-            status: "REJECTED",
-            sriResponse: JSON.stringify(resAuth.raw || resAuth),
-            sriError: resAuth.error || null,
+            sriStatus: "REJECTED",
           },
         });
-        console.log(`Factura ${invoice.id} no autorizada por el SRI.`);
+        console.log(`Factura ${document.id} no autorizada por el SRI.`);
       } else {
-        await prisma.invoice.update({
-          where: { id: invoice.id },
+        await prisma.documentFiscalInfo.update({
+          where: { id: document.id },
           data: {
-            sriResponse: JSON.stringify(resAuth.raw || resAuth),
-            sriError: resAuth.error || null,
+            sriStatus: "AUTHORIZED",
           },
         });
         console.log(
-          `Factura ${invoice.id} aún no autorizada. Estado: ${resAuth.estado}`
+          `Factura ${document.id} aún no autorizada. Estado: ${resAuth.estado}`
         );
       }
     } catch (err) {

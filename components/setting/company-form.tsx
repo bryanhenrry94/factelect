@@ -25,7 +25,7 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
     defaultValues: initialData || {
       name: "",
       subdomain: "",
-      legalName: "",
+      tradeName: "",
       ruc: "",
       phone: "",
       contactEmail: "",
@@ -128,9 +128,9 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
               fullWidth
               label="Nombre Comercial"
               placeholder="Ej: Comercial Andina"
-              {...register("legalName")}
-              error={!!errors.legalName}
-              helperText={errors.legalName?.message}
+              {...register("tradeName")}
+              error={!!errors.tradeName}
+              helperText={errors.tradeName?.message}
             />
           </Grid>
 
@@ -193,12 +193,6 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
             />
 
             <UploadLogoForm logoUrl={watch("logoUrl")} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <EstablishmentForm />
-          </Grid>
-          <Grid size={{ xs: 12, md: 8 }}>
-            <EmissionPointForm />
           </Grid>
         </Grid>
 

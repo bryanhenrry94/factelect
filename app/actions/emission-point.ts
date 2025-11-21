@@ -88,43 +88,6 @@ export const getEmissionPointsByEstablishment = async (
   }
 };
 
-export const getNextSequenceDocumentNumber = async (
-  emissionPointId: string,
-  documentType: string
-): Promise<{
-  success: boolean;
-  nextSequence?: number;
-  error?: string;
-}> => {
-  try {
-    console.log(
-      "Fetching next sequence for emissionPointId:",
-      emissionPointId,
-      "and documentType:",
-      documentType
-    );
-
-    const emissionPoint = await prisma.emissionPoint.findUnique({
-      where: { id: emissionPointId },
-    });
-
-    if (!emissionPoint) {
-      return { success: false, error: "Emission point not found." };
-    }
-
-    if (documentType === "INVOICE") {
-      return {
-        success: true,
-        nextSequence: emissionPoint.currentInvoiceSequence,
-      };
-    }
-
-    return { success: false, error: "Invalid document type." };
-  } catch (error) {
-    return { success: false, error: "Failed to fetch next document number." };
-  }
-};
-
 export const getEmissionPoint = async (
   id: string
 ): Promise<{

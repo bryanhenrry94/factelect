@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const DocumentTaxSchema = z.object({
   id: z.string(), // cuid() generates a string
-  sale_id: z.string(),
+  documentId: z.string(),
   code: z.string(),
   percentage_code: z.string(),
   base: z.number(),

@@ -16,12 +16,14 @@ export const getEstablishments = async (
 };
 
 export const createEstablishment = async (
+  tenantId: string,
   establishmentData: Omit<Establishment, "id">
 ): Promise<{ success: boolean; data?: Establishment; error?: string }> => {
   try {
     const newEstablishment = await prisma.establishment.create({
       data: {
         ...establishmentData,
+        tenantId,
       },
     });
     return { success: true, data: newEstablishment };

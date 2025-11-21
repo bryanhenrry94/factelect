@@ -52,7 +52,6 @@ const EmissionPointDialog: React.FC<EmissionPointDialogProps> = ({
       establishmentId: editingData?.establishmentId ?? "",
       code: editingData?.code ?? "",
       description: editingData?.description ?? "",
-      currentInvoiceSequence: editingData?.currentInvoiceSequence ?? 1,
       isActive: editingData?.isActive ?? true,
     },
   });
@@ -63,7 +62,6 @@ const EmissionPointDialog: React.FC<EmissionPointDialogProps> = ({
       establishmentId: editingData?.establishmentId ?? "",
       code: editingData?.code ?? "",
       description: editingData?.description ?? "",
-      currentInvoiceSequence: editingData?.currentInvoiceSequence ?? 1,
       isActive: editingData?.isActive ?? true,
     });
   }, [editingData, reset]);
@@ -95,7 +93,6 @@ const EmissionPointDialog: React.FC<EmissionPointDialogProps> = ({
 
       const formattedData = {
         ...data,
-        currentInvoiceSequence: Number(data.currentInvoiceSequence),
         tenantId: session.user.tenantId,
       };
 
@@ -190,26 +187,6 @@ const EmissionPointDialog: React.FC<EmissionPointDialogProps> = ({
                   {...field}
                   error={!!errors.description}
                   helperText={errors.description?.message}
-                  fullWidth
-                />
-              )}
-            />
-
-            {/* 🔸 Secuencia */}
-            <Controller
-              name="currentInvoiceSequence"
-              control={control}
-              rules={{
-                required: "La secuencia es obligatoria",
-                min: { value: 1, message: "Debe ser mayor o igual a 1" },
-              }}
-              render={({ field }) => (
-                <TextField
-                  type="number"
-                  label="Secuencia Actual de Factura"
-                  {...field}
-                  error={!!errors.currentInvoiceSequence}
-                  helperText={errors.currentInvoiceSequence?.message}
                   fullWidth
                 />
               )}

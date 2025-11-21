@@ -30,6 +30,8 @@ export async function createPerson(
         identificationType:
           parsed.identificationType as $Enums.IdentificationType,
         tenantId,
+        accountPayableId: data.accountPayableId || null,
+        accountReceivableId: data.accountReceivableId || null,
       },
     });
 
@@ -81,8 +83,33 @@ export async function getPersonsByTenant(
   filter: PersonFilter
 ): Promise<{ success: boolean; data: PersonInput[] }> {
   try {
+    console.log("Fetching persons with filter:", filter);
+
+    const where: any = {
+      tenantId: filter.tenantId,
+    };
+
+    // Solo filtrar por rol si viene definido y no está vacío
+    if (filter.role) {
+      where.roles = { has: filter.role };
+    }
+
+    if (filter.search) {
+      where.OR = [
+        { firstName: { contains: filter.search, mode: "insensitive" } },
+        { lastName: { contains: filter.search, mode: "insensitive" } },
+        { email: { contains: filter.search, mode: "insensitive" } },
+        {
+          identification: {
+            contains: filter.search,
+            mode: "insensitive",
+          },
+        },
+      ];
+    }
+
     const persons = await prisma.person.findMany({
-      where: { tenantId: filter.tenantId, roles: { has: filter.role } },
+      where,
       orderBy: { createdAt: "desc" },
     });
 

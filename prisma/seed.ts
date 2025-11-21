@@ -10,7 +10,7 @@ async function main() {
       id: "0874303e-6795-46ef-8416-5d76bba8071b",
       name: "BRYAN HENRRY NAVARRETE ZUÑIGA",
       subdomain: "0940528128001",
-      legalName: "BRYAN HENRRY NAVARRETE ZUÑIGA",
+      tradeName: "BRYAN HENRRY NAVARRETE ZUÑIGA",
       ruc: "0940528128001",
       phone: "+593969437708",
       contactEmail: "bryanhenrry94@gmail.com",

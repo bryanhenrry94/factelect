@@ -102,7 +102,7 @@ const Profile = () => {
           </Box>
         </MenuItem>
         <MenuItem
-          onClick={() => router.push("/cuenta")}
+          onClick={() => router.push("/perfil")}
           sx={{
             py: 1.8,
             px: 2.5,
@@ -134,7 +134,7 @@ const Profile = () => {
           <ListItemText
             primary={
               <Typography variant="body1" fontWeight={600}>
-                Mi cuenta
+                Mi perfil
               </Typography>
             }
             secondary={

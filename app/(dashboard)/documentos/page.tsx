@@ -21,12 +21,11 @@ import { Plus, Files, Delete, Edit } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { AlertService } from "@/lib/alerts";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
-import InvoiceStatusLabel from "@/components/invoice/InvoiceStatusLabel";
 import { useRouter } from "next/navigation";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { DocumentResponse } from "@/lib/validations";
 import { deleteDocument, getDocuments } from "@/app/actions";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function DocumentsPage() {
   const router = useRouter();
@@ -159,8 +158,7 @@ export default function DocumentsPage() {
                               variant="body2"
                               sx={{ fontWeight: "normal" }}
                             >
-                              {`${document?.person?.firstName} ${document?.person?.lastName}` ||
-                                "N/A"}
+                              {document?.person?.fullname || "N/A"}
                             </Typography>
                             <Typography
                               variant="caption"
@@ -185,9 +183,7 @@ export default function DocumentsPage() {
                         <TableCell>
                           {formatCurrency(document.balance)}
                         </TableCell>
-                        <TableCell>
-                          <InvoiceStatusLabel status={document.status} />
-                        </TableCell>
+                        <TableCell>{document.status}</TableCell>
                         <TableCell align="right">
                           <IconButton
                             color="primary"

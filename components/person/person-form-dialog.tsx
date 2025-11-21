@@ -1,6 +1,8 @@
 import { createPerson, updatePerson } from "@/app/actions";
+import { getAccounts } from "@/app/actions/account";
 import { identificationOptions } from "@/constants/identification";
-import { AlertService } from "@/lib/alerts";
+import { notifyInfo } from "@/lib/notifications";
+import { Account } from "@/lib/validations";
 import {
   CreatePersonInput,
   createPersonSchema,
@@ -19,7 +21,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 interface PersonFormDialogProps {
@@ -39,7 +41,8 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
   tenantId,
   setError,
 }) => {
-  console.log("Editing Person:", editingPerson);
+  const [accounts, setAccounts] = React.useState<Account[]>([]);
+
   const {
     register,
     handleSubmit,
@@ -50,14 +53,19 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
   } = useForm<CreatePersonInput>({
     resolver: zodResolver(createPersonSchema),
     defaultValues: editingPerson ?? {
+      personKind: "NATURAL",
       identificationType: "CEDULA",
       identification: "",
       firstName: "",
       lastName: "",
+      businessName: "",
+      commercialName: "",
       email: "",
       phone: "",
       address: "",
       roles: ["CLIENT"],
+      accountPayableId: null,
+      accountReceivableId: null,
     },
   });
 
@@ -79,16 +87,29 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
     }
   }, [editingPerson, reset]);
 
+  // Fetch accounts when dialog opens
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      const response = await getAccounts(tenantId);
+      if (response.success && response.data) {
+        setAccounts(response.data);
+      }
+    };
+    fetchAccounts();
+  }, [tenantId, open]);
+
   const onSubmit = async (data: CreatePersonInput) => {
     setError(null);
+
+    console.log("Submitting person data:", data);
 
     const action = editingPerson
       ? await updatePerson(editingPerson.id ?? "", data)
       : await createPerson(data, tenantId);
 
     if (action.success) {
-      AlertService.showSuccess(
-        editingPerson ? "Persona actualizado" : "Persona creado"
+      notifyInfo(
+        `Persona ${editingPerson ? "actualizada" : "creada"} correctamente`
       );
       await onSuccess();
       onClose();
@@ -111,6 +132,22 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
               : "Agrega una nueva persona a tu base de datos."}
           </Typography>
           <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                select
+                label="Tipo de Persona"
+                {...register("personKind")}
+                error={!!errors.personKind}
+                helperText={errors.personKind?.message}
+                value={watch("personKind") || "NATURAL"}
+                fullWidth
+                size="small"
+              >
+                <MenuItem value="NATURAL">NATURAL</MenuItem>
+                <MenuItem value="LEGAL">JURÍDICA</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid size={{ md: 6 }} />
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 select
@@ -139,65 +176,154 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
                 size="small"
               />
             </Grid>
-          </Grid>
-          <TextField
-            label="Nombres"
-            {...register("firstName")}
-            error={!!errors.firstName}
-            helperText={errors.firstName?.message}
-            fullWidth
-            size="small"
-          />
-          <TextField
-            label="Apellidos"
-            {...register("lastName")}
-            error={!!errors.lastName}
-            helperText={errors.lastName?.message}
-            fullWidth
-            size="small"
-          />
-          <TextField
-            label="Correo electrónico"
-            type="email"
-            {...register("email")}
-            error={!!errors.email}
-            helperText={errors.email?.message}
-            fullWidth
-            size="small"
-          />
-          <TextField
-            label="Teléfono"
-            {...register("phone")}
-            fullWidth
-            size="small"
-          />
-          <TextField
-            label="Dirección"
-            {...register("address")}
-            fullWidth
-            size="small"
-          />
+            {watch("personKind") === "LEGAL" ? (
+              <>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="Razón Social"
+                    {...register("businessName")}
+                    error={!!errors.businessName}
+                    helperText={errors.businessName?.message}
+                    fullWidth
+                    size="small"
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="Nombre Comercial"
+                    {...register("commercialName")}
+                    error={!!errors.commercialName}
+                    helperText={errors.commercialName?.message}
+                    fullWidth
+                    size="small"
+                  />
+                </Grid>
+              </>
+            ) : (
+              <>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="Nombres"
+                    {...register("firstName")}
+                    error={!!errors.firstName}
+                    helperText={errors.firstName?.message}
+                    fullWidth
+                    size="small"
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="Apellidos"
+                    {...register("lastName")}
+                    error={!!errors.lastName}
+                    helperText={errors.lastName?.message}
+                    fullWidth
+                    size="small"
+                  />
+                </Grid>
+              </>
+            )}
 
-          <Controller
-            name="roles"
-            control={control}
-            defaultValue={[]} // obligatorio cuando es multiple
-            render={({ field }) => (
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
-                select
-                label="Roles"
-                {...field}
-                error={!!errors.roles}
-                helperText={errors.roles?.message}
-                SelectProps={{
-                  multiple: true,
-                }}
+                label="Correo electrónico"
+                type="email"
+                {...register("email")}
+                error={!!errors.email}
+                helperText={errors.email?.message}
                 fullWidth
                 size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                label="Teléfono"
+                {...register("phone")}
+                fullWidth
+                size="small"
+              />
+            </Grid>
+            <TextField
+              label="Dirección"
+              {...register("address")}
+              fullWidth
+              size="small"
+            />
+
+            <Controller
+              name="roles"
+              control={control}
+              defaultValue={[]} // obligatorio cuando es multiple
+              render={({ field }) => (
+                <TextField
+                  select
+                  label="Roles"
+                  {...field}
+                  error={!!errors.roles}
+                  helperText={errors.roles?.message}
+                  SelectProps={{
+                    multiple: true,
+                  }}
+                  fullWidth
+                  size="small"
+                >
+                  {["CLIENT", "SUPPLIER", "SELLER"].map((role) => (
+                    <MenuItem key={role} value={role}>
+                      {getRoleLabel(role)}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
+          </Grid>
+          <Typography variant="body2" color="text.secondary">
+            Contabilidad
+          </Typography>
+          <Controller
+            name="accountPayableId"
+            control={control}
+            defaultValue=""
+            render={({ field }) => (
+              <TextField
+                label="Cuenta por Pagar"
+                {...field}
+                error={!!errors.accountPayableId}
+                helperText={errors.accountPayableId?.message}
+                fullWidth
+                size="small"
+                select
+                value={field.value || ""}
+                onChange={(e) => field.onChange(e)}
               >
-                {["CLIENT", "SUPPLIER", "SELLER"].map((role) => (
-                  <MenuItem key={role} value={role}>
-                    {getRoleLabel(role)}
+                <MenuItem value={""}>Ninguna</MenuItem>
+                {accounts.map((account) => (
+                  <MenuItem key={account.id} value={account.id}>
+                    {account.code} - {account.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+          />
+          <Controller
+            name="accountReceivableId"
+            control={control}
+            defaultValue=""
+            render={({ field }) => (
+              <TextField
+                label="Cuenta por Cobrar"
+                {...field}
+                error={!!errors.accountReceivableId}
+                helperText={errors.accountReceivableId?.message}
+                fullWidth
+                size="small"
+                select
+                value={field.value || ""}
+                onChange={(e) => field.onChange(e)}
+              >
+                <MenuItem value={""}>Ninguna</MenuItem>
+                {accounts.map((account) => (
+                  <MenuItem key={account.id} value={account.id}>
+                    {account.code} - {account.name}
                   </MenuItem>
                 ))}
               </TextField>

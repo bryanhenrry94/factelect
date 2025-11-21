@@ -32,7 +32,7 @@ export const getTotalAmountByMonth = async (
     const endDate = new Date(year, month, 0); // Last day of the month
 
     // Get all invoices for the month
-    const invoices = await prisma.invoice.findMany({
+    const invoices = await prisma.document.findMany({
       where: {
         tenantId,
         issueDate: {
@@ -40,7 +40,7 @@ export const getTotalAmountByMonth = async (
           lte: endDate,
         },
         status: {
-          in: ["AUTHORIZED", "DRAFT"], // Only count valid invoices
+          in: ["CONFIRMED"], // Only count valid invoices
         },
       },
       select: {
@@ -102,7 +102,7 @@ export const getYearlyBreakup = async (
   tenantId: string
 ): Promise<YearlyBreakupResponse> => {
   try {
-    const currentYearInvoices = await prisma.invoice.findMany({
+    const currentYearInvoices = await prisma.document.findMany({
       where: {
         tenantId,
         issueDate: {
@@ -110,7 +110,7 @@ export const getYearlyBreakup = async (
           lte: new Date(year, 11, 31),
         },
         status: {
-          in: ["AUTHORIZED", "DRAFT"],
+          in: ["CONFIRMED"],
         },
       },
       select: {
@@ -119,7 +119,7 @@ export const getYearlyBreakup = async (
       },
     });
 
-    const lastYearInvoices = await prisma.invoice.findMany({
+    const lastYearInvoices = await prisma.document.findMany({
       where: {
         tenantId,
         issueDate: {
@@ -127,7 +127,7 @@ export const getYearlyBreakup = async (
           lte: new Date(year - 1, 11, 31),
         },
         status: {
-          in: ["AUTHORIZED", "DRAFT"],
+          in: ["CONFIRMED"],
         },
       },
       select: {
@@ -188,7 +188,7 @@ export const getMonthlyEarnings = async (
   tenantId: string
 ): Promise<MonthlyEarningsResponse> => {
   try {
-    const currentMonthInvoices = await prisma.invoice.findMany({
+    const currentMonthInvoices = await prisma.document.findMany({
       where: {
         tenantId,
         issueDate: {
@@ -196,7 +196,7 @@ export const getMonthlyEarnings = async (
           lte: new Date(year, month, 0),
         },
         status: {
-          in: ["AUTHORIZED", "DRAFT"],
+          in: ["CONFIRMED"],
         },
       },
       select: {
@@ -204,7 +204,7 @@ export const getMonthlyEarnings = async (
       },
     });
 
-    const previousYearInvoices = await prisma.invoice.findMany({
+    const previousYearInvoices = await prisma.document.findMany({
       where: {
         tenantId,
         issueDate: {
@@ -212,7 +212,7 @@ export const getMonthlyEarnings = async (
           lte: new Date(year - 1, month, 0),
         },
         status: {
-          in: ["AUTHORIZED", "DRAFT"],
+          in: ["CONFIRMED"],
         },
       },
       select: {
@@ -241,7 +241,7 @@ export const getMonthlyEarnings = async (
     const history = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date(year, month - 1 - i, 1);
-      const monthInvoices = await prisma.invoice.findMany({
+      const monthInvoices = await prisma.document.findMany({
         where: {
           tenantId,
           issueDate: {
@@ -249,7 +249,7 @@ export const getMonthlyEarnings = async (
             lte: new Date(date.getFullYear(), date.getMonth() + 1, 0),
           },
           status: {
-            in: ["AUTHORIZED", "DRAFT"],
+            in: ["CONFIRMED"],
           },
         },
         select: {
@@ -304,7 +304,7 @@ export const getMonthlySalesData = async (
   try {
     const monthlyTotals: number[] = Array.from({ length: 12 }, () => 0);
 
-    const invoices = await prisma.invoice.findMany({
+    const invoices = await prisma.document.findMany({
       where: {
         tenantId,
         issueDate: {
@@ -312,7 +312,7 @@ export const getMonthlySalesData = async (
           lte: new Date(year, 11, 31),
         },
         status: {
-          in: ["AUTHORIZED", "DRAFT"],
+          in: ["CONFIRMED"],
         },
       },
       select: {

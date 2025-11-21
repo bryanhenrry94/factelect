@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 export const productSchema = z.object({
-  id: z.string().cuid(),
+  id: z.cuid(),
+  tenantId: z.cuid(),
   code: z.string().min(1, "El código es obligatorio"),
   description: z.string().min(1, "La descripción es obligatoria"),
   price: z.number().positive("El precio debe ser positivo"),
@@ -14,7 +15,12 @@ export const productSchema = z.object({
     "NO_IVA",
     "EXENTO_IVA",
   ]),
-  tenantId: z.string().cuid("Invalid tenant ID"),
+  type: z.enum(["PRODUCT", "SERVICE"]),
+  barcode: z.string().optional().nullable(),
+  cost: z.number().min(0),
+  isInventoriable: z.boolean(),
+  unitId: z.string().cuid().optional().nullable(),
+  categoryId: z.string().min(1, "La categoría es obligatoria"),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

@@ -18,7 +18,7 @@ export async function createProduct(
     }
 
     const codeExists = await prisma.product.findUnique({
-      where: { code: parsed.code },
+      where: { tenantId_code: { tenantId, code: parsed.code } },
     });
 
     if (codeExists) {

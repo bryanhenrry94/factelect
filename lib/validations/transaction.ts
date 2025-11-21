@@ -1,17 +1,29 @@
 import { z } from "zod";
 import { createTransactionDocumentSchema } from "./transaction-document";
 
+const TransactionTypeEnum = z.enum(["INCOME", "EXPENSE"]);
+const PaymentMethodEnum = z.enum([
+  "CASH",
+  "TRANSFER",
+  "PETTY_CASH",
+  "CREDIT_CARD",
+]);
+
 export const transactionSchema = z.object({
-  id: z.string().cuid().optional(),
-  type: z.enum(["INCOME", "EXPENSE"]), // Adjust based on your TransactionType enum
-  method: z.enum(["CASH", "TRANSFER", "PETTY_CASH", "CREDIT_CARD"]), // Adjust based on your PaymentMethod enum
+  id: z.cuid(),
+  tenantId: z.string(),
+  personId: z.string(),
+  type: TransactionTypeEnum,
+  method: PaymentMethodEnum,
+  amount: z.number(),
   issueDate: z.date(),
   reference: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
-  tenantId: z.string(),
-  personId: z.string(),
-  accountId: z.string(),
-  documents: z.array(createTransactionDocumentSchema).optional(),
+  documents: z.array(createTransactionDocumentSchema),
+  reconciled: z.boolean().optional(),
+  reconciledAt: z.date().nullable().optional(),
+  bankAccountId: z.string().nullable().optional(),
+  cashBoxId: z.string().nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

@@ -2,21 +2,22 @@ import { z } from "zod";
 
 export const tenantSchema = z.object({
   id: z.string().uuid().optional(),
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "El nombre es obligatorio"),
+  tradeName: z.string().optional(),
   subdomain: z
     .string()
-    .min(1, "Subdomain is required")
+    .min(1, "El subdominio es obligatorio")
     .regex(
       /^[a-z0-9-]+$/,
-      "Subdomain must contain only lowercase letters, numbers, and hyphens"
+      "El subdominio solo debe contener letras minúsculas, números y guiones"
     ),
-  legalName: z.string().optional(),
   ruc: z.string().optional(),
   phone: z.string().optional(),
   contactEmail: z.string().email().optional(),
   address: z.string().optional(),
   logoUrl: z.string().url().optional(),
   sriConfig: z.any().optional(), // Replace with specific schema if needed
+  obligatedAccounting: z.boolean().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

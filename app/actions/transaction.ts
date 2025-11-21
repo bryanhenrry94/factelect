@@ -15,13 +15,18 @@ export const createTransaction = async (
 
     const transaction = await prisma.transaction.create({
       data: {
+        personId: parsedData.personId,
         type: parsedData.type,
         method: parsedData.method,
+        amount: parsedData.amount,
         issueDate: parsedData.issueDate,
         reference: parsedData.reference ?? null,
         description: parsedData.description ?? null,
-        personId: parsedData.personId,
-        accountId: parsedData.accountId,
+        // documents: parsedData.documents,
+        reconciled: parsedData.reconciled ?? false,
+        reconciledAt: parsedData.reconciledAt ?? null,
+        bankAccountId: parsedData.bankAccountId ?? null,
+        cashBoxId: parsedData.cashBoxId ?? null,
         tenantId,
       },
     });
@@ -36,62 +41,15 @@ export const createTransaction = async (
             tenantId,
           },
         });
-
-        const movementType = parsedData.type === "INCOME" ? "IN" : "OUT";
-
-        // Create corresponding movement
-        await prisma.movement.create({
-          data: {
-            type: movementType,
-            amount: doc.amount,
-            date: parsedData.issueDate,
-            description: `Movimiento por documento en transacción ID:${transaction.id}`,
-            accountId: parsedData.accountId,
-            transactionId: transaction.id,
-            tenantId,
-          },
-        });
-
-        // update paidAmount and balance in the document (invoice)
-        const invoice = await prisma.invoice.findUnique({
-          where: { id: doc.documentId },
-        });
-
-        if (invoice) {
-          const newPaidAmount = (invoice.paidAmount || 0) + doc.amount;
-          const newBalance = invoice.total - newPaidAmount;
-
-          await prisma.invoice.update({
-            where: { id: doc.documentId },
-            data: {
-              paidAmount: newPaidAmount,
-              balance: newBalance,
-            },
-          });
-        }
-
-        // updata account balance
-        const account = await prisma.account.findUnique({
-          where: { id: parsedData.accountId },
-        });
-
-        if (account) {
-          const newBalance =
-            movementType === "IN"
-              ? account.balance + doc.amount
-              : account.balance - doc.amount;
-
-          await prisma.account.update({
-            where: { id: parsedData.accountId },
-            data: {
-              balance: newBalance,
-            },
-          });
-        }
       }
     }
 
-    return { success: true, data: transaction };
+    const transactionFormatted: TransactionInput = {
+      ...transaction,
+      documents: parsedData.documents || [],
+    };
+
+    return { success: true, data: transactionFormatted };
   } catch (error) {
     console.error("Error creating transaction:", error);
     return { success: false, error: "Error creating transaction" };
@@ -108,17 +66,27 @@ export const updateTransaction = async (
     const transaction = await prisma.transaction.update({
       where: { id: transactionId },
       data: {
+        personId: parsedData.personId,
         type: parsedData.type,
         method: parsedData.method,
+        amount: parsedData.amount,
         issueDate: parsedData.issueDate,
         reference: parsedData.reference ?? null,
         description: parsedData.description ?? null,
-        personId: parsedData.personId,
-        accountId: parsedData.accountId,
+        // documents: parsedData.documents,
+        reconciled: parsedData.reconciled ?? false,
+        reconciledAt: parsedData.reconciledAt ?? null,
+        bankAccountId: parsedData.bankAccountId ?? null,
+        cashBoxId: parsedData.cashBoxId ?? null,
       },
     });
 
-    return { success: true, data: transaction };
+    const transactionFormatted: TransactionInput = {
+      ...transaction,
+      documents: parsedData.documents || [],
+    };
+
+    return { success: true, data: transactionFormatted };
   } catch (error) {
     console.error("Error updating transaction:", error);
     return { success: false, error: "Error updating transaction" };
@@ -131,13 +99,19 @@ export const getTransaction = async (
   try {
     const transaction = await prisma.transaction.findUnique({
       where: { id: transactionId },
+      include: { documents: true },
     });
 
     if (!transaction) {
       return { success: false, error: "Transaction not found" };
     }
 
-    return { success: true, data: transaction };
+    const transactionFormatted: TransactionInput = {
+      ...transaction,
+      documents: transaction.documents || [],
+    };
+
+    return { success: true, data: transactionFormatted };
   } catch (error) {
     console.error("Error fetching transaction:", error);
     return { success: false, error: "Error fetching transaction" };
@@ -151,6 +125,7 @@ export const getTransactions = async (
     const transactions = await prisma.transaction.findMany({
       where: { tenantId },
       orderBy: { issueDate: "desc" },
+      include: { documents: true },
     });
 
     return { success: true, data: transactions };

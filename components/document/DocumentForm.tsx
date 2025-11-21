@@ -256,7 +256,8 @@ export default function DocumentForm({
               <Grid size={{ xs: 12, md: 6 }}>
                 <DocumentFiscalInfo
                   modeEdit={modeEdit}
-                  documentType={watch("documentType") || "INVOICE"}
+                  // documentType={watch("documentType") || "INVOICE"}
+                  documentType={"INVOICE"}
                 />
               </Grid>
             </Grid>

@@ -1,12 +1,13 @@
 import {
   getEmissionPointsByEstablishment,
   getEstablishments,
-  getNextSequenceDocumentNumber,
 } from "@/app/actions";
+import { getNextSequenceDocumentNumber } from "@/app/actions/sequence_control";
 import {
   CreateDocument,
   EmissionPointWithEstablishmentSchema,
 } from "@/lib/validations";
+import { $Enums } from "@/prisma/generated/prisma";
 import { Box, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -14,7 +15,7 @@ import { Controller, useFormContext } from "react-hook-form";
 
 interface DocumentFiscalInfoProps {
   modeEdit?: boolean;
-  documentType: "INVOICE" | "CREDIT_NOTE" | "DEBIT_NOTE";
+  documentType: $Enums.DocumentType;
 }
 
 export const DocumentFiscalInfo: React.FC<DocumentFiscalInfoProps> = ({
@@ -32,6 +33,7 @@ export const DocumentFiscalInfo: React.FC<DocumentFiscalInfoProps> = ({
     control,
     formState: { errors },
     setValue,
+    getValues,
   } = useFormContext<CreateDocument>();
 
   // ---------------------------
@@ -71,8 +73,18 @@ export const DocumentFiscalInfo: React.FC<DocumentFiscalInfoProps> = ({
   // ---------------------------
   // 3. HANDLE EMISSION POINT CHANGE
   // ---------------------------
-  const loadNextSequence = async (epId: string) => {
-    const result = await getNextSequenceDocumentNumber(epId, documentType);
+  const loadNextSequence = async (
+    tenantId: string,
+    esId: string,
+    epId: string,
+    documentType: $Enums.DocumentType
+  ) => {
+    const result = await getNextSequenceDocumentNumber(
+      tenantId,
+      esId,
+      epId,
+      documentType
+    );
 
     if (result.success && result.nextSequence !== undefined) {
       setValue("fiscalInfo.sequence", result.nextSequence);
@@ -101,8 +113,15 @@ export const DocumentFiscalInfo: React.FC<DocumentFiscalInfoProps> = ({
       const defaultEpId = eps[0].id;
       setValue("fiscalInfo.emissionPointId", defaultEpId);
 
+      if (!defaultEpId) return;
+
       // 4) Cargar secuencia según el documentType
-      await loadNextSequence(defaultEpId || "");
+      await loadNextSequence(
+        session?.user.tenantId || "",
+        defaultEstId,
+        defaultEpId,
+        documentType
+      );
     };
 
     applyDefaults();
@@ -135,7 +154,12 @@ export const DocumentFiscalInfo: React.FC<DocumentFiscalInfoProps> = ({
 
                 if (eps.length > 0) {
                   setValue("fiscalInfo.emissionPointId", eps[0].id);
-                  await loadNextSequence(eps[0].id || "");
+                  await loadNextSequence(
+                    session?.user.tenantId || "",
+                    val,
+                    eps[0].id || "",
+                    documentType
+                  );
                 } else {
                   setValue("fiscalInfo.emissionPointId", "");
                   setValue("fiscalInfo.sequence", 0);
@@ -171,7 +195,12 @@ export const DocumentFiscalInfo: React.FC<DocumentFiscalInfoProps> = ({
               onChange={async (e) => {
                 const val = e.target.value;
                 field.onChange(val);
-                await loadNextSequence(val);
+                await loadNextSequence(
+                  session?.user.tenantId || "",
+                  getValues("fiscalInfo.establishmentId") || "",
+                  val || "",
+                  documentType
+                );
               }}
               value={field.value || ""}
               error={!!errors.fiscalInfo?.emissionPointId}

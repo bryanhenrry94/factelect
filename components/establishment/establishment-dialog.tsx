@@ -45,7 +45,6 @@ const EstablishmentDialog: React.FC<EstablishmentDialogProps> = ({
   } = useForm<CreateEstablishment>({
     // resolver: zodResolver(createEstablishmentSchema),
     defaultValues: {
-      tenantId: establishmentSelected?.tenantId ?? "",
       code: establishmentSelected?.code ?? "",
       address: establishmentSelected?.address ?? "",
     },
@@ -55,13 +54,11 @@ const EstablishmentDialog: React.FC<EstablishmentDialogProps> = ({
   useEffect(() => {
     if (establishmentSelected) {
       reset({
-        tenantId: establishmentSelected.tenantId ?? "",
         code: establishmentSelected.code ?? "",
         address: establishmentSelected.address ?? "",
       });
     } else {
       reset({
-        tenantId: "",
         code: "",
         address: "",
       });
@@ -80,7 +77,7 @@ const EstablishmentDialog: React.FC<EstablishmentDialogProps> = ({
 
       const response = establishmentSelected
         ? await updateEstablishment(establishmentSelected.id!, formattedData)
-        : await createEstablishment(formattedData);
+        : await createEstablishment(session.user.tenantId, formattedData);
 
       if (response.success) {
         AlertService.showSuccess(

@@ -2,11 +2,11 @@
 
 import { prisma } from "@/lib/prisma";
 import { create } from "xmlbuilder2";
-import { InvoiceTax } from "@/prisma/generated/prisma";
 import { formatDate } from "@/utils/formatters";
 import { sriDocumentTypes, sriEmissionTypes } from "@/constants/sri";
 import { generateAccessKey } from "@/utils/sri";
 import { identificationOptions } from "@/constants/identification";
+import { DocumentTax } from "@/lib/validations";
 
 /**
  * Genera el XML del comprobante electrónico para el SRI
@@ -18,47 +18,52 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
 }> {
   try {
     // === 1. Obtener datos de la factura y configuración SRI ===
-    const invoice = await prisma.invoice.findUnique({
+    const document = await prisma.document.findUnique({
       where: { id: invoiceId },
       include: {
         tenant: true,
         person: true,
-        emissionPoint: { include: { establishment: true } },
+        documentFiscalInfo: {
+          include: { establishment: true, emissionPoint: true },
+        },
         taxes: true,
         items: { include: { product: true } },
-        paymentMethods: true,
+        documentPayments: true,
       },
     });
 
-    if (!invoice) throw new Error("Factura no encontrada");
+    if (!document) throw new Error("Factura no encontrada");
 
     const sriConfig = await prisma.sRIConfiguration.findFirst({
-      where: { tenantId: invoice.tenantId },
+      where: { tenantId: document.tenantId },
     });
 
     if (!sriConfig)
       throw new Error("Configuración SRI no encontrada para el arrendatario");
 
     // === 2. Cálculos de totales ===
-    const totalWithoutTaxes = invoice.items.reduce(
+    const totalWithoutTaxes = document.items.reduce(
       (acc, i) => acc + i.subtotal,
       0
     );
-    const totalDiscount = invoice.items.reduce(
+    const totalDiscount = document.items.reduce(
       (acc, i) => acc + i.discountAmount,
       0
     );
 
     // === 3. Datos de serie y secuencial ===
-    const serie1 = invoice.emissionPoint.establishment.code;
-    const serie2 = invoice.emissionPoint.code;
-    const sequential = String(invoice.sequential).padStart(9, "0");
+    const serie1 = document?.documentFiscalInfo?.establishment.code;
+    const serie2 = document?.documentFiscalInfo?.emissionPoint.code;
+    const sequential = String(document?.documentFiscalInfo?.sequence).padStart(
+      9,
+      "0"
+    );
 
     // === 4. Generar clave de acceso ===
     const accessKey = generateAccessKey(
-      new Date(invoice.issueDate),
+      new Date(document.issueDate),
       sriDocumentTypes.INVOICE,
-      invoice.tenant.ruc ?? "",
+      document.tenant.ruc ?? "",
       sriConfig.environment || "TEST",
       `${serie1}${serie2}`,
       sequential,
@@ -68,7 +73,7 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
 
     // === 5. Tipo de identificación del comprador ===
     const buyerIdType = identificationOptions.find(
-      (opt) => opt.value === invoice.person.identificationType
+      (opt) => opt.value === document.person.identificationType
     )?.sriCode;
 
     if (!buyerIdType)
@@ -95,27 +100,28 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
         infoTributaria: {
           ambiente: sriConfig.environment === "TEST" ? "1" : "2",
           tipoEmision: "1",
-          razonSocial: invoice.tenant.name,
-          ruc: invoice.tenant.ruc,
+          razonSocial: document.tenant.name,
+          ruc: document.tenant.ruc,
           claveAcceso: accessKey,
           codDoc: sriDocumentTypes.INVOICE,
           estab: serie1,
           ptoEmi: serie2,
           secuencial: sequential,
-          dirMatriz: invoice.tenant.address,
+          dirMatriz: document.tenant.address,
         },
 
         infoFactura: {
-          fechaEmision: formatDate(invoice.issueDate.toString()),
-          dirEstablecimiento: invoice.emissionPoint.establishment.address,
+          fechaEmision: formatDate(document.issueDate.toString()),
+          dirEstablecimiento:
+            document.documentFiscalInfo?.establishment.address,
           obligadoContabilidad: "SI",
           tipoIdentificacionComprador: buyerIdType,
-          razonSocialComprador: `${invoice.person.firstName} ${invoice.person.lastName}`,
-          identificacionComprador: invoice.person.identification,
+          razonSocialComprador: `${document.person.firstName} ${document.person.lastName}`,
+          identificacionComprador: document.person.identification,
           totalSinImpuestos: totalWithoutTaxes.toFixed(2),
           totalDescuento: totalDiscount.toFixed(2),
           totalConImpuestos: {
-            totalImpuesto: invoice.taxes.map((tax: InvoiceTax) => ({
+            totalImpuesto: document.taxes.map((tax: DocumentTax) => ({
               codigo: tax.code,
               codigoPorcentaje: tax.percentage_code,
               baseImponible: tax.base,
@@ -123,20 +129,20 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
             })),
           },
           propina: "0.00",
-          importeTotal: invoice.total.toFixed(2),
+          importeTotal: document.total.toFixed(2),
           moneda: "DOLAR",
-          pagos: invoice.paymentMethods.map((m) => ({
+          pagos: document.documentPayments.map((m) => ({
             pago: {
               formaPago: m.paymentMethod,
               total: m.amount,
               plazo: m.term || "0",
-              unidadTiempo: m.timeUnit || "DÍAS",
+              unidadTiempo: m.termUnit || "DÍAS",
             },
           })),
         },
 
         detalles: {
-          detalle: invoice.items.map((item) => {
+          detalle: document.items.map((item) => {
             const { code, rate } = getTaxCode(item.tax);
             const taxValue = ((item.subtotal * Number(rate)) / 100).toFixed(2);
 

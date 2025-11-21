@@ -1,17 +1,17 @@
 import { z } from "zod";
 
+export const sriEnvironmentEnum = z.enum(["TEST", "PRODUCTION"]); // TEST: Sandbox, PRODUCTION: Producción
+
 export const tenantSriConfigBaseSchema = z.object({
-  environment: z.enum(["TEST", "PRODUCTION"]),
+  environment: sriEnvironmentEnum, // SRIEnvironment: "TEST" | "PRODUCTION"
   certificatePath: z.string().nullable().optional(),
+  certificateUrl: z.string().nullable().optional(),
   certificatePassword: z.string().nullable().optional(),
 });
 
-/**
- * 🧩 Esquema completo — usado para lectura desde base de datos o persistencia.
- */
 export const tenantSriConfigSchema = tenantSriConfigBaseSchema.extend({
-  id: z.uuid().optional(),
-  tenantId: z.uuid(),
+  id: z.string().uuid().optional(),
+  tenantId: z.string().uuid(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

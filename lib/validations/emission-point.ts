@@ -2,12 +2,13 @@ import { z } from "zod";
 import { establishmentSchema } from "./establishment";
 
 export const emissionPointSchema = z.object({
-  id: z.string().cuid().optional(),
-  tenantId: z.string().cuid(),
+  id: z.cuid().optional(),
+  tenantId: z.cuid(),
   establishmentId: z.string(),
-  code: z.string().length(3, "Code must be exactly 3 digits"),
+  code: z
+    .string()
+    .length(3, "El código del punto de emisión debe tener 3 caracteres"),
   description: z.string().optional().nullable(),
-  currentInvoiceSequence: z.number().int().min(1).default(1),
   isActive: z.boolean().default(true),
 });
 

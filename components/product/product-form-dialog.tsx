@@ -48,6 +48,10 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
       price: 0,
       tax: editingProduct ? editingProduct.tax : "IVA_0",
       description: "",
+      type: "PRODUCT",
+      barcode: null,
+      cost: 0,
+      isInventoriable: true,
     },
   });
 

@@ -10,10 +10,10 @@ import {
 } from "@mui/material";
 import { Delete, Search } from "lucide-react";
 import { Controller, useFormContext } from "react-hook-form";
-import { getInvoice, getInvoices } from "@/app/actions";
-import { Invoice, InvoiceResponse, TransactionInput } from "@/lib/validations";
 import { useSession } from "next-auth/react";
 import { formatCurrency } from "@/utils/formatters";
+import { DocumentResponse, TransactionInput } from "@/lib/validations";
+import { getDocument } from "@/app/actions";
 
 interface CustomRowProps {
   field: any;
@@ -30,37 +30,26 @@ const CustomRow: React.FC<CustomRowProps> = memo(({ field, index, remove }) => {
     watch,
   } = useFormContext<TransactionInput>(); // <- accedemos al contexto del formulario
 
-  const [invoices, setInvoices] = React.useState<InvoiceResponse[]>([]);
-  const [invoice, setInvoice] = React.useState<Invoice | null>(null);
+  const [documents, setDocuments] = React.useState<DocumentResponse[]>([]);
+  const [document, setDocument] = React.useState<DocumentResponse | null>(null);
 
   const handleChangeDocument = async (documentId: string) => {
-    const invoiceResponse = await getInvoice(documentId);
+    const invoiceResponse = await getDocument(documentId);
     if (invoiceResponse.success && invoiceResponse.data) {
-      const invoice = invoiceResponse.data;
-      setInvoice(invoice);
+      const document = invoiceResponse.data;
+      setDocument(document);
     }
   };
 
   useEffect(() => {
-    // Cargar facturas disponibles al montar el componente
     const fetchInvoices = async () => {
       if (!session?.user?.tenantId) return;
 
       const watchPersonId = watch("personId");
 
       if (!watchPersonId) {
-        setInvoices([]);
+        setDocuments([]);
         return;
-      }
-
-      const response = await getInvoices(session.user.tenantId);
-      if (response.success && response.data) {
-        const filteredInvoices = response.data.filter(
-          (inv) => inv.personId === watchPersonId
-        );
-        setInvoices(filteredInvoices);
-      } else {
-        setInvoices([]);
       }
     };
     fetchInvoices();
@@ -101,9 +90,13 @@ const CustomRow: React.FC<CustomRowProps> = memo(({ field, index, remove }) => {
                     : ""
                 }
               >
-                {invoices.map((inv) => (
+                {documents.map((inv) => (
                   <MenuItem key={inv.id} value={inv.id}>
-                    {`FACT ${inv.document}`}
+                    {`FACT ${
+                      inv.DocumentFiscalInfo?.sequence
+                    } - $${inv.total.toFixed(2)} - ${new Date(
+                      inv.issueDate
+                    ).toLocaleDateString()} `}
                   </MenuItem>
                 ))}
               </TextField>
@@ -116,12 +109,12 @@ const CustomRow: React.FC<CustomRowProps> = memo(({ field, index, remove }) => {
         </Stack>
       </TableCell>
       <TableCell>
-        {invoice ? new Date(invoice.issueDate).toLocaleDateString() : ""}
+        {document ? new Date(document.issueDate).toLocaleDateString() : ""}
       </TableCell>
-      <TableCell>{invoice ? `$${invoice.total.toFixed(2)}` : ""}</TableCell>
-      <TableCell>{formatCurrency(invoice?.balance || 0)}</TableCell>
+      <TableCell>{document ? `$${document.total.toFixed(2)}` : ""}</TableCell>
+      <TableCell>{formatCurrency(document?.balance || 0)}</TableCell>
       <TableCell>
-        {invoice ? (
+        {document ? (
           <Controller
             control={control}
             name={`documents.${index}.amount`}
@@ -134,9 +127,7 @@ const CustomRow: React.FC<CustomRowProps> = memo(({ field, index, remove }) => {
                 value={field.value || 0}
                 onChange={(e) => {
                   const inputAmount = parseFloat(e.target.value);
-                  field.onChange(
-                    isNaN(inputAmount) ? 0 : inputAmount
-                  ); 
+                  field.onChange(isNaN(inputAmount) ? 0 : inputAmount);
                 }}
                 inputProps={{ min: 0, step: 0.01 }}
               />
