@@ -19,8 +19,10 @@ import {
   BarChart3,
   Calculator,
   Boxes,
+  ScanBarcode,
 } from "lucide-react";
 import { uniqueId } from "lodash";
+import { Children } from "react";
 
 const Menuitems = [
   {
@@ -78,6 +80,19 @@ const Menuitems = [
         title: "Unidades de Medida",
         icon: CircleSmall,
         href: "/unidades-medida",
+      },
+    ],
+  },
+  {
+    id: uniqueId(),
+    title: "POS",
+    icon: ScanBarcode,
+    children: [
+      {
+        id: uniqueId(),
+        title: "Venta POS",
+        icon: CircleSmall,
+        href: "/pos",
       },
     ],
   },
@@ -183,26 +198,32 @@ const Menuitems = [
   // Caja chica
   {
     id: uniqueId(),
-    title: "Caja Chica",
+    title: "Caja",
     icon: Calculator,
     children: [
       {
         id: uniqueId(),
-        title: "Gastos",
+        title: "Caja",
         icon: CircleSmall,
-        href: "/caja-chica/gastos",
+        href: "/caja",
       },
       {
         id: uniqueId(),
-        title: "Ingresos",
+        title: "Movimientos",
         icon: CircleSmall,
-        href: "/caja-chica/ingresos",
+        href: "/caja/movimientos",
       },
       {
         id: uniqueId(),
-        title: "Arqueo",
+        title: "Apertura / Cierre de Caja",
         icon: CircleSmall,
-        href: "/caja-chica/arqueo",
+        href: "/caja/apertura-cierre",
+      },
+      {
+        id: uniqueId(),
+        title: "Arqueo de Caja",
+        icon: CircleSmall,
+        href: "/caja/arqueo",
       },
     ],
   },

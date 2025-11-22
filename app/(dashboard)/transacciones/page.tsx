@@ -24,7 +24,7 @@ import { Delete, Edit, File, Plus } from "lucide-react";
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { getTransaction, getTransactions } from "@/app/actions";
+import { getTransactions } from "@/app/actions";
 import { TransactionInput } from "@/lib/validations";
 import { formatDate } from "@/utils/formatters";
 import { getTransactionTypeLabel } from "@/utils/transaction";

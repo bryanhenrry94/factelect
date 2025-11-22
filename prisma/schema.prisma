@@ -119,7 +119,9 @@ model User {
   createdAt           DateTime             @map("created_at") @default(now())
   updatedAt           DateTime             @map("updated_at") @updatedAt
   tenant              Tenant               @relation(fields: [tenantId], references: [id])
+
   passwordResetTokens PasswordResetToken[]
+  cashSessions        CashSession[]
 
   @@map("user")
 }
@@ -573,7 +575,6 @@ model BankTransfer {
   @@map("bank_transfer")
 }
 
-
 model CashBox {
   id          String                           @id @default(cuid())
   name        String
@@ -581,7 +582,6 @@ model CashBox {
   createdAt   DateTime      @map("created_at") @default(now())
   updatedAt   DateTime      @map("updated_at") @updatedAt
 
-  // NUEVO → vincular cada caja con una cuenta contable
   accountId   String?
   account     Account?      @relation(fields: [accountId], references: [id])
 
@@ -598,13 +598,19 @@ model CashSession {
   id                 String                                      @id @default(cuid())
   tenantId           String               @map("tenant_id")
   cashBoxId          String               @map("cash_box_id")
+  userId             String               @map("user_id")
+
   openedAt           DateTime             @map("opened_at")      @default(now())
   closedAt           DateTime?            @map("closed_at")
   initialAmount      Float                @map("initial_amount")
   closingAmount      Float?               @map("closing_amount")
+  status             CashSessionStatus                           @default(OPEN)
+  notes              String?              @map("notes")
 
   cashBox            CashBox              @relation(fields: [cashBoxId], references: [id])
   tenant             Tenant               @relation(fields: [tenantId], references: [id])
+  user               User                 @relation(fields: [userId], references: [id])
+
   cashMovement       CashMovement[]
   cashCount          CashCount[]
   cashReconciliation CashReconciliation[]
@@ -613,21 +619,23 @@ model CashSession {
 }
 
 model CashMovement {
-  id            String                                   @id @default(cuid())
+  id            String                                       @id @default(cuid())
 
-  cashSessionId String           @map("cash_session_id")
-  cashSession   CashSession      @relation(fields: [cashSessionId], references: [id])
+  cashSessionId String               @map("cash_session_id")
+  cashSession   CashSession          @relation(fields: [cashSessionId], references: [id])
 
   type          CashMovementType
+  category      CashMovementCategory                         @default(OTHER)
   amount        Float
   description   String?
-  createdAt     DateTime         @map("created_at")      @default(now())
+  reference     String?
+  createdAt     DateTime             @map("created_at")      @default(now())
 
   accountId     String?
-  account       Account?         @relation(fields: [accountId], references: [id])
+  account       Account?             @relation(fields: [accountId], references: [id])
 
-  tenantId      String           @map("tenant_id")
-  tenant        Tenant           @relation(fields: [tenantId], references: [id])
+  tenantId      String               @map("tenant_id")
+  tenant        Tenant               @relation(fields: [tenantId], references: [id])
 
   @@map("cash_movement")
 }
@@ -980,4 +988,20 @@ enum RetentionType {
 enum PersonKind {
   NATURAL
   LEGAL
+}
+
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+  PENDING
+}
+
+enum CashMovementCategory {
+  SALE
+  PURCHASE
+  PETTY_CASH
+  ADVANCE
+  REFUND
+  TRANSFER
+  OTHER
 }

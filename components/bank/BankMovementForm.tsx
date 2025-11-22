@@ -10,7 +10,6 @@ import {
   BankMovementSchema,
 } from "@/lib/validations/bank_movement";
 import { $Enums } from "@/prisma/generated/prisma";
-import { formatCurrencyInput } from "@/utils/formatCurrency";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Box,
