@@ -13,3 +13,5 @@ export const formatDate = (dateString: string): string => {
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
 };
+
+export const toInputDate = (d: Date) => d.toISOString().split("T")[0];

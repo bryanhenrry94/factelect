@@ -523,19 +523,23 @@ model BankAccount {
 
 model BankMovement {
   id            String                                   @id @default(cuid())
+
   tenantId      String           @map("tenant_id")
+  tenant        Tenant           @relation(fields: [tenantId], references: [id])
+
   bankAccountId String           @map("bank_account_id")
+  bankAccount   BankAccount      @relation(fields: [bankAccountId], references: [id])
+
   type          BankMovementType
+  date          DateTime         @map("date")
   amount        Float
+  reference     String?          @map("reference")
   description   String?
 
   accountId     String?
   account       Account?         @relation(fields: [accountId], references: [id])
 
   createdAt     DateTime         @map("created_at")      @default(now())
-
-  bankAccount   BankAccount      @relation(fields: [bankAccountId], references: [id])
-  tenant        Tenant           @relation(fields: [tenantId], references: [id])
 
   @@map("bank_movement")
 }
