@@ -34,6 +34,7 @@ model Tenant {
   transactionDocuments TransactionDocument[]
   bankAccounts         BankAccount[]
   bankMovements        BankMovement[]
+  bankTransfers        BankTransfer[]
   cashBoxes            CashBox[]
   cashSessions         CashSession[]
   cashMovements        CashMovement[]
@@ -522,27 +523,56 @@ model BankAccount {
 }
 
 model BankMovement {
-  id            String                                   @id @default(cuid())
+  id               String                                   @id @default(cuid())
 
-  tenantId      String           @map("tenant_id")
-  tenant        Tenant           @relation(fields: [tenantId], references: [id])
+  tenantId         String           @map("tenant_id")
+  tenant           Tenant           @relation(fields: [tenantId], references: [id])
 
-  bankAccountId String           @map("bank_account_id")
-  bankAccount   BankAccount      @relation(fields: [bankAccountId], references: [id])
+  bankAccountId    String           @map("bank_account_id")
+  bankAccount      BankAccount      @relation(fields: [bankAccountId], references: [id])
 
-  type          BankMovementType
-  date          DateTime         @map("date")
-  amount        Float
-  reference     String?          @map("reference")
-  description   String?
+  type             BankMovementType
+  date             DateTime         @map("date")
+  amount           Float
+  reference        String?          @map("reference")
+  description      String?
 
-  accountId     String?
-  account       Account?         @relation(fields: [accountId], references: [id])
+  accountId        String?
+  account          Account?         @relation(fields: [accountId], references: [id])
 
-  createdAt     DateTime         @map("created_at")      @default(now())
+  createdAt        DateTime         @map("created_at")      @default(now())
+
+  bankTransfersOut BankTransfer[]   @relation("TransferOut")
+  bankTransfersIn  BankTransfer[]   @relation("TransferIn")
 
   @@map("bank_movement")
 }
+
+model BankTransfer {
+  id            String                                @id @default(uuid())
+  tenantId      String        @map("tenant_id")
+
+  fromAccountId String        @map("from_account_id")
+  toAccountId   String        @map("to_account_id")
+
+  amount        Decimal
+  date          DateTime                              @default(now())
+  description   String?
+  reference     String?
+
+  movementOutId String?
+  movementInId  String?
+
+  movementOut   BankMovement? @relation("TransferOut", fields: [movementOutId], references: [id], onDelete: Cascade)
+  movementIn    BankMovement? @relation("TransferIn", fields: [movementInId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime      @map("created_at")      @default(now())
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+
+  @@map("bank_transfer")
+}
+
 
 model CashBox {
   id          String                           @id @default(cuid())

@@ -167,15 +167,15 @@ const Menuitems = [
       },
       {
         id: uniqueId(),
-        title: "Conciliación Bancaria",
-        icon: CircleSmall,
-        href: "/bancos/conciliacion",
-      },
-      {
-        id: uniqueId(),
         title: "Transferencias",
         icon: ArrowLeftRight,
         href: "/bancos/transferencias",
+      },
+      {
+        id: uniqueId(),
+        title: "Conciliación Bancaria",
+        icon: CircleSmall,
+        href: "/bancos/conciliacion",
       },
     ],
   },
