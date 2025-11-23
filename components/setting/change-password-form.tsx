@@ -2,6 +2,7 @@
 
 import { changeUserPassword } from "@/app/actions/user";
 import { AlertService } from "@/lib/alerts";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 import {
   Box,
   Button,
@@ -51,7 +52,7 @@ const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ userId }) => {
 
   const onSubmit = async (data: PasswordForm) => {
     if (data.newPassword !== data.confirmPassword) {
-      AlertService.showWarning("Las contraseñas no coinciden");
+      notifyError("Las contraseñas no coinciden");
       return;
     }
 
@@ -62,12 +63,10 @@ const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ userId }) => {
         data.newPassword
       );
       if (result.success) {
-        AlertService.showSuccess("Contraseña actualizada con éxito");
+        notifyInfo("Contraseña actualizada con éxito");
         reset();
       } else {
-        AlertService.showError(
-          result.error || "Error al actualizar la contraseña"
-        );
+        notifyError(result.error || "Error al actualizar la contraseña");
       }
     } catch (error) {
       AlertService.showError("Error al actualizar la contraseña");

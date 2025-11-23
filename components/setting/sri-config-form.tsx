@@ -24,6 +24,7 @@ import {
   Grid,
   Stack,
 } from "@mui/material";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 
 interface SriTenantFormProps {
   tenantId: string;
@@ -45,7 +46,7 @@ const SRIConfigForm: React.FC<SriTenantFormProps> = ({ tenantId }) => {
   const onSubmit = async (data: TenantSriConfigInput) => {
     const currentTenantId = session?.user?.tenantId;
     if (!currentTenantId) {
-      AlertService.showError("No se encontró el tenantId en la sesión.");
+      notifyError("No se encontró el tenantId en la sesión.");
       return;
     }
 
@@ -59,12 +60,10 @@ const SRIConfigForm: React.FC<SriTenantFormProps> = ({ tenantId }) => {
 
     const result = await updateTenantSriConfig(currentTenantId, data);
     if (result?.success) {
-      AlertService.showSuccess("Configuración SRI actualizada correctamente.");
+      notifyInfo("Configuración SRI actualizada correctamente.");
       reset(result.data);
     } else {
-      AlertService.showError(
-        result?.error || "Error al actualizar configuración."
-      );
+      notifyError(result?.error || "Error al actualizar configuración.");
     }
   };
 

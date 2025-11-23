@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { styled } from "@mui/material/styles";
 import { AlertService } from "@/lib/alerts";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
@@ -55,10 +56,10 @@ const UploadCertificateForm: React.FC<UploadCertificateFormProps> = ({
           result.path || "",
           result.url || ""
         );
-        AlertService.showSuccess("Certificado subido correctamente.");
+        notifyInfo("Certificado subido correctamente.");
         onSave();
       } else {
-        AlertService.showError("Error al subir el certificado.");
+        notifyError("Error al subir el certificado.");
       }
     });
   };

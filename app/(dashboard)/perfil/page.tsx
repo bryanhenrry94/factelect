@@ -3,7 +3,7 @@ import { updateUserProfile } from "@/app/actions/user";
 import PageContainer from "@/components/container/PageContainer";
 import ChangePasswordForm from "@/components/setting/change-password-form";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { AlertService } from "@/lib/alerts";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 import {
   Box,
   Typography,
@@ -53,9 +53,9 @@ const ProfilePage = () => {
       userInfo.name
     );
     if (result.success) {
-      AlertService.showSuccess("Perfil actualizado correctamente");
+      notifyInfo("Perfil actualizado correctamente");
     } else {
-      AlertService.showError(result.error || "Error al actualizar el perfil");
+      notifyError(result.error || "Error al actualizar el perfil");
     }
     setIsEditing(false);
   };

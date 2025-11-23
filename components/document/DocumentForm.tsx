@@ -28,6 +28,7 @@ import {
 import { CreateDocumentFiscalInfo } from "@/lib/validations/document-fiscal-info";
 import { DocumentFiscalInfo } from "./DocumentFiscalInfo";
 import { getDocumentFiscalInfo } from "@/app/actions/document-fiscal-info";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 
 const initialItemsState: CreateDocumentItem[] = [
   {
@@ -174,10 +175,10 @@ export default function DocumentForm({
         };
         reset(data);
       } else {
-        AlertService.showError("Error al cargar el documento");
+        notifyError("Error al cargar el documento");
       }
     } catch (error) {
-      AlertService.showError("Error al cargar el documento");
+      notifyError("Error al cargar el documento");
     }
   };
 
@@ -220,7 +221,7 @@ export default function DocumentForm({
         return;
       }
 
-      await AlertService.showSuccess(
+      await notifyInfo(
         `Documento ${modeEdit ? "actualizado" : "creado"} exitosamente.`
       );
 

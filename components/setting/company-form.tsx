@@ -5,10 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Tenant, tenantSchema } from "@/lib/validations/tenant";
 import { updateTenant } from "@/app/actions/tenant";
-import { AlertService } from "@/lib/alerts";
 import UploadLogoForm from "../ui/UploadLogoForm";
-import { EstablishmentForm } from "../establishment/EstablishmentForm";
-import { EmissionPointForm } from "../emission-point/EmissionPointForm";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 
 interface CompanyFormProps {
   initialData: Tenant | null;
@@ -38,17 +36,13 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
     try {
       const result = await updateTenant(data.id || "", data);
       if (result.success) {
-        AlertService.showSuccess(
-          "Información de la empresa actualizada correctamente"
-        );
+        notifyInfo("Información de la empresa actualizada correctamente");
       } else {
-        AlertService.showError(
-          "Error al actualizar la información de la empresa"
-        );
+        notifyError("Error al actualizar la información de la empresa");
       }
     } catch (error) {
       console.error(error);
-      AlertService.showError("Ocurrió un error inesperado");
+      notifyError("Ocurrió un error inesperado");
     }
   };
 

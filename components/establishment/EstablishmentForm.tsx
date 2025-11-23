@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 import { Delete, Edit, PlusCircle } from "lucide-react";
 import EstablishmentDialog from "./establishment-dialog";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 
 export const EstablishmentForm = () => {
   const [establishments, setEstablishments] = useState<Establishment[]>([]);
@@ -54,9 +55,8 @@ export const EstablishmentForm = () => {
 
     const result = await deleteEstablishment(id);
     result.success
-      ? (AlertService.showSuccess("Eliminado correctamente."),
-        fetchEstablishments())
-      : AlertService.showError("Error al eliminar el establecimiento.");
+      ? (notifyInfo("Eliminando establecimiento..."), fetchEstablishments())
+      : notifyError("Error al eliminar el establecimiento");
   };
 
   return (

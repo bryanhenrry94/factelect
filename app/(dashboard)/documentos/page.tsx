@@ -26,6 +26,7 @@ import { formatCurrency, formatDate } from "@/utils/formatters";
 import { DocumentResponse } from "@/lib/validations";
 import { deleteDocument, getDocuments } from "@/app/actions";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 
 export default function DocumentsPage() {
   const router = useRouter();
@@ -58,12 +59,10 @@ export default function DocumentsPage() {
       const response = await deleteDocument(id);
 
       if (response.success) {
-        AlertService.showSuccess("Documento eliminado correctamente");
+        notifyInfo("Documento eliminado correctamente");
         loadData();
       } else {
-        AlertService.showError(
-          response.error || "Error al eliminar el documento"
-        );
+        notifyError(response.error || "Error al eliminar el documento");
       }
     }
   };

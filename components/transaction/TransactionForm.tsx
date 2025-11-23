@@ -34,6 +34,7 @@ import { paymentMethodsIncome } from "@/utils/paymentMethods";
 import { PersonInput } from "@/lib/validations/person";
 import { PersonFilter } from "@/types/person";
 import { useSession } from "next-auth/react";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 
 const initialState: CreateTransactionInput = {
   personId: "",
@@ -141,10 +142,10 @@ export default function TransactionForm({
 
         reset(data);
       } else {
-        AlertService.showError("Error al cargar la transacción");
+        notifyError("Error al cargar la transacción");
       }
     } catch (error) {
-      AlertService.showError("Error al cargar la transacción");
+      notifyError("Error al cargar la transacción");
     }
   };
 
@@ -177,7 +178,7 @@ export default function TransactionForm({
         return;
       }
 
-      await AlertService.showSuccess(
+      notifyInfo(
         `Transacción ${modeEdit ? "actualizada" : "creada"} exitosamente.`
       );
 

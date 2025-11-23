@@ -24,6 +24,7 @@ import { Delete, Edit, PlusCircle } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import EmissionPointDialog from "./emission-point-dialog";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 
 export const EmissionPointForm = () => {
   const [emissionPoints, setEmissionPoints] = useState<
@@ -56,9 +57,8 @@ export const EmissionPointForm = () => {
 
     const result = await deleteEmissionPoint(id);
     result.success
-      ? (AlertService.showSuccess("Punto de emisión eliminado."),
-        fetchEmissionPoints())
-      : AlertService.showError("Error al eliminar el punto de emisión.");
+      ? (notifyInfo("Punto de emisión eliminado."), fetchEmissionPoints())
+      : notifyError("Error al eliminar el punto de emisión.");
   };
 
   return (

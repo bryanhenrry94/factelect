@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { uploadLogoAction } from "@/app/actions/supabase";
 import { updateLogoUrl } from "@/app/actions/tenant";
-import { AlertService } from "@/lib/alerts";
 import {
   Box,
   Button,
@@ -15,6 +14,7 @@ import { CloudUpload, File } from "lucide-react";
 import { styled } from "@mui/material/styles";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
@@ -60,7 +60,7 @@ const UploadLogoForm: React.FC<UploadLogoFormProps> = ({
         const tenantId = session?.user?.tenantId ?? "";
 
         if (!tenantId) {
-          AlertService.showError("No se pudo obtener el ID del inquilino.");
+          notifyError("No se pudo obtener el ID del inquilino.");
           return;
         }
 
@@ -73,13 +73,13 @@ const UploadLogoForm: React.FC<UploadLogoFormProps> = ({
         if (result.success && result.url) {
           await updateLogoUrl(tenantId, result.url);
           setPreview(result.url);
-          AlertService.showSuccess("Logo subido correctamente.");
+          notifyInfo("Logo subido correctamente.");
         } else {
-          AlertService.showError(result.error || "Error al subir el logo.");
+          notifyError(result.error || "Error al subir el logo.");
         }
       } catch (err) {
         console.error("Upload error:", err);
-        AlertService.showError("Ocurrió un error inesperado al subir el logo.");
+        notifyError("Ocurrió un error inesperado al subir el logo.");
       }
     });
   };

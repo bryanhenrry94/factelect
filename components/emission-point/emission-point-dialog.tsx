@@ -7,7 +7,6 @@ import {
   CreateEmissionPoint,
   EmissionPoint,
 } from "@/lib/validations/emission-point";
-import { AlertService } from "@/lib/alerts";
 import { Establishment } from "@/lib/validations/establishment";
 import {
   Box,
@@ -25,6 +24,7 @@ import {
 import { useForm, Controller } from "react-hook-form";
 import { useSession } from "next-auth/react";
 import { getEstablishments } from "@/app/actions";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 
 interface EmissionPointDialogProps {
   open: boolean;
@@ -87,7 +87,7 @@ const EmissionPointDialog: React.FC<EmissionPointDialogProps> = ({
   const onSubmit = async (data: CreateEmissionPoint) => {
     try {
       if (!session?.user?.tenantId) {
-        AlertService.showError("No se encontró el tenantId en la sesión.");
+        notifyError("No se encontró el tenantId en la sesión.");
         return;
       }
 
@@ -101,7 +101,7 @@ const EmissionPointDialog: React.FC<EmissionPointDialogProps> = ({
         : await createEmissionPoint(formattedData);
 
       if (response.success) {
-        AlertService.showSuccess(
+        notifyInfo(
           editingData
             ? "Punto de emisión actualizado correctamente"
             : "Punto de emisión creado correctamente"
@@ -109,13 +109,11 @@ const EmissionPointDialog: React.FC<EmissionPointDialogProps> = ({
         await onSuccess();
         onClose();
       } else {
-        AlertService.showError(
-          response.error || "Error al guardar el punto de emisión"
-        );
+        notifyError(response.error || "Error al guardar el punto de emisión");
       }
     } catch (error) {
       console.error(error);
-      AlertService.showError("Ocurrió un error inesperado al guardar");
+      notifyError("Ocurrió un error inesperado al guardar el punto de emisión");
     }
   };
 

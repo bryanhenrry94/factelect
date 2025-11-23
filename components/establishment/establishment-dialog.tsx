@@ -2,7 +2,7 @@ import {
   createEstablishment,
   updateEstablishment,
 } from "@/app/actions/establishment";
-import { AlertService } from "@/lib/alerts";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 import {
   CreateEstablishment,
   Establishment,
@@ -69,7 +69,7 @@ const EstablishmentDialog: React.FC<EstablishmentDialogProps> = ({
   const onSubmit = async (data: CreateEstablishment) => {
     try {
       if (!session?.user?.tenantId) {
-        AlertService.showError("No se encontró la información del usuario.");
+        notifyError("No se encontró la información del usuario.");
         return;
       }
 
@@ -80,7 +80,7 @@ const EstablishmentDialog: React.FC<EstablishmentDialogProps> = ({
         : await createEstablishment(session.user.tenantId, formattedData);
 
       if (response.success) {
-        AlertService.showSuccess(
+        notifyInfo(
           establishmentSelected
             ? "Establecimiento actualizado correctamente"
             : "Establecimiento creado correctamente"
@@ -88,14 +88,11 @@ const EstablishmentDialog: React.FC<EstablishmentDialogProps> = ({
         await onSuccess();
         onClose();
       } else {
-        AlertService.showError(
-          response.error || "Error al guardar el establecimiento"
-        );
-        // setError(response.error || "Error al guardar el establecimiento");
+        notifyError(response.error || "Error al guardar el establecimiento");
       }
     } catch (err: any) {
       console.error(err);
-      // setError("Ocurrió un error inesperado al guardar el establecimiento");
+      notifyError("Ocurrió un error inesperado al guardar el establecimiento");
     }
   };
 
