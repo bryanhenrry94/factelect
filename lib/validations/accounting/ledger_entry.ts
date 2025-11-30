@@ -13,4 +13,15 @@ export const LedgerEntrySchema = z.object({
   createdAt: z.date(),
 });
 
+export const createLedgerEntrySchema = LedgerEntrySchema.omit({
+  id: true,
+  tenantId: true,
+  journalEntryId: true,
+  createdAt: true,
+});
+
+export const updateLedgerEntrySchema = LedgerEntrySchema.partial();
+
 export type LedgerEntry = z.infer<typeof LedgerEntrySchema>;
+export type CreateLedgerEntry = z.infer<typeof createLedgerEntrySchema>;
+export type UpdateLedgerEntry = z.infer<typeof updateLedgerEntrySchema>;

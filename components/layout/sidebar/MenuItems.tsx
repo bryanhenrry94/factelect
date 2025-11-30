@@ -306,21 +306,21 @@ const Menuitems = [
       },
       {
         id: uniqueId(),
+        title: "Centros de Costo",
+        icon: CircleSmall,
+        href: "/contabilidad/centros-costo",
+      },
+      {
+        id: uniqueId(),
         title: "Asientos Contables",
         icon: CircleSmall,
         href: "/contabilidad/asientos-contables",
       },
       {
         id: uniqueId(),
-        title: "Libro Diario",
+        title: "Movimientos de Cuenta",
         icon: CircleSmall,
-        href: "/contabilidad/libro-diario",
-      },
-      {
-        id: uniqueId(),
-        title: "Libro Mayor",
-        icon: CircleSmall,
-        href: "/contabilidad/libro-mayor",
+        href: "/contabilidad/movimientos-cuenta",
       },
       {
         id: uniqueId(),

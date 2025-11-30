@@ -1,6 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import { createAccount, getAccounts } from "@/actions/account";
+import {
+  createAccount,
+  deleteAccount,
+  getAccounts,
+  updateAccount,
+} from "@/actions/accounting/account";
 import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Account, CreateAccount } from "@/lib/validations";
@@ -13,15 +18,18 @@ import {
   DialogContent,
   DialogTitle,
   MenuItem,
-  Stack,
   TextField,
+  Typography,
 } from "@mui/material";
 import { Controller, useForm } from "react-hook-form";
+import { AlertService } from "@/lib/alerts";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 
 export default function PlanContablePage() {
   const { data: session } = useSession();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [open, setOpen] = useState(false);
+  const [accountToEdit, setAccountToEdit] = useState<Account | null>(null);
 
   useEffect(() => {
     fetchAccounts();
@@ -43,32 +51,84 @@ export default function PlanContablePage() {
   };
 
   const openCreateModal = (parentId: string | null) => {
-    // Lógica para abrir el modal de creación
-    console.log("Open create modal for parentId:", parentId);
+    setAccountToEdit(null);
+
+    if (parentId) {
+      console.log("Creating as child of:", parentId);
+      reset({
+        code: "",
+        name: "",
+        accountType: "ASSET",
+        parentId: parentId,
+      });
+    } else {
+      reset({
+        code: "",
+        name: "",
+        accountType: "ASSET",
+        parentId: null,
+      });
+    }
+
     setOpen(true);
   };
 
   const openEditModal = (account: Account) => {
-    // Lógica para abrir el modal de edición
-    console.log("Open edit modal for account:", account);
+    setAccountToEdit(account);
+    reset({
+      code: account.code,
+      name: account.name,
+      accountType: account.accountType,
+      parentId: account.parentId,
+    });
+
+    setOpen(true);
   };
 
-  const confirmDelete = (account: Account) => {
+  const confirmDelete = async (account: Account) => {
     // Lógica para confirmar y eliminar la cuenta
     console.log("Confirm delete for account:", account);
+    const confirmed = await AlertService.showConfirm(
+      "Aviso",
+      `¿Está seguro de que desea eliminar la cuenta "${account.name}"? Esta acción no se puede deshacer.`
+    );
+    if (confirmed) {
+      console.log("Account deleted:", account);
+      await deleteAccount(account.id);
+      notifyInfo("Cuenta eliminada correctamente");
+      fetchAccounts();
+      // Aquí iría la lógica para eliminar la cuenta
+    } else {
+      console.log("Account deletion cancelled");
+    }
   };
 
   const {
     control,
     handleSubmit,
     formState: { errors },
+    reset,
   } = useForm<CreateAccount>();
 
   const onSubmit = async (data: CreateAccount) => {
-    // Lógica para crear una nueva cuenta
-    console.log("Creating account with data:", data);
+    const response = accountToEdit
+      ? await updateAccount(accountToEdit.id, data)
+      : await createAccount(session!.user!.tenantId!, data);
 
-    await createAccount(session!.user!.tenantId!, data);
+    if (!response.success) {
+      notifyError(
+        accountToEdit
+          ? "Error al actualizar la cuenta"
+          : "Error al crear la cuenta"
+      );
+      return;
+    }
+
+    notifyInfo(
+      accountToEdit
+        ? "Cuenta actualizada correctamente"
+        : "Cuenta creada correctamente"
+    );
     setOpen(false);
     fetchAccounts();
   };
@@ -89,11 +149,39 @@ export default function PlanContablePage() {
         open={open}
         onClose={() => setOpen(false)}
         fullWidth
-        maxWidth="sm"
+        maxWidth="xs"
       >
-        <DialogTitle>Crear Cuenta</DialogTitle>
         <form onSubmit={handleSubmit(onSubmit)}>
+          <DialogTitle>Crear Cuenta</DialogTitle>
           <DialogContent>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Complete el formulario para crear una nueva cuenta contable.
+            </Typography>
+
+            <Controller
+              name="parentId"
+              control={control}
+              defaultValue={null}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label="Cuenta Padre (opcional)"
+                  fullWidth
+                  margin="dense"
+                  size="small"
+                  disabled
+                  value={field.value || "Ninguna (Cuenta raíz)"}
+                  select
+                >
+                  {accounts.map((account) => (
+                    <MenuItem key={account.id} value={account.id}>
+                      {account.code} - {account.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
+
             <Controller
               name="code"
               control={control}
@@ -104,7 +192,8 @@ export default function PlanContablePage() {
                   {...field}
                   label="Código"
                   fullWidth
-                  margin="normal"
+                  margin="dense"
+                  size="small"
                   error={!!errors.code}
                   helperText={errors.code ? errors.code.message : ""}
                 />
@@ -120,7 +209,8 @@ export default function PlanContablePage() {
                   {...field}
                   label="Nombre"
                   fullWidth
-                  margin="normal"
+                  margin="dense"
+                  size="small"
                   error={!!errors.name}
                   helperText={errors.name ? errors.name.message : ""}
                 />
@@ -136,7 +226,8 @@ export default function PlanContablePage() {
                   select
                   label="Tipo de Cuenta"
                   fullWidth
-                  margin="normal"
+                  margin="dense"
+                  size="small"
                   error={!!errors.accountType}
                   helperText={
                     errors.accountType ? errors.accountType.message : ""

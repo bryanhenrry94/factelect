@@ -17,9 +17,17 @@ import {
   Button,
   Stack,
   MenuItem,
+  Menu,
 } from "@mui/material";
 
-import { ChevronRight, ChevronDown, Delete, Edit, Plus } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronDown,
+  Delete,
+  Edit,
+  Plus,
+  EllipsisVertical,
+} from "lucide-react";
 
 interface TreeTableProps {
   accounts: Account[];
@@ -41,6 +49,24 @@ export const TreeTable: React.FC<TreeTableProps> = ({
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
+
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
+
+  const open = Boolean(anchorEl);
+
+  const handleOpenMenu = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    node: TreeNode
+  ) => {
+    setSelectedNode(node); // GUARDAMOS EL REGISTRO REAL
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+    setSelectedNode(null);
+  };
 
   // -------------------------
   // Convertir lista plana → árbol
@@ -136,35 +162,66 @@ export const TreeTable: React.FC<TreeTableProps> = ({
           <TableCell>{node.name}</TableCell>
 
           {/* Tipo */}
-          <TableCell>{node.accountType || ""}</TableCell>
+          {/* <TableCell>{node.accountType || ""}</TableCell> */}
 
           {/* Acciones */}
           <TableCell>
-            <Stack direction="row" spacing={1}>
-              <IconButton
-                size="small"
-                onClick={() => onCreate?.(node.id)}
-                title="Crear subcuenta"
-              >
-                <Plus size={16} />
-              </IconButton>
+            <IconButton
+              size="small"
+              onClick={(e) => handleOpenMenu(e, node)}
+              title="Más opciones"
+            >
+              <EllipsisVertical size={16} />
+            </IconButton>
 
-              <IconButton
-                size="small"
-                onClick={() => onEdit?.(node)}
-                title="Editar cuenta"
+            <Menu
+              anchorEl={anchorEl}
+              open={open}
+              onClose={handleClose}
+              PaperProps={{
+                elevation: 3,
+                sx: { mt: 1, minWidth: 180, py: 0.5 },
+              }}
+            >
+              <MenuItem
+                onClick={() => {
+                  if (selectedNode) onCreate?.(selectedNode.id);
+                  handleClose();
+                }}
+                sx={{ minHeight: 40 }}
               >
-                <Edit size={16} />
-              </IconButton>
+                <Box display="flex" alignItems="center" gap={1.5}>
+                  <Plus size={18} color="gray" />
+                  <span>Agregar</span>
+                </Box>
+              </MenuItem>
 
-              <IconButton
-                size="small"
-                onClick={() => onDelete?.(node)}
-                title="Eliminar cuenta"
+              <MenuItem
+                onClick={() => {
+                  if (selectedNode) onEdit?.(selectedNode);
+                  handleClose();
+                }}
+                sx={{ minHeight: 40 }}
               >
-                <Delete size={16} />
-              </IconButton>
-            </Stack>
+                <Box display="flex" alignItems="center" gap={1.5}>
+                  <Edit size={18} color="gray" />
+                  <span>Modificar</span>
+                </Box>
+              </MenuItem>
+
+              <MenuItem
+                onClick={() => {
+                  if (selectedNode) onDelete?.(selectedNode);
+                  handleClose();
+                }}
+                sx={{ minHeight: 40 }}
+              >
+                <Box display="flex" alignItems="center" gap={1.5}>
+                  <Delete size={18} color="gray" />
+                  <span>Eliminar</span>
+                </Box>
+              </MenuItem>
+            </Menu>
           </TableCell>
         </TableRow>
 
@@ -233,7 +290,7 @@ export const TreeTable: React.FC<TreeTableProps> = ({
             <TableCell />
             <TableCell>Código</TableCell>
             <TableCell>Nombre</TableCell>
-            <TableCell>Tipo</TableCell>
+            {/* <TableCell>Tipo</TableCell> */}
             <TableCell>Acciones</TableCell>
           </TableRow>
         </TableHead>

@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { getAccounts } from "@/actions/account";
+import { getAccounts } from "@/actions/accounting/account";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { Account } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";

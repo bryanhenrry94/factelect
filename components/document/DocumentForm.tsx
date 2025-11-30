@@ -105,8 +105,6 @@ export default function DocumentForm({
     handleSubmit,
     formState: { errors },
     reset,
-    watch,
-    getValues,
   } = methods;
 
   useEffect(() => {

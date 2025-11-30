@@ -14,7 +14,6 @@ export const accountSchema = z.object({
 });
 
 export const createAccountSchema = accountSchema.omit({
-  id: true,
   tenantId: true,
   createdAt: true,
   balance: true,

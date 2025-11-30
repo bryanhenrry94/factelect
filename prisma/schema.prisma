@@ -758,7 +758,6 @@ model Account {
 model JournalEntry {
   id           String                              @id @default(uuid())
   tenantId     String        @map("tenant_id")
-  entryNumber  Int           @map("entry_number")
   date         DateTime
   description  String?
   type         EntryType                           @default(JOURNAL)
@@ -794,7 +793,7 @@ model LedgerEntry {
 
   costCenterId   String?      @map("cost_center_id")
   createdAt      DateTime     @map("created_at")       @default(now())
-  CostCenter     CostCenter?  @relation(fields: [costCenterId], references: [id])
+  costCenter     CostCenter?  @relation(fields: [costCenterId], references: [id])
 
   @@map("ledger_entry")
 }
