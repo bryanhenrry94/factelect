@@ -330,9 +330,9 @@ const Menuitems = [
       },
       {
         id: uniqueId(),
-        title: "Estado de Resultados",
+        title: "Estado de Resultado",
         icon: CircleSmall,
-        href: "/contabilidad/estado-resultados",
+        href: "/contabilidad/estado-resultado",
       },
     ],
   },

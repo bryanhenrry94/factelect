@@ -141,6 +141,7 @@ export default function MovimientosCuentaPage() {
               value={costCenterId}
               onChange={(e) => setCostCenterId(e.target.value)}
             >
+              <MenuItem value="">Todos</MenuItem>
               {costCenters.map((center) => (
                 <MenuItem key={center.id} value={center.id}>
                   {center.code} — {center.name}
