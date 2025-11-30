@@ -24,7 +24,7 @@ import PageContainer from "@/components/container/PageContainer";
 import { useRouter } from "next/navigation";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { DocumentResponse } from "@/lib/validations";
-import { deleteDocument, getDocuments } from "@/app/actions";
+import { deleteDocument, getDocuments } from "@/actions";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 

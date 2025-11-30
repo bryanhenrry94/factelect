@@ -11,7 +11,7 @@ import {
   getEstablishmentsByTenant,
   getTenantSriConfig,
   getAllProducts,
-} from "@/app/actions";
+} from "@/actions";
 import { PersonFilter } from "@/types";
 import { PersonInput } from "@/lib/validations/person";
 import { Product } from "@/lib/validations";

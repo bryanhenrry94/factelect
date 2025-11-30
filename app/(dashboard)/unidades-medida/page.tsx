@@ -33,7 +33,7 @@ import {
   deleteUnit,
   getUnits,
   updateUnit,
-} from "@/app/actions/unit";
+} from "@/actions/unit";
 
 const UnitsPage = () => {
   const router = useRouter();

@@ -206,12 +206,54 @@ export const registerAccount = async (
     // registramos consumidor final
     await prisma.person.create({
       data: {
-        personKind: "LEGAL",
+        personKind: "NATURAL",
         identificationType: $Enums.IdentificationType.VENTA_A_CONSUMIDOR_FINAL,
-        identification: "9999999999999",
+        identification: "9999999999",
         firstName: "CONSUMIDOR",
         lastName: "FINAL",
         email: "noemail@example.com",
+        roles: ["CLIENT"],
+        tenantId: tenant.id,
+      },
+    });
+
+    const establishment = await prisma.establishment.create({
+      data: {
+        code: "001",
+        address: data.tenantAddress,
+        tenantId: tenant.id,
+      },
+    });
+
+    const emissionPoint = await prisma.emissionPoint.create({
+      data: {
+        tenantId: tenant.id,
+        establishmentId: establishment.id,
+        code: "001",
+      },
+    });
+
+    await prisma.sequenceControl.create({
+      data: {
+        tenantId: tenant.id,
+        documentType: $Enums.DocumentType.INVOICE,
+        establishmentId: establishment.id,
+        emissionPointId: emissionPoint.id,
+        currentSequence: 0,
+      },
+    });
+
+    await prisma.category.create({
+      data: {
+        name: "General",
+        tenantId: tenant.id,
+      },
+    });
+
+    await prisma.unit.create({
+      data: {
+        name: "Unidad",
+        symbol: "UND",
         tenantId: tenant.id,
       },
     });

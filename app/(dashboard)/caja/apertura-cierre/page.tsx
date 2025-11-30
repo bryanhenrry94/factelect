@@ -26,8 +26,8 @@ import {
   openCashSession,
   closeCashSession,
   getAllCashSessions,
-} from "@/app/actions/cash-session";
-import { getAllCashBoxes } from "@/app/actions/cash-box";
+} from "@/actions/cash-session";
+import { getAllCashBoxes } from "@/actions/cash-box";
 import {
   CashSession,
   CreateCashSession,

@@ -10,7 +10,7 @@ import {
 import { PlusCircle, Delete } from "lucide-react";
 import { Controller, useFormContext } from "react-hook-form";
 import { taxOptions } from "@/constants/tax";
-import { getProductById } from "@/app/actions";
+import { getProductById } from "@/actions";
 
 const taxRates: Record<string, number> = {
   IVA_0: 0,

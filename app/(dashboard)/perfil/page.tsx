@@ -1,5 +1,5 @@
 "use client";
-import { updateUserProfile } from "@/app/actions/user";
+import { updateUserProfile } from "@/actions/user";
 import PageContainer from "@/components/container/PageContainer";
 import ChangePasswordForm from "@/components/setting/change-password-form";
 import { PageHeader } from "@/components/ui/PageHeader";

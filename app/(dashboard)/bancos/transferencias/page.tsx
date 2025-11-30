@@ -32,7 +32,7 @@ import {
 import {
   deleteBankTransfer,
   getAllBankTransfers,
-} from "@/app/actions/bank-transfer";
+} from "@/actions/bank-transfer";
 import { BankTransferForm } from "@/components/bank/BankTransferForm";
 
 const now = new Date();

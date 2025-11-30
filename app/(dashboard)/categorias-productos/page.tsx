@@ -5,7 +5,7 @@ import {
   deleteCategory,
   getAllCategories,
   updateCategory,
-} from "@/app/actions/category";
+} from "@/actions/category";
 import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";

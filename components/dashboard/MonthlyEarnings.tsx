@@ -7,7 +7,7 @@ import { Stack, Typography, Avatar, Fab } from "@mui/material";
 import DashboardCard from "@/components/shared/DashboardCard";
 import { ArrowDown, ArrowUpLeft, Currency } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getMonthlyEarnings } from "@/app/actions/dashboard";
+import { getMonthlyEarnings } from "@/actions/dashboard";
 import { useSession } from "next-auth/react";
 
 interface EarningsData {

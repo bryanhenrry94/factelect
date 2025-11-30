@@ -25,7 +25,7 @@ import { formatDate, toInputDate } from "@/utils/formatters";
 import { useSearchFilter } from "@/hooks/useSearchFilter";
 import { AlertService } from "@/lib/alerts";
 import { CashBox } from "@/lib/validations/cash_box";
-import { deleteCashBox, getAllCashBoxes } from "@/app/actions/cash-box";
+import { deleteCashBox, getAllCashBoxes } from "@/actions/cash-box";
 import { CashBoxForm } from "@/components/cash/CashBoxForm";
 
 export default function CashBoxPage() {

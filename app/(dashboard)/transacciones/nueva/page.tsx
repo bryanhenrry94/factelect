@@ -11,7 +11,7 @@ import {
   getEstablishmentsByTenant,
   getTenantSriConfig,
   getAllProducts,
-} from "@/app/actions";
+} from "@/actions";
 import { SRIConfiguration } from "@/prisma/generated/prisma";
 import { PersonFilter } from "@/types";
 import TransactionForm from "@/components/transaction/TransactionForm";

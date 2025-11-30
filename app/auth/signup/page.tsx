@@ -1,6 +1,6 @@
 "use client";
 
-import { registerAccount } from "@/app/actions/auth";
+import { registerAccount } from "@/actions/auth";
 import { AccountStep } from "@/components/auth/signup/AccountStep";
 import { TenantStep } from "@/components/auth/signup/TenantStep";
 import { TermsStep } from "@/components/auth/signup/TermsStep";

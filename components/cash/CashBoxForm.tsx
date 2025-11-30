@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { getAccounts } from "@/app/actions/account";
-import { createCashBox, updateCashBox } from "@/app/actions/cash-box";
+import { getAccounts } from "@/actions/account";
+import { createCashBox, updateCashBox } from "@/actions/cash-box";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { Account } from "@/lib/validations";
 import {

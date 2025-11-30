@@ -6,7 +6,7 @@ import { useTheme } from "@mui/material/styles";
 import dynamic from "next/dynamic";
 import DashboardCard from "@/components/shared/DashboardCard";
 import { getCategoriesForMonth, getLastMonths } from "@/utils/dashboard";
-import { getTotalAmountByMonth } from "@/app/actions/dashboard";
+import { getTotalAmountByMonth } from "@/actions/dashboard";
 import { useSession } from "next-auth/react";
 
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });

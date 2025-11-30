@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   createEmissionPoint,
   updateEmissionPoint,
-} from "@/app/actions/emission-point";
+} from "@/actions/emission-point";
 import {
   CreateEmissionPoint,
   EmissionPoint,
@@ -23,7 +23,7 @@ import {
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import { useSession } from "next-auth/react";
-import { getEstablishments } from "@/app/actions";
+import { getEstablishments } from "@/actions";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
 interface EmissionPointDialogProps {

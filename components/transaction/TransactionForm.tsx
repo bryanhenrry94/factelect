@@ -27,7 +27,7 @@ import {
   getPersonsByTenant,
   getTransaction,
   updateTransaction,
-} from "@/app/actions";
+} from "@/actions";
 import TabPanel from "../ui/TabPanel";
 import DocumentTable from "./DocumentTable";
 import { paymentMethodsIncome } from "@/utils/paymentMethods";

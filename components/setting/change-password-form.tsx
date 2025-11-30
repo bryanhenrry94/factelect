@@ -1,6 +1,6 @@
 "use client";
 
-import { changeUserPassword } from "@/app/actions/user";
+import { changeUserPassword } from "@/actions/user";
 import { AlertService } from "@/lib/alerts";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import {

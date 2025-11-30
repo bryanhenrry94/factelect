@@ -23,9 +23,9 @@ import {
 import { taxOptions } from "@/constants/tax";
 import { Category } from "@/lib/validations/category";
 import { Unit } from "@/lib/validations/unit";
-import { getAllCategories } from "@/app/actions/category";
+import { getAllCategories } from "@/actions/category";
 import { useSession } from "next-auth/react";
-import { getUnits } from "@/app/actions/unit";
+import { getUnits } from "@/actions/unit";
 
 interface ProductFormDialogProps {
   isDialogOpen: boolean;
@@ -133,6 +133,28 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
 
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}>
             <Stack direction="row" spacing={2}>
+              <Controller
+                name="type"
+                control={control}
+                defaultValue={
+                  editingProduct?.type ? editingProduct.type : "PRODUCT"
+                }
+                render={({ field }) => (
+                  <TextField
+                    fullWidth
+                    select
+                    label="Tipo de Ítem"
+                    {...field}
+                    error={!!errors.type}
+                    helperText={errors.type?.message}
+                    size="small"
+                  >
+                    <MenuItem value="PRODUCT">Producto</MenuItem>
+                    <MenuItem value="SERVICE">Servicio</MenuItem>
+                  </TextField>
+                )}
+              />
+
               <TextField
                 label="Código"
                 fullWidth
@@ -142,23 +164,25 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
                 size="small"
               />
 
-              <Controller
-                name="barcode"
-                control={control}
-                defaultValue={
-                  editingProduct?.barcode ? editingProduct.barcode : ""
-                }
-                render={({ field }) => (
-                  <TextField
-                    label="Código de Barras"
-                    fullWidth
-                    {...field}
-                    error={!!errors.barcode}
-                    helperText={errors.barcode?.message}
-                    size="small"
-                  />
-                )}
-              />
+              {watch("type") === "PRODUCT" && (
+                <Controller
+                  name="barcode"
+                  control={control}
+                  defaultValue={
+                    editingProduct?.barcode ? editingProduct.barcode : ""
+                  }
+                  render={({ field }) => (
+                    <TextField
+                      label="Código de Barras"
+                      fullWidth
+                      {...field}
+                      error={!!errors.barcode}
+                      helperText={errors.barcode?.message}
+                      size="small"
+                    />
+                  )}
+                />
+              )}
             </Stack>
 
             <TextField
@@ -208,28 +232,6 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
                 size="small"
               />
             </Stack>
-
-            <Controller
-              name="type"
-              control={control}
-              defaultValue={
-                editingProduct?.type ? editingProduct.type : "PRODUCT"
-              }
-              render={({ field }) => (
-                <TextField
-                  fullWidth
-                  select
-                  label="Tipo de Ítem"
-                  {...field}
-                  error={!!errors.type}
-                  helperText={errors.type?.message}
-                  size="small"
-                >
-                  <MenuItem value="PRODUCT">Producto</MenuItem>
-                  <MenuItem value="SERVICE">Servicio</MenuItem>
-                </TextField>
-              )}
-            />
 
             {watch("type") === "PRODUCT" && (
               <Controller

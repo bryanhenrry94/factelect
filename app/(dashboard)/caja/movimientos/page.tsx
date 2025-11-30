@@ -32,12 +32,12 @@ import {
 import {
   deleteBankTransfer,
   getAllBankTransfers,
-} from "@/app/actions/bank-transfer";
+} from "@/actions/bank-transfer";
 import { BankTransferForm } from "@/components/bank/BankTransferForm";
 import {
   deleteCashMovement,
   getAllCashMovements,
-} from "@/app/actions/cash-movement";
+} from "@/actions/cash-movement";
 import { CashMovement } from "@/lib/validations/cash_movement";
 import { CashMovementForm } from "@/components/cash/CashMovementForm";
 import {

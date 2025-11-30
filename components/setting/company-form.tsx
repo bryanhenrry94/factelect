@@ -4,7 +4,7 @@ import { Box, Button, TextField, Typography, Grid } from "@mui/material";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Tenant, tenantSchema } from "@/lib/validations/tenant";
-import { updateTenant } from "@/app/actions/tenant";
+import { updateTenant } from "@/actions/tenant";
 import UploadLogoForm from "../ui/UploadLogoForm";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 

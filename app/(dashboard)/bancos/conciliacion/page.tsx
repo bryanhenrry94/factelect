@@ -30,7 +30,7 @@ import {
 import {
   deleteBankMovement,
   getAllBankMovements,
-} from "@/app/actions/bank-movement";
+} from "@/actions/bank-movement";
 
 import { formatCurrency, formatDate, toInputDate } from "@/utils/formatters";
 import { BankMovementForm } from "@/components/bank/BankMovementForm";

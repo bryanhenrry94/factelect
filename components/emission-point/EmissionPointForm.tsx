@@ -1,4 +1,4 @@
-import { deleteEmissionPoint, getEmissionPoints } from "@/app/actions";
+import { deleteEmissionPoint, getEmissionPoints } from "@/actions";
 import { AlertService } from "@/lib/alerts";
 import {
   EmissionPoint,

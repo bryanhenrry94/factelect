@@ -22,7 +22,6 @@ import {
   ScanBarcode,
 } from "lucide-react";
 import { uniqueId } from "lodash";
-import { Children } from "react";
 
 const Menuitems = [
   {
@@ -55,31 +54,6 @@ const Menuitems = [
         title: "Proveedores",
         icon: CircleSmall,
         href: "/personas?tipo=proveedor",
-      },
-    ],
-  },
-  {
-    id: uniqueId(),
-    title: "Productos / Servicios",
-    icon: Boxes,
-    children: [
-      {
-        id: uniqueId(),
-        title: "Productos / Servicios",
-        icon: CircleSmall,
-        href: "/productos",
-      },
-      {
-        id: uniqueId(),
-        title: "Categorías",
-        icon: CircleSmall,
-        href: "/categorias-productos",
-      },
-      {
-        id: uniqueId(),
-        title: "Unidades de Medida",
-        icon: CircleSmall,
-        href: "/unidades-medida",
       },
     ],
   },
@@ -236,6 +210,24 @@ const Menuitems = [
     children: [
       {
         id: uniqueId(),
+        title: "Productos / Servicios",
+        icon: CircleSmall,
+        href: "/productos",
+      },
+      {
+        id: uniqueId(),
+        title: "Categorías",
+        icon: CircleSmall,
+        href: "/categorias-productos",
+      },
+      {
+        id: uniqueId(),
+        title: "Unidades de Medida",
+        icon: CircleSmall,
+        href: "/unidades-medida",
+      },
+      {
+        id: uniqueId(),
         title: "Movimientos (Kardex)",
         icon: ArrowLeftRight,
         href: "/inventario-movimientos",
@@ -310,37 +302,37 @@ const Menuitems = [
         id: uniqueId(),
         title: "Plan Contable",
         icon: CircleSmall,
-        href: "/plan-contable",
+        href: "/contabilidad/plan-contable",
       },
       {
         id: uniqueId(),
         title: "Asientos Contables",
         icon: CircleSmall,
-        href: "/asientos-contables",
+        href: "/contabilidad/asientos-contables",
       },
       {
         id: uniqueId(),
         title: "Libro Diario",
         icon: CircleSmall,
-        href: "/libro-diario",
+        href: "/contabilidad/libro-diario",
       },
       {
         id: uniqueId(),
         title: "Libro Mayor",
         icon: CircleSmall,
-        href: "/libro-mayor",
+        href: "/contabilidad/libro-mayor",
       },
       {
         id: uniqueId(),
         title: "Balance General",
         icon: CircleSmall,
-        href: "/balance-general",
+        href: "/contabilidad/balance-general",
       },
       {
         id: uniqueId(),
         title: "Estado de Resultados",
         icon: CircleSmall,
-        href: "/estado-resultados",
+        href: "/contabilidad/estado-resultados",
       },
     ],
   },

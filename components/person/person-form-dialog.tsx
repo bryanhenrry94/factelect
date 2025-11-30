@@ -1,5 +1,5 @@
-import { createPerson, updatePerson } from "@/app/actions";
-import { getAccounts } from "@/app/actions/account";
+import { createPerson, updatePerson } from "@/actions";
+import { getAccounts } from "@/actions/account";
 import { identificationOptions } from "@/constants/identification";
 import { notifyInfo } from "@/lib/notifications";
 import { Account } from "@/lib/validations";

@@ -39,7 +39,7 @@ import {
   deleteBankAccount,
   getAllBankAccounts,
   updateBankAccount,
-} from "@/app/actions/bank-account";
+} from "@/actions/bank-account";
 
 const initialBankAccount: BankAccount = {
   id: "",

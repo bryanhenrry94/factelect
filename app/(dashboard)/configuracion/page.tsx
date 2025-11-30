@@ -6,7 +6,7 @@ import { Tabs, Tab, Box, Card } from "@mui/material";
 import { Building2, CreditCard, FileText } from "lucide-react";
 import CompanyForm from "@/components/setting/company-form";
 import SRIConfigForm from "@/components/setting/sri-config-form";
-import { getTenantById } from "@/app/actions/tenant";
+import { getTenantById } from "@/actions/tenant";
 import { useSession } from "next-auth/react";
 import { Tenant } from "@/lib/validations/tenant";
 import { PageHeader } from "@/components/ui/PageHeader";

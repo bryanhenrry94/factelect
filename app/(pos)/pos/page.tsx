@@ -41,6 +41,7 @@ import {
   Plus,
   Printer,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 /**
  * POS Fullscreen Template (MVP)
@@ -295,6 +296,7 @@ export default function POSTemplate() {
   >("TICKET");
   const [paymentOpen, setPaymentOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement | null>(null);
+  const { data: session } = useSession();
 
   useEffect(() => {
     // keyboard shortcuts
@@ -413,7 +415,7 @@ export default function POSTemplate() {
         <Toolbar sx={{ display: "flex", gap: 2 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              MyPOS
+              Factelect
             </Typography>
             <Chip label="Pto. Emisión: 001-001" />
           </Box>
@@ -422,7 +424,7 @@ export default function POSTemplate() {
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Vendedor: Juan
+              Usuario: {session?.user?.name || "Invitado"}
             </Typography>
             <IconButton size="small">
               <User size={16} />

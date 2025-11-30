@@ -83,8 +83,6 @@ export async function getPersonsByTenant(
   filter: PersonFilter
 ): Promise<{ success: boolean; data: PersonInput[] }> {
   try {
-    console.log("Fetching persons with filter:", filter);
-
     const where: any = {
       tenantId: filter.tenantId,
     };

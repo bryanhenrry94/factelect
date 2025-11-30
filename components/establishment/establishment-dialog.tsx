@@ -1,7 +1,7 @@
 import {
   createEstablishment,
   updateEstablishment,
-} from "@/app/actions/establishment";
+} from "@/actions/establishment";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import {
   CreateEstablishment,

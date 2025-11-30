@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import DashboardCard from "../shared/DashboardCard";
 import { getMonthNamesUpToCurrent } from "@/utils/dashboard";
 import { useTheme } from "@mui/material/styles";
-import { getMonthlySalesData } from "@/app/actions/dashboard";
+import { getMonthlySalesData } from "@/actions/dashboard";
 import { useSession } from "next-auth/react";
 
 // 👇 Importa el chart dinámicamente (solo en el cliente)

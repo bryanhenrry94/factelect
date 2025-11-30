@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import {
   getTenantSriConfig,
   updateTenantSriConfig,
-} from "@/app/actions/tenant-sri-config";
+} from "@/actions/tenant-sri-config";
 
 import {
   CreateTenantSriConfig,

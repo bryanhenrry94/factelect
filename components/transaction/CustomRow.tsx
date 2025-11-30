@@ -13,7 +13,7 @@ import { Controller, useFormContext } from "react-hook-form";
 import { useSession } from "next-auth/react";
 import { formatCurrency } from "@/utils/formatters";
 import { DocumentResponse, TransactionInput } from "@/lib/validations";
-import { getDocument } from "@/app/actions";
+import { getDocument } from "@/actions";
 
 interface CustomRowProps {
   field: any;

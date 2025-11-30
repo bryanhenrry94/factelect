@@ -1,8 +1,8 @@
 "use client";
 
 import { useTransition } from "react";
-import { uploadCertificateAction } from "@/app/actions/supabase";
-import { updateCertificatePath } from "@/app/actions/tenant-sri-config";
+import { uploadCertificateAction } from "@/actions/supabase";
+import { updateCertificatePath } from "@/actions/tenant-sri-config";
 import { Button, Paper, Typography } from "@mui/material";
 import {
   CheckCircle2,

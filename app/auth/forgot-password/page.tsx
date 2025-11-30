@@ -1,6 +1,6 @@
 "use client";
 
-import { sendPasswordResetEmail } from "@/app/actions/auth";
+import { sendPasswordResetEmail } from "@/actions/auth";
 import PageContainer from "@/components/container/PageContainer";
 import Logo from "@/components/layout/shared/logo/Logo";
 import CustomTextField from "@/components/ui/CustomTextField";

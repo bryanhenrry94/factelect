@@ -13,7 +13,7 @@ import {
 import DashboardCard from "@/components/shared/DashboardCard";
 import { ArrowDownRight, ArrowUpLeft } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getYearlyBreakup } from "@/app/actions/dashboard";
+import { getYearlyBreakup } from "@/actions/dashboard";
 import { useSession } from "next-auth/react";
 
 interface YearlyData {

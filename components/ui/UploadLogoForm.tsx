@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { uploadLogoAction } from "@/app/actions/supabase";
-import { updateLogoUrl } from "@/app/actions/tenant";
+import { uploadLogoAction } from "@/actions/supabase";
+import { updateLogoUrl } from "@/actions/tenant";
 import {
   Box,
   Button,

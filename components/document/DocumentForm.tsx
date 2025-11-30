@@ -24,10 +24,10 @@ import {
   getDocument,
   getDocumentItems,
   updateDocument,
-} from "@/app/actions";
+} from "@/actions";
 import { CreateDocumentFiscalInfo } from "@/lib/validations/document-fiscal-info";
 import { DocumentFiscalInfo } from "./DocumentFiscalInfo";
-import { getDocumentFiscalInfo } from "@/app/actions/document-fiscal-info";
+import { getDocumentFiscalInfo } from "@/actions/document-fiscal-info";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
 const initialItemsState: CreateDocumentItem[] = [

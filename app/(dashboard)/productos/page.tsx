@@ -24,7 +24,7 @@ import {
   deleteProduct,
   getAllProducts,
   updateProduct,
-} from "@/app/actions/product";
+} from "@/actions/product";
 import { useSession } from "next-auth/react";
 import { AlertService } from "@/lib/alerts";
 import PageContainer from "@/components/container/PageContainer";

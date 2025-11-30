@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import {
   deleteEstablishment,
   getEstablishments,
-} from "@/app/actions/establishment";
+} from "@/actions/establishment";
 import { AlertService } from "@/lib/alerts";
 import {
   Box,

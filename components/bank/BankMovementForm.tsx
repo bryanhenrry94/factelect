@@ -1,8 +1,8 @@
-import { getAllBankAccounts } from "@/app/actions/bank-account";
+import { getAllBankAccounts } from "@/actions/bank-account";
 import {
   createBankMovement,
   updateBankMovement,
-} from "@/app/actions/bank-movement";
+} from "@/actions/bank-movement";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { BankAccount } from "@/lib/validations/bank_account";
 import {

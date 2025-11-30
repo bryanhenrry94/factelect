@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 export const accountSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: z.string(),
   tenantId: z.string(),
   code: z.string().min(1, "Code is required"),
   name: z.string().min(1, "Name is required"),
-  type: z.enum(["BANK", "CASH", "CREDIT_CARD"]), // Ajusta según tu enum AccountType
+  accountType: z.enum(["ASSET", "LIABILITY", "EQUITY", "INCOME", "EXPENSE"]),
   parentId: z.string().uuid().nullable().optional(),
   isAuxiliary: z.boolean().optional(),
   allowCustomer: z.boolean().optional(),

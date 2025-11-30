@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 
-import { getPersonsByTenant, getAllProducts } from "@/app/actions";
+import { getPersonsByTenant, getAllProducts } from "@/actions";
 import { PersonFilter } from "@/types";
 import { PersonInput } from "@/lib/validations/person";
 import { Product } from "@/lib/validations";

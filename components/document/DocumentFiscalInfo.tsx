@@ -1,8 +1,8 @@
 import {
   getEmissionPointsByEstablishment,
   getEstablishments,
-} from "@/app/actions";
-import { getNextSequenceDocumentNumber } from "@/app/actions/sequence_control";
+} from "@/actions";
+import { getNextSequenceDocumentNumber } from "@/actions/sequence_control";
 import {
   CreateDocument,
   EmissionPointWithEstablishmentSchema,

@@ -13,13 +13,6 @@ export const getNextSequenceDocumentNumber = async (
   error?: string;
 }> => {
   try {
-    console.log(
-      "Fetching next sequence for emissionPointId:",
-      emissionPointId,
-      "and documentType:",
-      documentType
-    );
-
     // You may need to provide tenantId as well; adjust as necessary
     const sequenceControl = await prisma.sequenceControl.findUnique({
       where: {
@@ -39,7 +32,7 @@ export const getNextSequenceDocumentNumber = async (
     if (documentType === "INVOICE") {
       return {
         success: true,
-        nextSequence: sequenceControl.currentSequence,
+        nextSequence: sequenceControl.currentSequence + 1,
       };
     }
 

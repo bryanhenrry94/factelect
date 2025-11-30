@@ -21,7 +21,7 @@ import {
 import { Edit, Delete, Users, Plus, UserCheck, Truck } from "lucide-react";
 import { useSession } from "next-auth/react";
 
-import { deletePerson, getPersonsByTenant } from "@/app/actions/person";
+import { deletePerson, getPersonsByTenant } from "@/actions/person";
 import { AlertService } from "@/lib/alerts";
 import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
