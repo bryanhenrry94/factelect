@@ -17,9 +17,9 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
-import { CashBox } from "@/lib/validations/cash_box";
-import { CashSession } from "@/lib/validations/cash_session";
-import { CashMovement } from "@/lib/validations/cash_movement";
+import { CashBox } from "@/lib/validations/cash/cash_box";
+import { CashSession } from "@/lib/validations/cash/cash_session";
+import { CashMovement } from "@/lib/validations/cash/cash_movement";
 
 type FormValues = {
   cashCounts: { denomination: number; quantity: number }[];

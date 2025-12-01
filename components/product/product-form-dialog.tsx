@@ -19,11 +19,11 @@ import {
   CreateProduct,
   createProductSchema,
   Product,
-} from "@/lib/validations/product";
+} from "@/lib/validations/inventory/product";
 import { taxOptions } from "@/constants/tax";
-import { Category } from "@/lib/validations/category";
+import { Category } from "@/lib/validations/inventory/category";
 import { Unit } from "@/lib/validations/unit";
-import { getAllCategories } from "@/actions/category";
+import { getAllCategories } from "@/actions/inventory/category";
 import { useSession } from "next-auth/react";
 import { getUnits } from "@/actions/unit";
 
@@ -89,7 +89,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
       price: 0,
       tax: editingProduct ? editingProduct.tax : "IVA_0",
       description: "",
-      type: "PRODUCT",
+      type: "SERVICE",
       barcode: null,
       cost: 0,
     },
@@ -132,58 +132,62 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
           </Typography>
 
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}>
-            <Stack direction="row" spacing={2}>
+            <Controller
+              name="type"
+              control={control}
+              defaultValue={
+                editingProduct?.type ? editingProduct.type : "SERVICE"
+              }
+              render={({ field }) => (
+                <TextField
+                  fullWidth
+                  select
+                  label="Tipo de Ítem"
+                  {...field}
+                  error={!!errors.type}
+                  helperText={errors.type?.message}
+                  size="small"
+                >
+                  <MenuItem value="PRODUCT">Producto</MenuItem>
+                  <MenuItem value="SERVICE">Servicio</MenuItem>
+                </TextField>
+              )}
+            />
+
+            <Controller
+              name="code"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  label="Código"
+                  fullWidth
+                  {...field}
+                  error={!!errors.code}
+                  helperText={errors.code?.message}
+                  size="small"
+                />
+              )}
+            />
+
+            {watch("type") === "PRODUCT" && (
               <Controller
-                name="type"
+                name="barcode"
                 control={control}
                 defaultValue={
-                  editingProduct?.type ? editingProduct.type : "PRODUCT"
+                  editingProduct?.barcode ? editingProduct.barcode : ""
                 }
                 render={({ field }) => (
                   <TextField
+                    label="Código de Barras"
                     fullWidth
-                    select
-                    label="Tipo de Ítem"
                     {...field}
-                    error={!!errors.type}
-                    helperText={errors.type?.message}
+                    error={!!errors.barcode}
+                    helperText={errors.barcode?.message}
                     size="small"
-                  >
-                    <MenuItem value="PRODUCT">Producto</MenuItem>
-                    <MenuItem value="SERVICE">Servicio</MenuItem>
-                  </TextField>
+                  />
                 )}
               />
-
-              <TextField
-                label="Código"
-                fullWidth
-                {...register("code")}
-                error={!!errors.code}
-                helperText={errors.code?.message}
-                size="small"
-              />
-
-              {watch("type") === "PRODUCT" && (
-                <Controller
-                  name="barcode"
-                  control={control}
-                  defaultValue={
-                    editingProduct?.barcode ? editingProduct.barcode : ""
-                  }
-                  render={({ field }) => (
-                    <TextField
-                      label="Código de Barras"
-                      fullWidth
-                      {...field}
-                      error={!!errors.barcode}
-                      helperText={errors.barcode?.message}
-                      size="small"
-                    />
-                  )}
-                />
-              )}
-            </Stack>
+            )}
 
             <TextField
               label="Descripción"
@@ -196,42 +200,51 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
               size="small"
             />
 
-            <Stack direction="row" spacing={2}>
-              <Controller
-                name="tax"
-                control={control}
-                defaultValue={
-                  editingProduct?.tax ? editingProduct.tax : "IVA_0"
-                }
-                render={({ field }) => (
-                  <TextField
-                    fullWidth
-                    select
-                    label="IVA"
-                    {...field}
-                    error={!!errors.tax}
-                    helperText={errors.tax?.message}
-                    size="small"
-                  >
-                    {taxOptions.map(({ label, value, code }) => (
-                      <MenuItem key={code} value={value}>
-                        {label}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                )}
-              />
-              <TextField
-                label="Precio"
-                type="number"
-                fullWidth
-                inputProps={{ step: "0.01", min: 0 }}
-                {...register("price", { valueAsNumber: true })}
-                error={!!errors.price}
-                helperText={errors.price?.message}
-                size="small"
-              />
-            </Stack>
+            <Controller
+              name="tax"
+              control={control}
+              defaultValue={editingProduct?.tax ? editingProduct.tax : "IVA_0"}
+              render={({ field }) => (
+                <TextField
+                  fullWidth
+                  select
+                  label="IVA"
+                  {...field}
+                  error={!!errors.tax}
+                  helperText={errors.tax?.message}
+                  size="small"
+                >
+                  {taxOptions.map(({ label, value, code }) => (
+                    <MenuItem key={code} value={value}>
+                      {label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
+
+            <Controller
+              name="price"
+              control={control}
+              defaultValue={editingProduct?.price ? editingProduct.price : 0}
+              render={({ field }) => (
+                <TextField
+                  label="Precio"
+                  type="number"
+                  fullWidth
+                  inputProps={{ step: "0.01", min: 0 }}
+                  {...field}
+                  error={!!errors.price}
+                  helperText={errors.price?.message}
+                  value={field.value || 0}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value);
+                    field.onChange(isNaN(value) ? 0 : value);
+                  }}
+                  size="small"
+                />
+              )}
+            />
 
             {watch("type") === "PRODUCT" && (
               <Controller

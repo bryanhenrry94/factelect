@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { getAccounts } from "@/actions/accounting/account";
+import { getAccounts } from "@/actions/accounting/chart-of-account";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { Account } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,12 +18,12 @@ import {
   CashMovement,
   CreateCashMovement,
   createCashMovementSchema,
-} from "@/lib/validations/cash_movement";
+} from "@/lib/validations/cash/cash_movement";
 import {
   createCashMovement,
   updateCashMovement,
-} from "@/actions/cash-movement";
-import { getOpenCashSession } from "@/actions/cash-session";
+} from "@/actions/cash/cash-movement";
+import { getOpenCashSession } from "@/actions/cash/cash-session";
 
 const initialState: CreateCashMovement = {
   type: "IN",

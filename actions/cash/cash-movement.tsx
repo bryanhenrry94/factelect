@@ -4,7 +4,7 @@ import {
   CashMovement,
   CreateCashMovement,
   UpdateCashMovement,
-} from "@/lib/validations/cash_movement";
+} from "@/lib/validations/cash/cash_movement";
 
 export const getAllCashMovements = async (
   tenantId: string,

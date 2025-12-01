@@ -1,14 +1,14 @@
 import React, { useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { getAccounts } from "@/actions/accounting/account";
-import { createCashBox, updateCashBox } from "@/actions/cash-box";
+import { getAccounts } from "@/actions/accounting/chart-of-account";
+import { createCashBox, updateCashBox } from "@/actions/cash/cash-box";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { Account } from "@/lib/validations";
 import {
   CashBox,
   CreateCashBox,
   createCashBoxSchema,
-} from "@/lib/validations/cash_box";
+} from "@/lib/validations/cash/cash_box";
 import { $Enums } from "@/prisma/generated/prisma";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {

@@ -1,5 +1,5 @@
 "use client";
-import { getAccounts } from "@/actions/accounting/account";
+import { getAccounts } from "@/actions/accounting/chart-of-account";
 import { getCostCenters } from "@/actions/accounting/cost-center";
 import {
   createJournalEntry,

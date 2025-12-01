@@ -38,7 +38,7 @@ export async function getEstadoResultados(params: {
     );
 
     // 1️⃣ Obtener cuentas contables tipo INGRESOS (4) y GASTOS (5)
-    const accounts = await prisma.account.findMany({
+    const accounts = await prisma.chartOfAccount.findMany({
       where: {
         accountType: { in: ["INCOME", "EXPENSE"] },
       },

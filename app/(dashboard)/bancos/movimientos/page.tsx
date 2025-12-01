@@ -25,12 +25,12 @@ import { useSession } from "next-auth/react";
 import {
   BankMovement,
   BankMovementWithAccount,
-} from "@/lib/validations/bank_movement";
+} from "@/lib/validations/bank/bank_movement";
 
 import {
   deleteBankMovement,
   getAllBankMovements,
-} from "@/actions/bank-movement";
+} from "@/actions/bank/bank-movement";
 
 import { formatCurrency, formatDate, toInputDate } from "@/utils/formatters";
 import { BankMovementForm } from "@/components/bank/BankMovementForm";

@@ -1,6 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { CashSession } from "@/lib/validations/cash_session";
+import { CashSession } from "@/lib/validations/cash/cash_session";
 
 export async function getOpenCashSession(
   tenantId: string,

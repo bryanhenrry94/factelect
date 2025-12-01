@@ -1,14 +1,14 @@
-import { getAllBankAccounts } from "@/actions/bank-account";
+import { getAllBankAccounts } from "@/actions/bank/bank-account";
 import {
   createBankMovement,
   updateBankMovement,
-} from "@/actions/bank-movement";
+} from "@/actions/bank/bank-movement";
 import { notifyError, notifyInfo } from "@/lib/notifications";
-import { BankAccount } from "@/lib/validations/bank_account";
+import { BankAccount } from "@/lib/validations/bank/bank_account";
 import {
   BankMovement,
   BankMovementSchema,
-} from "@/lib/validations/bank_movement";
+} from "@/lib/validations/bank/bank_movement";
 import { $Enums } from "@/prisma/generated/prisma";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {

@@ -6,7 +6,7 @@ export const getAccounts = async (
   tenantId: string
 ): Promise<{ success: boolean; data?: Account[]; error?: string }> => {
   try {
-    const accounts = await prisma.account.findMany({
+    const accounts = await prisma.chartOfAccount.findMany({
       where: {
         tenantId,
       },
@@ -15,9 +15,9 @@ export const getAccounts = async (
       },
     });
 
-    const mappedAccounts = accounts.map((account) => ({
-      ...account,
-      accountType: account.accountType as Account["accountType"],
+    const mappedAccounts = accounts.map((chartOfAccount) => ({
+      ...chartOfAccount,
+      accountType: chartOfAccount.accountType as Account["accountType"],
     }));
 
     return { success: true, data: mappedAccounts };
@@ -31,7 +31,7 @@ export const createAccount = async (
   accountData: CreateAccount
 ): Promise<{ success: boolean; data?: Account; error?: string }> => {
   try {
-    const newAccount = await prisma.account.create({
+    const newAccount = await prisma.chartOfAccount.create({
       data: {
         ...accountData,
         tenantId,
@@ -49,7 +49,7 @@ export const updateAccount = async (
   accountData: Partial<CreateAccount>
 ): Promise<{ success: boolean; data?: Account; error?: string }> => {
   try {
-    const updatedAccount = await prisma.account.update({
+    const updatedAccount = await prisma.chartOfAccount.update({
       where: {
         id: accountId,
       },
@@ -66,7 +66,7 @@ export const deleteAccount = async (
   accountId: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    await prisma.account.delete({
+    await prisma.chartOfAccount.delete({
       where: {
         id: accountId,
       },

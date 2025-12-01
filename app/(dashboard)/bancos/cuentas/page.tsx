@@ -33,13 +33,13 @@ import {
   BankAccount,
   CreateBankAccount,
   createBankAccountSchema,
-} from "@/lib/validations/bank_account";
+} from "@/lib/validations/bank/bank_account";
 import {
   createBankAccount,
   deleteBankAccount,
   getAllBankAccounts,
   updateBankAccount,
-} from "@/actions/bank-account";
+} from "@/actions/bank/bank-account";
 
 const initialBankAccount: BankAccount = {
   id: "",

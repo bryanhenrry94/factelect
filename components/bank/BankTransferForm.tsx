@@ -1,15 +1,15 @@
-import { getAllBankAccounts } from "@/actions/bank-account";
+import { getAllBankAccounts } from "@/actions/bank/bank-account";
 import {
   createBankTransfer,
   updateBankTransfer,
-} from "@/actions/bank-transfer";
+} from "@/actions/bank/bank-transfer";
 import { notifyError, notifyInfo } from "@/lib/notifications";
-import { BankAccount } from "@/lib/validations/bank_account";
+import { BankAccount } from "@/lib/validations/bank/bank_account";
 import {
   BankTransfer,
   CreateBankTransfer,
   createBankTransferSchema,
-} from "@/lib/validations/bank_transfer";
+} from "@/lib/validations/bank/bank_transfer";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Box,

@@ -5,7 +5,7 @@ import {
   BankTransferWithAccount,
   CreateBankTransfer,
   UpdateBankTransfer,
-} from "@/lib/validations/bank_transfer";
+} from "@/lib/validations/bank/bank_transfer";
 
 export const getAllBankTransfers = async (
   tenantId: string,

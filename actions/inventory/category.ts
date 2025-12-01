@@ -4,7 +4,7 @@ import {
   Category,
   CreateCategory,
   UpdateCategory,
-} from "@/lib/validations/category";
+} from "@/lib/validations/inventory/category";
 
 // crud
 export const createCategory = async (

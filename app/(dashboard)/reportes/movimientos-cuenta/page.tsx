@@ -19,7 +19,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useSession } from "next-auth/react";
-import { getAccounts } from "@/actions/accounting/account";
+import { getAccounts } from "@/actions/accounting/chart-of-account";
 import { CostCenter } from "@/lib/validations/accounting/cost-center";
 import { getCostCenters } from "@/actions/accounting/cost-center";
 import { Search } from "lucide-react";

@@ -284,7 +284,7 @@ export const TreeTable: React.FC<TreeTableProps> = ({
       {/* ===================== */}
       {/* Tabla */}
       {/* ===================== */}
-      <Table>
+      <Table size="small">
         <TableHead>
           <TableRow>
             <TableCell />

@@ -1,6 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { BankAccount, CreateBankAccount } from "@/lib/validations/bank_account";
+import { BankAccount, CreateBankAccount } from "@/lib/validations/bank/bank_account";
 
 export const createBankAccount = async (
   tenantId: string,

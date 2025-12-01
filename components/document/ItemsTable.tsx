@@ -1,6 +1,6 @@
 "use client";
 
-import { Product } from "@/lib/validations/product";
+import { Product } from "@/lib/validations/inventory/product";
 import {
   Table,
   TableBody,

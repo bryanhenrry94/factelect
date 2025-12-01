@@ -5,7 +5,7 @@ import {
   deleteAccount,
   getAccounts,
   updateAccount,
-} from "@/actions/accounting/account";
+} from "@/actions/accounting/chart-of-account";
 import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Account, CreateAccount } from "@/lib/validations";

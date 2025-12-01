@@ -4,7 +4,7 @@ import {
   CashBox,
   CreateCashBox,
   UpdateCashBox,
-} from "@/lib/validations/cash_box";
+} from "@/lib/validations/cash/cash_box";
 
 export const getAllCashBoxes = async (
   tenantId: string,

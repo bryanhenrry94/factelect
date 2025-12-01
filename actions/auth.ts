@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 import bcrypt from "bcrypt";
 import { $Enums } from "@/prisma/generated/prisma";
+import { cloneCOAForTenant } from "./accounting/clone-coa";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -136,10 +137,12 @@ export const registerAccount = async (
   data: FormValues
 ): Promise<{ success: boolean; error?: string; data?: any }> => {
   try {
+    // ---------------------
+    // VALIDACIONES
+    // ---------------------
+
     const emailExists = await prisma.user.findFirst({
-      where: {
-        email: data.email,
-      },
+      where: { email: data.email },
     });
 
     if (emailExists) {
@@ -150,9 +153,7 @@ export const registerAccount = async (
     }
 
     const subdomainExists = await prisma.tenant.findFirst({
-      where: {
-        subdomain: data.ruc,
-      },
+      where: { subdomain: data.ruc },
     });
 
     if (subdomainExists) {
@@ -162,103 +163,111 @@ export const registerAccount = async (
       };
     }
 
-    const tenant = await prisma.tenant.create({
-      data: {
-        ruc: data.ruc,
-        name: data.tenantName,
-        subdomain: data.ruc,
-      },
+    // ---------------------
+    // TRANSACCIÓN PRINCIPAL
+    // ---------------------
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Crear tenant
+      const tenant = await tx.tenant.create({
+        data: {
+          ruc: data.ruc,
+          name: data.tenantName,
+          subdomain: data.ruc,
+        },
+      });
+
+      // Configuración SRI
+      await tx.sRIConfiguration.create({
+        data: {
+          tenantId: tenant.id,
+          environment: "TEST",
+        },
+      });
+
+      // Crear usuario
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+
+      await tx.user.create({
+        data: {
+          name: data.name,
+          email: data.email,
+          password: hashedPassword,
+          tenantId: tenant.id,
+        },
+      });
+
+      // Consumidor Final
+      await tx.person.create({
+        data: {
+          personKind: "NATURAL",
+          identificationType:
+            $Enums.IdentificationType.VENTA_A_CONSUMIDOR_FINAL,
+          identification: "9999999999",
+          firstName: "CONSUMIDOR",
+          lastName: "FINAL",
+          email: "noemail@example.com",
+          roles: ["CLIENT"],
+          tenantId: tenant.id,
+        },
+      });
+
+      // Establecimiento y punto de emisión
+      const establishment = await tx.establishment.create({
+        data: {
+          code: "001",
+          address: data.tenantAddress,
+          tenantId: tenant.id,
+        },
+      });
+
+      const emissionPoint = await tx.emissionPoint.create({
+        data: {
+          tenantId: tenant.id,
+          establishmentId: establishment.id,
+          code: "001",
+        },
+      });
+
+      await tx.sequenceControl.create({
+        data: {
+          tenantId: tenant.id,
+          documentType: $Enums.DocumentType.INVOICE,
+          establishmentId: establishment.id,
+          emissionPointId: emissionPoint.id,
+          currentSequence: 0,
+        },
+      });
+
+      // Categorías y unidades base
+      await tx.category.create({
+        data: {
+          name: "General",
+          tenantId: tenant.id,
+        },
+      });
+
+      await tx.unit.create({
+        data: {
+          name: "Unidad",
+          symbol: "UND",
+          tenantId: tenant.id,
+        },
+      });
+
+      // Retornar tenant al final
+      return tenant;
     });
 
-    if (!tenant) {
-      return { success: false, error: "Hubo un error al registrar la empresa" };
-    }
+    // ---------------------
+    // CREAR PLAN DE CUENTAS (fuera de la transacción principal)
+    // ---------------------
+    await cloneCOAForTenant(result.id);
 
-    const sriConfig = await prisma.sRIConfiguration.create({
-      data: {
-        tenantId: tenant.id,
-        environment: "TEST",
-      },
-    });
-
-    if (!sriConfig) {
-      return { success: false, error: "Hubo un error al configurar el SRI" };
-    }
-
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-
-    const newUser = await prisma.user.create({
-      data: {
-        name: data.name,
-        email: data.email,
-        password: hashedPassword,
-        tenantId: tenant.id,
-      },
-    });
-
-    if (!newUser) {
-      return {
-        success: false,
-        error: "Hubo un error al registrar la cuenta del usuario",
-      };
-    }
-
-    // registramos consumidor final
-    await prisma.person.create({
-      data: {
-        personKind: "NATURAL",
-        identificationType: $Enums.IdentificationType.VENTA_A_CONSUMIDOR_FINAL,
-        identification: "9999999999",
-        firstName: "CONSUMIDOR",
-        lastName: "FINAL",
-        email: "noemail@example.com",
-        roles: ["CLIENT"],
-        tenantId: tenant.id,
-      },
-    });
-
-    const establishment = await prisma.establishment.create({
-      data: {
-        code: "001",
-        address: data.tenantAddress,
-        tenantId: tenant.id,
-      },
-    });
-
-    const emissionPoint = await prisma.emissionPoint.create({
-      data: {
-        tenantId: tenant.id,
-        establishmentId: establishment.id,
-        code: "001",
-      },
-    });
-
-    await prisma.sequenceControl.create({
-      data: {
-        tenantId: tenant.id,
-        documentType: $Enums.DocumentType.INVOICE,
-        establishmentId: establishment.id,
-        emissionPointId: emissionPoint.id,
-        currentSequence: 0,
-      },
-    });
-
-    await prisma.category.create({
-      data: {
-        name: "General",
-        tenantId: tenant.id,
-      },
-    });
-
-    await prisma.unit.create({
-      data: {
-        name: "Unidad",
-        symbol: "UND",
-        tenantId: tenant.id,
-      },
-    });
-
-    return { success: true, data: "Cuenta registrada exitosamente!" };
+    return {
+      success: true,
+      data: "Cuenta registrada exitosamente!",
+    };
   } catch (error) {
     console.error(`Error al momento de crear la cuenta: ${error}`);
     return { success: false, error: "Error al crear la cuenta" };

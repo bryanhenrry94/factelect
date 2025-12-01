@@ -9,6 +9,7 @@ const PUBLIC_ROUTES = [
   "/_next", // para permitir assets internos
   "/api/auth", // rutas internas de NextAuth
   "/api/invoices", // rutas api públicas de facturas
+  "/api/import/coa", // rutas api públicas de facturas
   "/favicon.ico",
 ];
 

@@ -26,14 +26,14 @@ import {
   openCashSession,
   closeCashSession,
   getAllCashSessions,
-} from "@/actions/cash-session";
-import { getAllCashBoxes } from "@/actions/cash-box";
+} from "@/actions/cash/cash-session";
+import { getAllCashBoxes } from "@/actions/cash/cash-box";
 import {
   CashSession,
   CreateCashSession,
   createCashSessionSchema,
-} from "@/lib/validations/cash_session";
-import { CashBox } from "@/lib/validations/cash_box";
+} from "@/lib/validations/cash/cash_session";
+import { CashBox } from "@/lib/validations/cash/cash_box";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 export default function CashSessionPage() {

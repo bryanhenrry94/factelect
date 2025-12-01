@@ -5,7 +5,7 @@ import {
   deleteCategory,
   getAllCategories,
   updateCategory,
-} from "@/actions/category";
+} from "@/actions/inventory/category";
 import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
@@ -13,7 +13,7 @@ import {
   Category,
   CreateCategory,
   CreateCategorySchema,
-} from "@/lib/validations/category";
+} from "@/lib/validations/inventory/category";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Box,

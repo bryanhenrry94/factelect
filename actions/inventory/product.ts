@@ -5,7 +5,7 @@ import {
   createProductSchema,
   Product,
   UpdateProduct,
-} from "@/lib/validations/product";
+} from "@/lib/validations/inventory/product";
 
 export async function createProduct(
   data: CreateProduct,

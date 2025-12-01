@@ -138,7 +138,7 @@ model Product {
   tax                     TaxType                   @map("tax")         @default(IVA_0)
   type                    ProductType                                   @default(PRODUCT) // PRODUCT | SERVICE
   barcode                 String?                                       @unique
-  cost                    Float                                         @default(0) // costo promedio o estándar
+  cost                    Float?                                         @default(0) // costo promedio o estándar
 
   unitId                  String
   unit                    Unit                      @relation(fields: [unitId], references: [id])
@@ -503,21 +503,21 @@ model TransactionDocument {
 }
 
 model BankAccount {
-  id                                                               String                                @id @default(cuid())
-  tenantId                                                         String         @map("tenant_id")
-  bankName                                                         String         @map("bank_name")
-  accountNumber                                                    String         @map("account_number")
+  id                                                               String                                 @id @default(cuid())
+  tenantId                                                         String          @map("tenant_id")
+  bankName                                                         String          @map("bank_name")
+  accountNumber                                                    String          @map("account_number")
   alias                                                            String?
   type          BankAccountType // CURRENT, SAVINGS, CREDIT, OTHER
 
   // NUEVO: referencia a la cuenta contable
   accountId                                                        String?
-  account                                                          Account?       @relation(fields: [accountId], references: [id])
+  account                                                          ChartOfAccount? @relation(fields: [accountId], references: [id])
 
-  createdAt                                                        DateTime       @map("created_at")     @default(now())
-  updatedAt                                                        DateTime       @map("updated_at")     @updatedAt
+  createdAt                                                        DateTime        @map("created_at")     @default(now())
+  updatedAt                                                        DateTime        @map("updated_at")     @updatedAt
 
-  tenant                                                           Tenant         @relation(fields: [tenantId], references: [id])
+  tenant                                                           Tenant          @relation(fields: [tenantId], references: [id])
   movements                                                        BankMovement[]
   transaction                                                      Transaction[]
 
@@ -540,7 +540,7 @@ model BankMovement {
   description      String?
 
   accountId        String?
-  account          Account?         @relation(fields: [accountId], references: [id])
+  account          ChartOfAccount?  @relation(fields: [accountId], references: [id])
 
   createdAt        DateTime         @map("created_at")      @default(now())
 
@@ -576,17 +576,17 @@ model BankTransfer {
 }
 
 model CashBox {
-  id          String                           @id @default(cuid())
+  id          String                             @id @default(cuid())
   name        String
   location    String
-  createdAt   DateTime      @map("created_at") @default(now())
-  updatedAt   DateTime      @map("updated_at") @updatedAt
+  createdAt   DateTime        @map("created_at") @default(now())
+  updatedAt   DateTime        @map("updated_at") @updatedAt
 
   accountId   String?
-  account     Account?      @relation(fields: [accountId], references: [id])
+  account     ChartOfAccount? @relation(fields: [accountId], references: [id])
 
-  tenantId    String        @map("tenant_id")
-  tenant      Tenant        @relation(fields: [tenantId], references: [id])
+  tenantId    String          @map("tenant_id")
+  tenant      Tenant          @relation(fields: [tenantId], references: [id])
 
   cashSession CashSession[]
   transaction Transaction[]
@@ -632,7 +632,7 @@ model CashMovement {
   createdAt     DateTime             @map("created_at")      @default(now())
 
   accountId     String?
-  account       Account?             @relation(fields: [accountId], references: [id])
+  account       ChartOfAccount?      @relation(fields: [accountId], references: [id])
 
   tenantId      String               @map("tenant_id")
   tenant        Tenant               @relation(fields: [tenantId], references: [id])
@@ -691,8 +691,8 @@ model Person {
   accountReceivableId String?                @map("account_receivable_id")
   accountPayableId    String?                @map("account_payable_id")
 
-  accountReceivable   Account?               @relation("person_account_receivable", fields: [accountReceivableId], references: [id])
-  accountPayable      Account?               @relation("person_account_payable", fields: [accountPayableId], references: [id])
+  accountReceivable   ChartOfAccount?        @relation("person_account_receivable", fields: [accountReceivableId], references: [id])
+  accountPayable      ChartOfAccount?        @relation("person_account_payable", fields: [accountPayableId], references: [id])
 
   createdAt           DateTime               @map("created_at")            @default(now())
   updatedAt           DateTime               @map("updated_at")            @updatedAt
@@ -724,19 +724,25 @@ model PersonIdentification {
 // ------------------------------
 // CATÁLOGO DE CUENTAS
 // ------------------------------
-model Account {
-  id                String                                   @id @default(uuid())
+model ChartOfAccountTemplate {
+  id          String       @id @default(uuid())
+  code        String
+  name        String
+  accountType AccountType
+  parentCode  String?
+
+  @@map("chart_of_account_template")
+}
+
+model ChartOfAccount {
+  id                String                              @id @default(uuid())
   tenantId          String            @map("tenant_id")
   code              String
   name              String
   accountType       AccountType
   parentId          String?           @map("parent_id")
-  parent            Account?          @relation("AccountHierarchy", fields: [parentId], references: [id])
-  children          Account[]         @relation("AccountHierarchy")
-
-  isAuxiliary       Boolean           @map("is_auxiliary")   @default(false)
-  allowCustomer     Boolean           @map("allow_customer") @default(false)
-  allowSupplier     Boolean           @map("allow_supplier") @default(false)
+  parent            ChartOfAccount?   @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children          ChartOfAccount[]  @relation("AccountHierarchy")
 
   ledgerEntries     LedgerEntry[]
 
@@ -749,7 +755,7 @@ model Account {
   CashMovement      CashMovement[]
   BankTransaction   BankTransaction[]
 
-  @@map("account")
+  @@map("chart_of_account")
 }
 
 // ------------------------------
@@ -777,23 +783,23 @@ model JournalEntry {
 // LÍNEAS DEL ASIENTO CONTABLE
 // ------------------------------
 model LedgerEntry {
-  id             String                                @id @default(uuid())
-  tenantId       String       @map("tenant_id")
-  journalEntryId String       @map("journal_entry_id")
-  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id])
+  id             String                                  @id @default(uuid())
+  tenantId       String         @map("tenant_id")
+  journalEntryId String         @map("journal_entry_id")
+  journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [id])
 
-  accountId      String       @map("account_id")
-  account        Account      @relation(fields: [accountId], references: [id])
+  accountId      String         @map("account_id")
+  account        ChartOfAccount @relation(fields: [accountId], references: [id])
 
-  debit          Decimal                               @default(0.00)
-  credit         Decimal                               @default(0.00)
+  debit          Decimal                                 @default(0.00)
+  credit         Decimal                                 @default(0.00)
 
-  personId       String?      @map("person_id")
-  person         Person?      @relation(fields: [personId], references: [id])
+  personId       String?        @map("person_id")
+  person         Person?        @relation(fields: [personId], references: [id])
 
-  costCenterId   String?      @map("cost_center_id")
-  createdAt      DateTime     @map("created_at")       @default(now())
-  costCenter     CostCenter?  @relation(fields: [costCenterId], references: [id])
+  costCenterId   String?        @map("cost_center_id")
+  createdAt      DateTime       @map("created_at")       @default(now())
+  costCenter     CostCenter?    @relation(fields: [costCenterId], references: [id])
 
   @@map("ledger_entry")
 }
@@ -829,15 +835,15 @@ model Tax {
 // MOVIMIENTOS DE CUENTAS BANCARIAS (para conciliación)
 // ------------------------------
 model BankTransaction {
-  id          String                      @id @default(uuid())
-  tenantId    String   @map("tenant_id")
+  id          String                            @id @default(uuid())
+  tenantId    String         @map("tenant_id")
   date        DateTime
   description String?
   amount      Decimal
   reference   String?
-  accountId   String   @map("account_id")
-  account     Account  @relation(fields: [accountId], references: [id])
-  matched     Boolean                     @default(false)
+  accountId   String         @map("account_id")
+  account     ChartOfAccount @relation(fields: [accountId], references: [id])
+  matched     Boolean                           @default(false)
 
   @@map("bank_transaction")
 }

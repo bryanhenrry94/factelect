@@ -24,8 +24,8 @@ import { useSession } from "next-auth/react";
 import { formatDate, toInputDate } from "@/utils/formatters";
 import { useSearchFilter } from "@/hooks/useSearchFilter";
 import { AlertService } from "@/lib/alerts";
-import { CashBox } from "@/lib/validations/cash_box";
-import { deleteCashBox, getAllCashBoxes } from "@/actions/cash-box";
+import { CashBox } from "@/lib/validations/cash/cash_box";
+import { deleteCashBox, getAllCashBoxes } from "@/actions/cash/cash-box";
 import { CashBoxForm } from "@/components/cash/CashBoxForm";
 
 export default function CashBoxPage() {

@@ -18,13 +18,13 @@ import {
 } from "@mui/material";
 import { Plus, Edit, Delete, Files } from "lucide-react";
 import { ProductFormDialog } from "@/components/product/product-form-dialog";
-import { CreateProduct, Product } from "@/lib/validations/product";
+import { CreateProduct, Product } from "@/lib/validations/inventory/product";
 import {
   createProduct,
   deleteProduct,
   getAllProducts,
   updateProduct,
-} from "@/actions/product";
+} from "@/actions/inventory/product";
 import { useSession } from "next-auth/react";
 import { AlertService } from "@/lib/alerts";
 import PageContainer from "@/components/container/PageContainer";

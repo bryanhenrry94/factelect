@@ -28,17 +28,17 @@ import { AlertService } from "@/lib/alerts";
 import {
   BankTransfer,
   BankTransferWithAccount,
-} from "@/lib/validations/bank_transfer";
+} from "@/lib/validations/bank/bank_transfer";
 import {
   deleteBankTransfer,
   getAllBankTransfers,
-} from "@/actions/bank-transfer";
+} from "@/actions/bank/bank-transfer";
 import { BankTransferForm } from "@/components/bank/BankTransferForm";
 import {
   deleteCashMovement,
   getAllCashMovements,
-} from "@/actions/cash-movement";
-import { CashMovement } from "@/lib/validations/cash_movement";
+} from "@/actions/cash/cash-movement";
+import { CashMovement } from "@/lib/validations/cash/cash_movement";
 import { CashMovementForm } from "@/components/cash/CashMovementForm";
 import {
   getMovementCategoryLabel,

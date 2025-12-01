@@ -28,11 +28,11 @@ import { AlertService } from "@/lib/alerts";
 import {
   BankTransfer,
   BankTransferWithAccount,
-} from "@/lib/validations/bank_transfer";
+} from "@/lib/validations/bank/bank_transfer";
 import {
   deleteBankTransfer,
   getAllBankTransfers,
-} from "@/actions/bank-transfer";
+} from "@/actions/bank/bank-transfer";
 import { BankTransferForm } from "@/components/bank/BankTransferForm";
 
 const now = new Date();

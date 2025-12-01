@@ -40,7 +40,7 @@ export async function getBalanceGeneral(params: {
     );
 
     // 1️⃣ Obtener todas las cuentas relevantes (solo activos, pasivos, patrimonio)
-    const accounts = await prisma.account.findMany({
+    const accounts = await prisma.chartOfAccount.findMany({
       where: {
         accountType: { in: ["ASSET", "LIABILITY", "EQUITY"] },
       },
