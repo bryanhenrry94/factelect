@@ -1,9 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
+import {
+  createCategory,
+  deleteCategory,
+  getAllCategories,
+  updateCategory,
+} from "@/actions/inventory/category";
 import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
-import { Unit, CreateUnit, CreateUnitSchema } from "@/lib/validations/unit";
+import {
+  Category,
+  CreateCategory,
+  CreateCategorySchema,
+} from "@/lib/validations/inventory/category";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Box,
@@ -28,22 +38,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { AlertService } from "@/lib/alerts";
 import { useSession } from "next-auth/react";
-import {
-  createUnit,
-  deleteUnit,
-  getUnits,
-  updateUnit,
-} from "@/actions/unit";
 
-const UnitsPage = () => {
+const CategorysProductsPage = () => {
   const router = useRouter();
   const params = useSearchParams();
 
   const { data: session } = useSession();
 
   const [open, setOpen] = useState(false);
-  const [units, setUnits] = useState<Unit[]>([]);
-  const [unitSelected, setUnitSelected] = useState<Unit | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categorySelected, setCategorySelected] = useState<Category | null>(
+    null
+  );
 
   const [search, setSearch] = useState(params.get("search") ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -56,7 +62,7 @@ const UnitsPage = () => {
   };
 
   const handleClose = () => {
-    reset({ name: "", symbol: "" });
+    reset({ name: "" });
     setOpen(false);
   };
 
@@ -72,52 +78,52 @@ const UnitsPage = () => {
     return () => clearTimeout(handler); // limpia si sigue escribiendo
   }, [search]);
 
-  const handleEdit = (unit: Unit) => {
-    setUnitSelected(unit);
-    reset({
-      name: unit ? unit.name : "",
-      symbol: unit ? unit.symbol : "",
-    });
+  const handleEdit = (category: Category) => {
+    setCategorySelected(category);
+    reset({ name: category.name ? category.name : "" });
     handleOpen();
   };
 
   const handleDelete = async (id: string) => {
     const confirm = await AlertService.showConfirm(
       "Aviso",
-      "¿Deseas eliminar la unidad?"
+      "¿Deseas eliminar la categoría?"
     );
     if (!confirm) return;
 
     try {
-      const result = await deleteUnit(id);
+      const result = await deleteCategory(id);
 
       if (result.success) {
-        notifyInfo("Unidad eliminada correctamente");
-        fetchUnits();
-      } else notifyError("Error al eliminar la unidad");
+        notifyInfo("Categoría eliminada correctamente");
+        fetchCategories();
+      } else notifyError("Error al eliminar la categoría");
     } catch (error) {
-      notifyError("Error al eliminar la unidad");
+      notifyError("Error al eliminar la categoría");
     }
   };
 
-  const fetchUnits = async () => {
+  const fetchCategories = async () => {
     try {
       if (!session?.user?.tenantId) return;
 
-      const response = await getUnits(session.user.tenantId, debouncedSearch);
+      const response = await getAllCategories(
+        session.user.tenantId,
+        debouncedSearch
+      );
       if (!response.success) {
-        notifyError("Error al cargar las unidades");
+        notifyError("Error al cargar las categorías");
         return;
       }
 
-      setUnits(response.data || []);
+      setCategories(response.data || []);
     } catch (error) {
       notifyError("Error al cargar las categorías");
     }
   };
 
   useEffect(() => {
-    fetchUnits();
+    fetchCategories();
   }, [session?.user?.tenantId, debouncedSearch]);
 
   useEffect(() => {
@@ -131,18 +137,18 @@ const UnitsPage = () => {
     if (query.get("search") === "") {
       query.delete("search");
     }
-    router.push(`/unidades-medida?${query.toString()}`);
+
+    router.push(`/inventario/categorias?${query.toString()}`);
   };
 
-  const { control, handleSubmit, reset } = useForm<CreateUnit>({
-    resolver: zodResolver(CreateUnitSchema),
+  const { control, handleSubmit, reset } = useForm<CreateCategory>({
+    resolver: zodResolver(CreateCategorySchema),
     defaultValues: {
       name: "",
-      symbol: "",
     },
   });
 
-  const onSubmit = async (data: CreateUnit) => {
+  const onSubmit = async (data: CreateCategory) => {
     try {
       console.log(data);
 
@@ -151,35 +157,37 @@ const UnitsPage = () => {
         return;
       }
 
-      const response = unitSelected
-        ? await updateUnit(unitSelected.id, data)
-        : await createUnit(session.user.tenantId, data);
+      const response = categorySelected
+        ? await updateCategory(categorySelected.id, data)
+        : await createCategory(session.user.tenantId, data);
 
-      if (response) {
-        notifyInfo(
-          `Unidad ${unitSelected ? "actualizada" : "creada"} correctamente`
+      if (response.success) {
+        await notifyInfo(
+          `Categoría ${
+            categorySelected ? "actualizada" : "creada"
+          } correctamente`
         );
-        fetchUnits();
+        fetchCategories();
         handleClose();
-        setUnitSelected(null);
+        setCategorySelected(null);
       } else {
         notifyError(
-          `Error al ${unitSelected ? "actualizar" : "crear"} la unidad`
+          `Error al ${categorySelected ? "actualizar" : "crear"} la categoría`
         );
       }
     } catch (error) {
       console.log(error);
-      notifyError("Error al guardar la unidad");
+      notifyError("Error al guardar la categoría");
     }
   };
 
   return (
     <PageContainer
-      title="Unidades de Medida"
-      description="Gestiona las unidades de medida de tus productos y servicios"
+      title="Categorías de Productos"
+      description="Gestiona las categorías de tus productos y servicios"
     >
       {/* Header */}
-      <PageHeader title="Unidades de Medida" />
+      <PageHeader title="Categorías de Productos" />
 
       <Box
         sx={{
@@ -191,7 +199,7 @@ const UnitsPage = () => {
         }}
       >
         <TextField
-          label="Buscar unidades"
+          label="Buscar categorías"
           variant="outlined"
           size="small"
           value={search}
@@ -206,20 +214,20 @@ const UnitsPage = () => {
           onClick={handleOpen}
           sx={{ width: { xs: "100%", sm: "auto" } }}
         >
-          Agregar Unidad
+          Agregar Categoría
         </Button>
       </Box>
 
       <Card sx={{ mt: 3 }}>
         <CardContent>
-          {units.length === 0 ? (
+          {categories.length === 0 ? (
             <Box textAlign="center" py={6}>
               <ShoppingBag />
               <Typography variant="h6" mt={2}>
-                No hay unidades aún
+                No hay categorías aún
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Agrega la primera unidad de medida.
+                Agrega la primera categoría
               </Typography>
             </Box>
           ) : (
@@ -230,31 +238,27 @@ const UnitsPage = () => {
                     <TableCell>
                       <strong>Nombre</strong>
                     </TableCell>
-                    <TableCell>
-                      <strong>Abreviatura</strong>
-                    </TableCell>
                     <TableCell align="right">
                       <strong>Acciones</strong>
                     </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {units
+                  {categories
                     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((unit) => (
-                      <TableRow key={unit.id} hover>
-                        <TableCell>{unit.name}</TableCell>
-                        <TableCell>{unit.symbol}</TableCell>
+                    .map((category) => (
+                      <TableRow key={category.id} hover>
+                        <TableCell>{category.name}</TableCell>
                         <TableCell align="right">
                           <IconButton
                             color="primary"
-                            onClick={() => handleEdit(unit)}
+                            onClick={() => handleEdit(category)}
                           >
                             <Edit />
                           </IconButton>
                           <IconButton
                             color="error"
-                            onClick={() => handleDelete(unit.id)}
+                            onClick={() => handleDelete(category.id)}
                           >
                             <Delete />
                           </IconButton>
@@ -267,7 +271,7 @@ const UnitsPage = () => {
               <TablePagination
                 component="div"
                 color="primary"
-                count={units.length}
+                count={categories.length}
                 page={page}
                 onPageChange={handleChangePage}
                 rowsPerPage={rowsPerPage}
@@ -281,13 +285,13 @@ const UnitsPage = () => {
       <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogTitle>
-            {unitSelected ? "Editar Unidad" : "Agregar Unidad"}
+            {categorySelected ? "Editar Categoría" : "Agregar Categoría"}
           </DialogTitle>
           <DialogContent>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {unitSelected
-                ? "Actualizar información de la unidad"
-                : "Agregar una nueva unidad a tu catálogo"}
+              {categorySelected
+                ? "Actualizar información de la categoría"
+                : "Agregar una nueva categoría a tu catálogo"}
             </Typography>
             <Box
               sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}
@@ -298,30 +302,15 @@ const UnitsPage = () => {
                 render={({ field, fieldState }) => (
                   <TextField
                     {...field}
-                    label="Nombre de la Unidad"
+                    label="Nombre de la Categoría"
                     variant="outlined"
                     fullWidth
+                    margin="normal"
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
                   />
                 )}
               />
-
-              <Controller
-                name="symbol"
-                control={control}
-                render={({ field, fieldState }) => (
-                  <TextField
-                    {...field}
-                    label="Abreviatura"
-                    variant="outlined"
-                    fullWidth
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                  />
-                )}
-              />
-
               <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
                 <Button onClick={handleClose}>Cancelar</Button>
                 <Button variant="contained" type="submit">
@@ -336,4 +325,4 @@ const UnitsPage = () => {
   );
 };
 
-export default UnitsPage;
+export default CategorysProductsPage;

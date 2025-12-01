@@ -4,16 +4,13 @@ export const warehouseSchema = z.object({
   id: z.string(),
   tenantId: z.string(),
   name: z.string(),
-  location: z.string().nullable().optional(),
-  // Relations as arrays of unknowns or you can import their schemas if available
-  stocks: z.array(z.unknown()),
-  movements: z.array(z.unknown()),
-  tenant: z.unknown(),
-  documentItems: z.array(z.unknown()),
-  InventoryAdjustmentItem: z.array(z.unknown()),
+  costCenterId: z.string().nullable().optional(),
 });
 
-export const createWarehouseSchema = warehouseSchema.omit({ id: true });
+export const createWarehouseSchema = warehouseSchema.omit({
+  id: true,
+  tenantId: true,
+});
 
 export const updateWarehouseSchema = warehouseSchema
   .partial()

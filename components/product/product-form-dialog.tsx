@@ -181,6 +181,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
                     label="Código de Barras"
                     fullWidth
                     {...field}
+                    value={field.value || ""}
                     error={!!errors.barcode}
                     helperText={errors.barcode?.message}
                     size="small"

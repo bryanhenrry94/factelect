@@ -91,7 +91,7 @@ export default function ProductsPage() {
     if (!debouncedSearch) query.delete("search");
     else query.set("search", debouncedSearch);
 
-    router.push(`/productos?${query.toString()}`);
+    router.push(`/inventario/productos?${query.toString()}`);
   }, [debouncedSearch]);
 
   /** Crear / actualizar producto */
