@@ -164,12 +164,12 @@ const Menuitems = [
         icon: CircleSmall,
         href: "/bancos/movimientos",
       },
-      {
-        id: uniqueId(),
-        title: "Transferencias",
-        icon: ArrowLeftRight,
-        href: "/bancos/transferencias",
-      },
+      // {
+      //   id: uniqueId(),
+      //   title: "Transferencias",
+      //   icon: ArrowLeftRight,
+      //   href: "/bancos/transferencias",
+      // },
       {
         id: uniqueId(),
         title: "Conciliación Bancaria",

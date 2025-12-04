@@ -1,13 +1,7 @@
 import { z } from "zod";
+import { createBankMovementDetailSchema } from "./bank-movement-detail";
 
-// Enum for BankMovementType (replace with actual values)
-export const BankMovementTypeEnum = z.enum([
-  "DEPOSIT",
-  "WITHDRAWAL",
-  "TRANSFER_IN",
-  "TRANSFER_OUT",
-  "FEE",
-]);
+export const BankMovementTypeEnum = z.enum(["DEBIT", "CREDIT"]);
 
 export const BankMovementSchema = z.object({
   id: z.string(),
@@ -15,12 +9,15 @@ export const BankMovementSchema = z.object({
   bankAccountId: z.string().min(1, "La cuenta bancaria es obligatoria"),
   type: BankMovementTypeEnum,
   date: z.date(),
+  reference: z.string().optional(),
   amount: z.number().positive("El monto debe ser un número positivo"),
   description: z.string().optional(),
-  reference: z.string().optional(),
-  accountId: z.string().optional(),
+  journalEntryId: z.string().optional(),
+  journalEntry: z.any().optional(), // Replace z.any() with a proper schema if available
   createdAt: z.date(),
-  // Relations can be validated separately or omitted if not needed here
+  details: z.array(createBankMovementDetailSchema).optional(), // Replace z.any() with BankMovementDetail schema if available
+  bankTransfersOut: z.array(z.any()).optional(), // Replace z.any() with BankTransfer schema if available
+  bankTransfersIn: z.array(z.any()).optional(), // Replace z.any() with BankTransfer schema if available
 });
 
 export const createBankMovementSchema = BankMovementSchema.omit({

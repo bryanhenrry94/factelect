@@ -43,7 +43,7 @@ export async function getAccountActivity(params: {
     // ---------------------------------------------------------------
     // 2. Calcular saldo inicial (antes de dateFromStart)
     // ---------------------------------------------------------------
-    const previousLines = await prisma.ledgerEntry.findMany({
+    const previousLines = await prisma.journalEntryLine.findMany({
       where: {
         accountId,
         journalEntry: {
@@ -64,7 +64,7 @@ export async function getAccountActivity(params: {
     // ---------------------------------------------------------------
     // 3. Buscar líneas dentro del rango normalizado
     // ---------------------------------------------------------------
-    const lines = await prisma.ledgerEntry.findMany({
+    const lines = await prisma.journalEntryLine.findMany({
       where: {
         accountId,
         journalEntry: {

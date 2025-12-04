@@ -1,10 +1,10 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { Account, CreateAccount } from "@/lib/validations";
+import { ChartOfAccount, CreateChartOfAccount } from "@/lib/validations";
 
 export const getAccounts = async (
   tenantId: string
-): Promise<{ success: boolean; data?: Account[]; error?: string }> => {
+): Promise<{ success: boolean; data?: ChartOfAccount[]; error?: string }> => {
   try {
     const accounts = await prisma.chartOfAccount.findMany({
       where: {
@@ -17,7 +17,7 @@ export const getAccounts = async (
 
     const mappedAccounts = accounts.map((chartOfAccount) => ({
       ...chartOfAccount,
-      accountType: chartOfAccount.accountType as Account["accountType"],
+      accountType: chartOfAccount.accountType as ChartOfAccount["accountType"],
     }));
 
     return { success: true, data: mappedAccounts };
@@ -28,8 +28,8 @@ export const getAccounts = async (
 
 export const createAccount = async (
   tenantId: string,
-  accountData: CreateAccount
-): Promise<{ success: boolean; data?: Account; error?: string }> => {
+  accountData: CreateChartOfAccount
+): Promise<{ success: boolean; data?: ChartOfAccount; error?: string }> => {
   try {
     const newAccount = await prisma.chartOfAccount.create({
       data: {
@@ -46,8 +46,8 @@ export const createAccount = async (
 
 export const updateAccount = async (
   accountId: string,
-  accountData: Partial<CreateAccount>
-): Promise<{ success: boolean; data?: Account; error?: string }> => {
+  accountData: Partial<CreateChartOfAccount>
+): Promise<{ success: boolean; data?: ChartOfAccount; error?: string }> => {
   try {
     const updatedAccount = await prisma.chartOfAccount.update({
       where: {

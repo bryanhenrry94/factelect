@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Account } from "@/lib/validations";
+import { ChartOfAccount } from "@/lib/validations";
 import {
   Button,
   Card,
@@ -33,7 +33,7 @@ import { formatCurrency, formatDate } from "@/utils/formatters";
 export default function MovimientosCuentaPage() {
   const { data: session } = useSession();
 
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [rows, setRows] = useState<AccountActivityRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,10 +41,18 @@ export default function MovimientosCuentaPage() {
   // ==========================
   // Filtros de búsqueda
   // ==========================
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+    .toISOString()
+    .substring(0, 10);
+  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    .toISOString()
+    .substring(0, 10);
+
   const [accountId, setAccountId] = useState("");
   const [costCenterId, setCostCenterId] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState(firstDayOfMonth);
+  const [dateTo, setDateTo] = useState(lastDayOfMonth);
 
   // ==========================
   // Data Fetch
@@ -87,7 +95,7 @@ export default function MovimientosCuentaPage() {
         costCenter: costCenterId || undefined,
       });
 
-      console.log("Account activity response:", response);
+      console.log("ChartOfAccount activity response:", response);
 
       if (response.success) {
         setRows(response.data || []);

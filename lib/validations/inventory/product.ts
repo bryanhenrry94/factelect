@@ -17,9 +17,10 @@ export const productSchema = z.object({
   ]),
   type: z.enum(["PRODUCT", "SERVICE"]),
   barcode: z.string().optional().nullable(),
-  cost: z.number().optional().nullable(),
   unitId: z.string().min(1, "La unidad es obligatoria"),
   categoryId: z.string().min(1, "La categoría es obligatoria"),
+  inventoryAccountId: z.string().optional().nullable(),
+  costAccountId: z.string().optional().nullable(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

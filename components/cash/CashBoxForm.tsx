@@ -3,13 +3,12 @@ import { useSession } from "next-auth/react";
 import { getAccounts } from "@/actions/accounting/chart-of-account";
 import { createCashBox, updateCashBox } from "@/actions/cash/cash-box";
 import { notifyError, notifyInfo } from "@/lib/notifications";
-import { Account } from "@/lib/validations";
+import { ChartOfAccount } from "@/lib/validations";
 import {
   CashBox,
   CreateCashBox,
   createCashBoxSchema,
 } from "@/lib/validations/cash/cash_box";
-import { $Enums } from "@/prisma/generated/prisma";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Box,
@@ -39,7 +38,7 @@ export const CashBoxForm: React.FC<CashBoxFormProps> = ({
   onCancel,
 }) => {
   const { data: session } = useSession();
-  const [accounts, setAccounts] = React.useState<Account[]>([]);
+  const [accounts, setAccounts] = React.useState<ChartOfAccount[]>([]);
 
   const {
     control,

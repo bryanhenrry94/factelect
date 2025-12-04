@@ -103,9 +103,7 @@ export const createInventoryMovement = async (
             );
           }
           // usa avgCost; si no existe avgCost, puedes decidir fallback (p.ej. product.cost)
-          const avgCost = existing.avgCost
-            ? Number(existing.avgCost)
-            : Number(existing?.product?.cost ?? 0);
+          const avgCost = existing.avgCost ? Number(existing.avgCost) : 0;
           itemCost = avgCost;
           itemTotalCost = Number((itemCost * it.quantity).toFixed(6));
         }

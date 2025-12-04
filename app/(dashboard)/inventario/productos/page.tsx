@@ -128,6 +128,11 @@ export default function ProductsPage() {
     setIsDialogOpen(true);
   };
 
+  const handleNew = () => {
+    setEditingProduct(null);
+    setIsDialogOpen(true);
+  };
+
   const handleDelete = async (id: string) => {
     try {
       const confirmed = await AlertService.showConfirm(
@@ -186,10 +191,10 @@ export default function ProductsPage() {
         <Button
           variant="contained"
           startIcon={<Plus />}
-          onClick={() => setIsDialogOpen(true)}
+          onClick={handleNew}
           sx={{ width: { xs: "100%", sm: "auto" } }}
         >
-          Agregar Producto
+          Nuevo
         </Button>
       </Box>
 

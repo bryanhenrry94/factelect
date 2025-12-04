@@ -34,8 +34,8 @@ export const getAllBankMovements = async (
     const formatted = bankMovements.map((m) => ({
       ...m,
       description: m.description ?? "",
+      journalEntryId: m.journalEntryId ?? undefined,
       reference: m.reference ?? "",
-      accountId: m.accountId ?? "",
       account: m.bankAccount
         ? {
             id: m.bankAccount.id,
@@ -82,15 +82,29 @@ export const createBankMovement = async (
         amount: data.amount,
         description: data.description,
         reference: data.reference || null,
-        accountId: data.accountId || null,
       },
+    });
+
+    // registrar detalles si es necesario
+    data.details?.forEach(async (detail) => {
+      await prisma.bankMovementDetail.create({
+        data: {
+          tenantId,
+          bankMovementId: newMovement.id,
+          accountId: detail.accountId,
+          costCenterId: detail.costCenterId || null,
+          description: detail.description || null,
+          amount: detail.amount,
+        },
+      });
     });
 
     const formattedMovement = {
       ...newMovement,
       description: newMovement.description || "",
       reference: newMovement.reference || "",
-      accountId: newMovement.accountId || "",
+      amount: newMovement.amount,
+      journalEntryId: newMovement.journalEntryId ?? undefined,
     };
 
     return { success: true, data: formattedMovement };
@@ -114,9 +128,29 @@ export const updateBankMovement = async (
         amount: data.amount,
         description: data.description,
         reference: data.reference || null,
-        accountId: data.accountId || null,
       },
     });
+
+    // elimina detalles existentes si es necesario
+    if (data.details) {
+      await prisma.bankMovementDetail.deleteMany({
+        where: { bankMovementId: id },
+      });
+
+      // registrar nuevos detalles
+      data.details.forEach(async (detail) => {
+        await prisma.bankMovementDetail.create({
+          data: {
+            tenantId: updatedMovement.tenantId,
+            bankMovementId: updatedMovement.id,
+            accountId: detail.accountId,
+            costCenterId: detail.costCenterId || null,
+            description: detail.description || null,
+            amount: detail.amount,
+          },
+        });
+      });
+    }
 
     if (!updatedMovement) {
       return {
@@ -133,7 +167,8 @@ export const updateBankMovement = async (
           ...movement,
           description: movement.description || "",
           reference: movement.reference || "",
-          accountId: movement.accountId || "",
+          amount: movement.amount,
+          journalEntryId: movement.journalEntryId ?? undefined,
         }
       : null;
 
@@ -141,5 +176,43 @@ export const updateBankMovement = async (
   } catch (error) {
     console.error("Error updating bank movement:", error);
     return { success: false, error: "Error updating bank movement" };
+  }
+};
+
+export const getBankMovementById = async (
+  id: string
+): Promise<{ success: boolean; error?: string; data?: BankMovement }> => {
+  try {
+    const movement = await prisma.bankMovement.findUnique({
+      where: { id },
+      include: { bankAccount: true, details: true },
+    });
+
+    if (!movement) {
+      return { success: false, error: "Bank movement not found" };
+    }
+
+    const formattedMovement = {
+      ...movement,
+      description: movement.description || "",
+      journalEntryId: movement.journalEntryId ?? undefined,
+      reference: movement.reference || "",
+      details: movement.details.map((detail) => ({
+        ...detail,
+        description: detail.description || "",
+      })),
+      account: movement.bankAccount
+        ? {
+            id: movement.bankAccount.id,
+            name: movement.bankAccount.bankName,
+            number: movement.bankAccount.accountNumber,
+          }
+        : undefined,
+    };
+
+    return { success: true, data: formattedMovement };
+  } catch (error) {
+    console.error("Error fetching bank movement by ID:", error);
+    return { success: false, error: "Error fetching bank movement" };
   }
 };

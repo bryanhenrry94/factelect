@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { getAccounts } from "@/actions/accounting/chart-of-account";
 import { notifyError, notifyInfo } from "@/lib/notifications";
-import { Account } from "@/lib/validations";
+import { ChartOfAccount } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Box,
@@ -46,7 +46,7 @@ export const CashMovementForm: React.FC<CashMovementFormProps> = ({
   onCancel,
 }) => {
   const { data: session } = useSession();
-  const [accounts, setAccounts] = React.useState<Account[]>([]);
+  const [accounts, setAccounts] = React.useState<ChartOfAccount[]>([]);
 
   const {
     control,

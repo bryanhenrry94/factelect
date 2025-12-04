@@ -6,6 +6,7 @@ import {
   Product,
   UpdateProduct,
 } from "@/lib/validations/inventory/product";
+import { $Enums } from "@/prisma/generated/prisma";
 
 export async function createProduct(
   data: CreateProduct,
@@ -98,7 +99,8 @@ export async function getProductById(
 
 export async function getAllProducts(
   tenantId: string,
-  search?: string
+  search?: string,
+  type?: $Enums.ProductType
 ): Promise<{ success: boolean; data: Product[]; error?: string }> {
   try {
     const products = await prisma.product.findMany({
@@ -112,6 +114,8 @@ export async function getAllProducts(
               ],
             }
           : {}),
+
+        ...(type ? { type } : {}),
       },
       orderBy: { createdAt: "asc" },
     });

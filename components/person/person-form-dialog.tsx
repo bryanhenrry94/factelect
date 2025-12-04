@@ -2,7 +2,7 @@ import { createPerson, updatePerson } from "@/actions";
 import { getAccounts } from "@/actions/accounting/chart-of-account";
 import { identificationOptions } from "@/constants/identification";
 import { notifyInfo } from "@/lib/notifications";
-import { Account } from "@/lib/validations";
+import { ChartOfAccount } from "@/lib/validations";
 import {
   CreatePersonInput,
   createPersonSchema,
@@ -41,7 +41,7 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
   tenantId,
   setError,
 }) => {
-  const [accounts, setAccounts] = React.useState<Account[]>([]);
+  const [accounts, setAccounts] = React.useState<ChartOfAccount[]>([]);
 
   const {
     register,

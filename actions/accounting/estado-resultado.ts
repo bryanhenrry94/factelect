@@ -56,7 +56,7 @@ export async function getEstadoResultados(params: {
 
     for (const acc of accounts) {
       // 2️⃣ Obtener movimientos dentro del período (NO se usa saldo inicial en estado de resultados)
-      const periodLines = await prisma.ledgerEntry.findMany({
+      const periodLines = await prisma.journalEntryLine.findMany({
         where: {
           accountId: acc.id,
           journalEntry: {

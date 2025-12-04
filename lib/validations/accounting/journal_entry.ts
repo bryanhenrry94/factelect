@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createLedgerEntrySchema } from "./ledger_entry";
+import { createJournalEntryLineSchema } from "./journal-entry-line";
 
 export const JournalEntrySchema = z.object({
   id: z.string().uuid(),
@@ -11,7 +11,7 @@ export const JournalEntrySchema = z.object({
     .enum(["INVOICE", "BILL", "RECEIPT", "PAYMENT", "COLLECTION", "OTHER"])
     .optional(),
   documentId: z.string().optional(),
-  entries: z.array(createLedgerEntrySchema),
+  lines: z.array(createJournalEntryLineSchema),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });

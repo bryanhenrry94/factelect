@@ -58,7 +58,7 @@ export async function getBalanceGeneral(params: {
       // -------------------------------------------------------------
       // 2️⃣ SALDO INICIAL: movimientos ANTES de dateFromStart
       // -------------------------------------------------------------
-      const previousLines = await prisma.ledgerEntry.findMany({
+      const previousLines = await prisma.journalEntryLine.findMany({
         where: {
           accountId: acc.id,
           journalEntry: {
@@ -77,7 +77,7 @@ export async function getBalanceGeneral(params: {
       // -------------------------------------------------------------
       // 3️⃣ MOVIMIENTOS dentro del rango
       // -------------------------------------------------------------
-      const periodLines = await prisma.ledgerEntry.findMany({
+      const periodLines = await prisma.journalEntryLine.findMany({
         where: {
           accountId: acc.id,
           journalEntry: {

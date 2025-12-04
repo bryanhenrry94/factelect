@@ -18,7 +18,7 @@ import useTenant from "@/hooks/useTenant";
 import { AlertService } from "@/lib/alerts";
 import { useRouter } from "next/navigation";
 import {
-  Account,
+  ChartOfAccount,
   CreateTransactionInput,
   createTransactionSchema,
 } from "@/lib/validations";
@@ -64,7 +64,7 @@ export default function TransactionForm({
   const [modeEdit, setModeEdit] = useState<boolean>(!!transactionId);
   const [tabValue, setTabValue] = useState(0);
   const [persons, setPersons] = useState<PersonInput[]>([]);
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const router = useRouter();
 
   const { tenant } = useTenant();

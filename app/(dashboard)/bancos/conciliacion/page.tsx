@@ -87,7 +87,7 @@ const BankConciliacionPage = () => {
 
   // Ejecuta la carga
   useEffect(() => {
-    fetchBankMovements();
+    // fetchBankMovements();
   }, [session?.user?.tenantId, search, dateFrom, dateTo]);
 
   const handleEdit = (m: BankMovement) => {
@@ -111,18 +111,14 @@ const BankConciliacionPage = () => {
   };
 
   const getSimbol = (t: $Enums.BankMovementType) =>
-    ["DEPOSIT", "TRANSFER_IN"].includes(t) ? "+" : "-";
+    ["CREDIT", "DEBIT"].includes(t) ? "+" : "-";
 
   const getTypeMovementLabel = (t: $Enums.BankMovementType) => {
     switch (t) {
-      case "DEPOSIT":
-        return "Depósito";
-      case "WITHDRAWAL":
-        return "Retiro";
-      case "TRANSFER_IN":
-        return "Transferencia Entrada";
-      case "TRANSFER_OUT":
-        return "Transferencia Salida";
+      case "DEBIT":
+        return "ND";
+      case "CREDIT":
+        return "NC";
       default:
         return t;
     }
@@ -268,26 +264,6 @@ const BankConciliacionPage = () => {
           )}
         </CardContent>
       </Card>
-
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <BankMovementForm
-          onSave={() => {
-            fetchBankMovements();
-            setOpen(false);
-            setBankMovementSelected(null);
-          }}
-          onCancel={() => {
-            setOpen(false);
-            setBankMovementSelected(null);
-          }}
-          bankMovementSelected={bankMovementSelected}
-        />
-      </Dialog>
     </PageContainer>
   );
 };

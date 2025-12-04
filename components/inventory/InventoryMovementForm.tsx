@@ -98,7 +98,11 @@ export const InventoryMovementForm: React.FC<InventoryMovementFormProps> = ({
 
     const fetchProducts = async () => {
       if (!session?.user.tenantId) return;
-      const response = await getAllProducts(session?.user.tenantId);
+      const response = await getAllProducts(
+        session?.user.tenantId,
+        "",
+        "PRODUCT"
+      );
 
       if (response.success) {
         setProducts(response.data);

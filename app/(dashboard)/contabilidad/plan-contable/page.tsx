@@ -8,7 +8,7 @@ import {
 } from "@/actions/accounting/chart-of-account";
 import PageContainer from "@/components/container/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Account, CreateAccount } from "@/lib/validations";
+import { ChartOfAccount, CreateChartOfAccount } from "@/lib/validations";
 import { useSession } from "next-auth/react";
 import { TreeTable } from "./TreeTable";
 import {
@@ -27,9 +27,11 @@ import { notifyError, notifyInfo } from "@/lib/notifications";
 
 export default function PlanContablePage() {
   const { data: session } = useSession();
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [open, setOpen] = useState(false);
-  const [accountToEdit, setAccountToEdit] = useState<Account | null>(null);
+  const [accountToEdit, setAccountToEdit] = useState<ChartOfAccount | null>(
+    null
+  );
 
   useEffect(() => {
     fetchAccounts();
@@ -73,7 +75,7 @@ export default function PlanContablePage() {
     setOpen(true);
   };
 
-  const openEditModal = (account: Account) => {
+  const openEditModal = (account: ChartOfAccount) => {
     setAccountToEdit(account);
     reset({
       code: account.code,
@@ -85,7 +87,7 @@ export default function PlanContablePage() {
     setOpen(true);
   };
 
-  const confirmDelete = async (account: Account) => {
+  const confirmDelete = async (account: ChartOfAccount) => {
     // Lógica para confirmar y eliminar la cuenta
     console.log("Confirm delete for account:", account);
     const confirmed = await AlertService.showConfirm(
@@ -93,13 +95,13 @@ export default function PlanContablePage() {
       `¿Está seguro de que desea eliminar la cuenta "${account.name}"? Esta acción no se puede deshacer.`
     );
     if (confirmed) {
-      console.log("Account deleted:", account);
+      console.log("ChartOfAccount deleted:", account);
       await deleteAccount(account.id);
       notifyInfo("Cuenta eliminada correctamente");
       fetchAccounts();
       // Aquí iría la lógica para eliminar la cuenta
     } else {
-      console.log("Account deletion cancelled");
+      console.log("ChartOfAccount deletion cancelled");
     }
   };
 
@@ -108,9 +110,9 @@ export default function PlanContablePage() {
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm<CreateAccount>();
+  } = useForm<CreateChartOfAccount>();
 
-  const onSubmit = async (data: CreateAccount) => {
+  const onSubmit = async (data: CreateChartOfAccount) => {
     const response = accountToEdit
       ? await updateAccount(accountToEdit.id, data)
       : await createAccount(session!.user!.tenantId!, data);

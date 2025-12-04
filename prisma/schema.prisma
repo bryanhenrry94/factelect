@@ -51,7 +51,8 @@ model Tenant {
   inventoryAdjustment     InventoryAdjustment[]
   warehouseTransferItems  WarehouseTransferItem[]
   inventoryMovementItems  InventoryMovementItem[]
-  InventoryAdjustmentItem InventoryAdjustmentItem[]
+  inventoryAdjustmentItem InventoryAdjustmentItem[]
+  bankMovementDetail      BankMovementDetail[]
 
   @@map("tenant")
 }
@@ -130,7 +131,7 @@ model User {
 }
 
 model Product {
-  id                       String                    @map("id")          @id @default(cuid())
+  id                       String                    @map("id")                   @id @default(cuid())
 
   tenantId                 String                    @map("tenant_id")
   tenant                   Tenant                    @relation(fields: [tenantId], references: [id])
@@ -138,10 +139,9 @@ model Product {
   code                     String                    @map("code")
   description              String                    @map("description")
   price                    Float                     @map("price")
-  tax                      TaxType                   @map("tax")         @default(IVA_0)
-  type                     ProductType                                   @default(PRODUCT) // PRODUCT | SERVICE
-  barcode                  String?                                       @unique
-  cost                     Float?                                        @default(0) // costo promedio o estándar
+  tax                      TaxType                   @map("tax")                  @default(IVA_0)
+  type                     ProductType                                            @default(PRODUCT) // PRODUCT | SERVICE
+  barcode                  String?                                                @unique
 
   unitId                   String
   unit                     Unit                      @relation(fields: [unitId], references: [id])
@@ -149,8 +149,14 @@ model Product {
   categoryId               String                    @map("category_id")
   category                 Category                  @relation(fields: [categoryId], references: [id])
 
-  createdAt                DateTime                  @map("created_at")  @default(now())
-  updatedAt                DateTime                  @map("updated_at")  @updatedAt
+  createdAt                DateTime                  @map("created_at")           @default(now())
+  updatedAt                DateTime                  @map("updated_at")           @updatedAt
+
+  inventoryAccountId       String?                   @map("inventory_account_id")
+  inventoryAccount         ChartOfAccount?           @relation("ProductInventoryAccount", fields: [inventoryAccountId], references: [id])
+
+  costAccountId            String?                   @map("cost_account_id")
+  costAccount              ChartOfAccount?           @relation("ProductCostAccount", fields: [costAccountId], references: [id])
 
   documentItems            DocumentItem[]
   stocks                   Stock[]
@@ -564,29 +570,49 @@ model BankAccount {
 }
 
 model BankMovement {
-  id               String                                   @id @default(cuid())
-
-  tenantId         String           @map("tenant_id")
-  tenant           Tenant           @relation(fields: [tenantId], references: [id])
-
-  bankAccountId    String           @map("bank_account_id")
-  bankAccount      BankAccount      @relation(fields: [bankAccountId], references: [id])
-
+  id               String                                        @id @default(cuid())
+  tenantId         String               @map("tenant_id")
+  tenant           Tenant               @relation(fields: [tenantId], references: [id])
   type             BankMovementType
-  date             DateTime         @map("date")
+  date             DateTime             @map("date")
+  reference        String?              @map("reference")
+  bankAccountId    String               @map("bank_account_id")
+  bankAccount      BankAccount          @relation(fields: [bankAccountId], references: [id])
   amount           Float
-  reference        String?          @map("reference")
   description      String?
 
-  accountId        String?
-  account          ChartOfAccount?  @relation(fields: [accountId], references: [id])
+  journalEntryId   String?              @map("journal_entry_id") @unique
+  journalEntry     JournalEntry?        @relation(fields: [journalEntryId], references: [id])
 
-  createdAt        DateTime         @map("created_at")      @default(now())
+  createdAt        DateTime             @map("created_at")       @default(now())
 
-  bankTransfersOut BankTransfer[]   @relation("TransferOut")
-  bankTransfersIn  BankTransfer[]   @relation("TransferIn")
+  details          BankMovementDetail[]
+  bankTransfersOut BankTransfer[]       @relation("TransferOut")
+  bankTransfersIn  BankTransfer[]       @relation("TransferIn")
 
   @@map("bank_movement")
+}
+
+model BankMovementDetail {
+  id             String                                  @id @default(cuid())
+  tenantId       String         @map("tenant_id")
+  tenant         Tenant         @relation(fields: [tenantId], references: [id])
+
+  bankMovementId String         @map("bank_movement_id")
+  bankMovement   BankMovement   @relation(fields: [bankMovementId], references: [id])
+
+  accountId      String         @map("account_id")
+  account        ChartOfAccount @relation(fields: [accountId], references: [id])
+
+  costCenterId   String?        @map("cost_center_id")
+  costCenter     CostCenter?    @relation(fields: [costCenterId], references: [id])
+
+  description    String?
+  amount         Float
+
+  createdAt      DateTime       @map("created_at")       @default(now())
+
+  @@map("bank_movement_detail")
 }
 
 model BankTransfer {
@@ -601,8 +627,8 @@ model BankTransfer {
   description   String?
   reference     String?
 
-  movementOutId String?
-  movementInId  String?
+  movementOutId String?                               @unique
+  movementInId  String?                               @unique
 
   movementOut   BankMovement? @relation("TransferOut", fields: [movementOutId], references: [id], onDelete: Cascade)
   movementIn    BankMovement? @relation("TransferIn", fields: [movementInId], references: [id], onDelete: Cascade)
@@ -741,7 +767,7 @@ model Person {
 
   transactions        Transaction[]
   documents           Document[]
-  ledgerEntries       LedgerEntry[]
+  ledgerEntries       JournalEntryLine[]
 
   @@map("person")
 }
@@ -774,25 +800,28 @@ model ChartOfAccountTemplate {
 }
 
 model ChartOfAccount {
-  id                String                              @id @default(uuid())
-  tenantId          String            @map("tenant_id")
-  code              String
-  name              String
-  accountType       AccountType
-  parentId          String?           @map("parent_id")
-  parent            ChartOfAccount?   @relation("AccountHierarchy", fields: [parentId], references: [id])
-  children          ChartOfAccount[]  @relation("AccountHierarchy")
+  id                 String                                 @id @default(uuid())
+  tenantId           String               @map("tenant_id")
+  code               String
+  name               String
+  accountType        AccountType
+  parentId           String?              @map("parent_id")
+  parent             ChartOfAccount?      @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children           ChartOfAccount[]     @relation("AccountHierarchy")
 
-  ledgerEntries     LedgerEntry[]
+  ledgerEntries      JournalEntryLine[]
 
   // NUEVOS → relaciones inversas necesarias
-  personsReceivable Person[]          @relation("person_account_receivable")
-  personsPayable    Person[]          @relation("person_account_payable")
-  BankAccount       BankAccount[]
-  BankMovement      BankMovement[]
-  CashBox           CashBox[]
-  CashMovement      CashMovement[]
-  BankTransaction   BankTransaction[]
+  personsReceivable  Person[]             @relation("person_account_receivable")
+  personsPayable     Person[]             @relation("person_account_payable")
+  productsInventory  Product[]            @relation("ProductInventoryAccount")
+  productsCost       Product[]            @relation("ProductCostAccount")
+
+  bankAccounts       BankAccount[]
+  cashBox            CashBox[]
+  cashMovement       CashMovement[]
+  bankTransaction    BankTransaction[]
+  bankMovementDetail BankMovementDetail[]
 
   @@map("chart_of_account")
 }
@@ -801,19 +830,20 @@ model ChartOfAccount {
 // COMPROBANTES CONTABLES
 // ------------------------------
 model JournalEntry {
-  id           String                              @id @default(uuid())
-  tenantId     String        @map("tenant_id")
+  id           String                                   @id @default(uuid())
+  tenantId     String             @map("tenant_id")
   date         DateTime
   description  String?
-  type         EntryType                           @default(JOURNAL)
-  documentType DocumentType? @map("document_type")
-  documentId   String?       @map("document_id")
+  type         EntryType                                @default(JOURNAL)
+  documentType DocumentType?      @map("document_type")
+  documentId   String?            @map("document_id")
 
   // Relación con líneas
-  entries      LedgerEntry[]
+  lines        JournalEntryLine[]
+  bankMovement BankMovement?
 
-  createdAt    DateTime      @map("created_at")    @default(now())
-  updatedAt    DateTime      @map("updated_at")    @updatedAt
+  createdAt    DateTime           @map("created_at")    @default(now())
+  updatedAt    DateTime           @map("updated_at")    @updatedAt
 
   @@map("journal_entry")
 }
@@ -821,7 +851,7 @@ model JournalEntry {
 // ------------------------------
 // LÍNEAS DEL ASIENTO CONTABLE
 // ------------------------------
-model LedgerEntry {
+model JournalEntryLine {
   id             String                                  @id @default(uuid())
   tenantId       String         @map("tenant_id")
   journalEntryId String         @map("journal_entry_id")
@@ -840,20 +870,21 @@ model LedgerEntry {
   createdAt      DateTime       @map("created_at")       @default(now())
   costCenter     CostCenter?    @relation(fields: [costCenterId], references: [id])
 
-  @@map("ledger_entry")
+  @@map("journal_entry_line")
 }
 
 // ------------------------------
 // CENTROS DE COSTO
 // ------------------------------
 model CostCenter {
-  id            String                          @id @default(uuid())
-  tenantId      String        @map("tenant_id")
-  code          String
-  name          String
+  id                  String                                 @id @default(uuid())
+  tenantId            String               @map("tenant_id")
+  code                String
+  name                String
 
-  ledgerEntries LedgerEntry[]
-  warehouses    Warehouse[]
+  ledgerEntries       JournalEntryLine[]
+  warehouses          Warehouse[]
+  bankMovementDetails BankMovementDetail[]
 
   @@unique([tenantId, code])
   @@map("cost_center")
@@ -961,11 +992,8 @@ enum AccountKind {
 }
 
 enum BankMovementType {
-  DEPOSIT
-  WITHDRAWAL
-  TRANSFER_IN
-  TRANSFER_OUT
-  FEE
+  DEBIT
+  CREDIT
 }
 
 enum CashMovementType {
@@ -1048,4 +1076,9 @@ enum CashMovementCategory {
   REFUND
   TRANSFER
   OTHER
+}
+
+enum MovementLineType {
+  DEBIT
+  CREDIT
 }

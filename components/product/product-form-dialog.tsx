@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  Autocomplete,
   Box,
   Button,
   Dialog,
@@ -26,6 +27,9 @@ import { Unit } from "@/lib/validations/unit";
 import { getAllCategories } from "@/actions/inventory/category";
 import { useSession } from "next-auth/react";
 import { getUnits } from "@/actions/unit";
+import { ChartOfAccount } from "@/lib/validations";
+import { getAccounts } from "@/actions/accounting/chart-of-account";
+import { notifyError } from "@/lib/notifications";
 
 interface ProductFormDialogProps {
   isDialogOpen: boolean;
@@ -42,12 +46,14 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
 }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
 
   const { data: session } = useSession();
 
   useEffect(() => {
     fetchCategories();
     fetchUnits();
+    fetchAccounts();
   }, [session?.user.tenantId]);
 
   const fetchCategories = async () => {
@@ -74,6 +80,22 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
     }
   };
 
+  const fetchAccounts = async () => {
+    try {
+      if (!session?.user?.tenantId) return;
+
+      const response = await getAccounts(session.user.tenantId);
+      if (!response.success) {
+        notifyError("Error al cargar las cuentas contables");
+        return;
+      }
+
+      setAccounts(response.data || []);
+    } catch (error) {
+      notifyError("Error al cargar las cuentas contables");
+    }
+  };
+
   const {
     register,
     handleSubmit,
@@ -91,7 +113,6 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
       description: "",
       type: "SERVICE",
       barcode: null,
-      cost: 0,
     },
   });
 
@@ -101,10 +122,16 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
       reset(editingProduct);
     } else {
       reset({
+        type: "SERVICE",
         code: "",
         price: 0,
         tax: "IVA_0",
         description: "",
+        inventoryAccountId: "",
+        costAccountId: "",
+        categoryId: "",
+        unitId: "",
+        barcode: null,
       });
     }
   }, [editingProduct, reset]);
@@ -135,9 +162,6 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
             <Controller
               name="type"
               control={control}
-              defaultValue={
-                editingProduct?.type ? editingProduct.type : "SERVICE"
-              }
               render={({ field }) => (
                 <TextField
                   fullWidth
@@ -173,9 +197,6 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
               <Controller
                 name="barcode"
                 control={control}
-                defaultValue={
-                  editingProduct?.barcode ? editingProduct.barcode : ""
-                }
                 render={({ field }) => (
                   <TextField
                     label="Código de Barras"
@@ -193,8 +214,6 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
             <TextField
               label="Descripción"
               fullWidth
-              multiline
-              rows={2}
               {...register("description")}
               error={!!errors.description}
               helperText={errors.description?.message}
@@ -204,7 +223,6 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
             <Controller
               name="tax"
               control={control}
-              defaultValue={editingProduct?.tax ? editingProduct.tax : "IVA_0"}
               render={({ field }) => (
                 <TextField
                   fullWidth
@@ -227,7 +245,6 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
             <Controller
               name="price"
               control={control}
-              defaultValue={editingProduct?.price ? editingProduct.price : 0}
               render={({ field }) => (
                 <TextField
                   label="Precio"
@@ -247,38 +264,10 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
               )}
             />
 
-            {watch("type") === "PRODUCT" && (
-              <Controller
-                name="cost"
-                control={control}
-                defaultValue={editingProduct?.cost ? editingProduct.cost : 0}
-                render={({ field }) => (
-                  <TextField
-                    label="Costo"
-                    type="number"
-                    fullWidth
-                    inputProps={{ step: "0.01", min: 0 }}
-                    {...field}
-                    error={!!errors.cost}
-                    helperText={errors.cost?.message}
-                    value={field.value || 0}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value);
-                      field.onChange(isNaN(value) ? 0 : value);
-                    }}
-                    size="small"
-                  />
-                )}
-              />
-            )}
-
             {/* categoryId */}
             <Controller
               name="categoryId"
               control={control}
-              defaultValue={
-                editingProduct?.categoryId ? editingProduct.categoryId : ""
-              }
               render={({ field }) => (
                 <TextField
                   label="Categoría"
@@ -302,7 +291,6 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
             <Controller
               name="unitId"
               control={control}
-              defaultValue={editingProduct?.unitId ? editingProduct.unitId : ""}
               render={({ field }) => (
                 <TextField
                   label="Unidad de Medida"
@@ -320,6 +308,72 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
                   ))}
                 </TextField>
               )}
+            />
+
+            <Typography variant="body2" color="text.secondary">
+              {"Contabilidad"}
+            </Typography>
+
+            <Controller
+              name="inventoryAccountId"
+              control={control}
+              render={({ field }) => {
+                const selectedOption =
+                  accounts.find((a) => a.id === field.value) || null;
+
+                return (
+                  <Autocomplete
+                    options={accounts}
+                    getOptionLabel={(option) => `${option.code} ${option.name}`}
+                    value={selectedOption}
+                    onChange={(_, value) => {
+                      field.onChange(value ? value.id : "");
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Cuenta de Ingresos"
+                        variant="outlined"
+                        size="small"
+                        error={!!errors.inventoryAccountId}
+                        helperText={errors.inventoryAccountId?.message}
+                        fullWidth
+                      />
+                    )}
+                  />
+                );
+              }}
+            />
+
+            <Controller
+              name="costAccountId"
+              control={control}
+              render={({ field }) => {
+                const selectedOption =
+                  accounts.find((a) => a.id === field.value) || null;
+
+                return (
+                  <Autocomplete
+                    options={accounts}
+                    getOptionLabel={(option) => `${option.code} ${option.name}`}
+                    value={selectedOption}
+                    onChange={(_, value) => {
+                      field.onChange(value ? value.id : "");
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Cuenta de Ingresos"
+                        variant="outlined"
+                        size="small"
+                        error={!!errors.costAccountId}
+                        helperText={errors.costAccountId?.message}
+                        fullWidth
+                      />
+                    )}
+                  />
+                );
+              }}
             />
           </Box>
         </DialogContent>

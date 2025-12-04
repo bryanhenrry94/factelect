@@ -21,6 +21,6 @@ export const updateChartOfAccountSchema = chartOfAccountSchema.partial().omit({
   createdAt: true,
 });
 
-export type Account = z.infer<typeof chartOfAccountSchema>;
-export type CreateAccount = z.infer<typeof createChartOfAccountSchema>;
-export type UpdateAccount = z.infer<typeof updateChartOfAccountSchema>;
+export type ChartOfAccount = z.infer<typeof chartOfAccountSchema>;
+export type CreateChartOfAccount = z.infer<typeof createChartOfAccountSchema>;
+export type UpdateChartOfAccount = z.infer<typeof updateChartOfAccountSchema>;

@@ -24,7 +24,7 @@ export const getJournalEntries = async (
           : {}),
       },
       include: {
-        entries: true,
+        lines: true,
       },
       orderBy: { date: "desc" },
     });
@@ -36,7 +36,7 @@ export const getJournalEntries = async (
       documentId: je.documentId || undefined,
       createdAt: je.createdAt,
       updatedAt: je.updatedAt,
-      entries: je.entries.map((e) => ({
+      lines: je.lines.map((e) => ({
         ...e,
         debit: typeof e.debit === "object" ? e.debit.toNumber() : e.debit,
         credit: typeof e.credit === "object" ? e.credit.toNumber() : e.credit,
@@ -46,8 +46,8 @@ export const getJournalEntries = async (
 
     return { success: true, data: formatted };
   } catch (error) {
-    console.error("Error fetching journal entries:", error);
-    return { success: false, error: "Error fetching journal entries" };
+    console.error("Error fetching journal lines:", error);
+    return { success: false, error: "Error fetching journal lines" };
   }
 };
 
@@ -57,7 +57,7 @@ export const getJournalEntryById = async (
   try {
     const journalEntry = await prisma.journalEntry.findFirst({
       where: { id },
-      include: { entries: true },
+      include: { lines: true },
     });
 
     if (!journalEntry) {
@@ -71,7 +71,7 @@ export const getJournalEntryById = async (
       description: journalEntry.description || undefined,
       documentType: journalEntry.documentType || undefined,
       documentId: journalEntry.documentId || undefined,
-      entries: journalEntry.entries.map((e) => ({
+      lines: journalEntry.lines.map((e) => ({
         ...e,
         accountId: e.accountId,
         debit: e.debit.toNumber(),
@@ -95,8 +95,8 @@ export const deleteJournalEntry = async (
     // Aqui se debe validar si el asiento puede ser eliminado (no estar referenciado en otros documentos)
 
     const result = await prisma.$transaction(async (tx) => {
-      // eliminar ledger entries asociados
-      await tx.ledgerEntry.deleteMany({
+      // eliminar ledger lines asociados
+      await tx.journalEntryLine.deleteMany({
         where: { journalEntryId: id },
       });
 
@@ -122,18 +122,15 @@ export const createJournalEntry = async (
     // VALIDACIONES
     // ------------------------------
 
-    if (!data.entries || data.entries.length === 0) {
+    if (!data.lines || data.lines.length === 0) {
       return {
         success: false,
         error: "El asiento debe tener al menos un detalle",
       };
     }
 
-    const totalDebit = data.entries.reduce((sum, e) => sum + (e.debit ?? 0), 0);
-    const totalCredit = data.entries.reduce(
-      (sum, e) => sum + (e.credit ?? 0),
-      0
-    );
+    const totalDebit = data.lines.reduce((sum, e) => sum + (e.debit ?? 0), 0);
+    const totalCredit = data.lines.reduce((sum, e) => sum + (e.credit ?? 0), 0);
 
     if (totalDebit !== totalCredit) {
       return {
@@ -142,7 +139,7 @@ export const createJournalEntry = async (
       };
     }
 
-    for (const entry of data.entries) {
+    for (const entry of data.lines) {
       if (!entry.accountId) {
         return {
           success: false,
@@ -173,8 +170,8 @@ export const createJournalEntry = async (
         },
       });
 
-      // crear ledger entries
-      const ledgerEntriesData = data.entries.map((e) => ({
+      // crear ledger lines
+      const ledgerEntriesData = data.lines.map((e) => ({
         tenantId,
         journalEntryId: newJournal.id,
         accountId: e.accountId,
@@ -184,7 +181,7 @@ export const createJournalEntry = async (
         personId: e.personId || null,
       }));
 
-      await tx.ledgerEntry.createMany({
+      await tx.journalEntryLine.createMany({
         data: ledgerEntriesData,
       });
 
@@ -192,7 +189,7 @@ export const createJournalEntry = async (
       return tx.journalEntry.findUnique({
         where: { id: newJournal.id },
         include: {
-          entries: true,
+          lines: true,
         },
       });
     });
@@ -216,7 +213,7 @@ export const createJournalEntry = async (
       description: result.description || undefined,
       documentType: result.documentType || undefined,
       documentId: result.documentId || undefined,
-      entries: result.entries.map((e) => ({
+      lines: result.lines.map((e) => ({
         ...e,
         accountId: e.accountId,
         debit: e.debit.toNumber(),
@@ -241,14 +238,14 @@ export const updateJournalEntry = async (
   >
 ): Promise<{ success: boolean; data?: JournalEntry; error?: string }> => {
   try {
-    const { entries, ...journalData } = data;
+    const { lines, ...journalData } = data;
 
     // ---------------------------------------
     // VALIDAR ENTRADAS (si se envían)
     // ---------------------------------------
-    if (entries && entries.length > 0) {
-      const totalDebit = entries.reduce((sum, e) => sum + (e.debit ?? 0), 0);
-      const totalCredit = entries.reduce((sum, e) => sum + (e.credit ?? 0), 0);
+    if (lines && lines.length > 0) {
+      const totalDebit = lines.reduce((sum, e) => sum + (e.debit ?? 0), 0);
+      const totalCredit = lines.reduce((sum, e) => sum + (e.credit ?? 0), 0);
 
       if (totalDebit !== totalCredit) {
         return {
@@ -257,7 +254,7 @@ export const updateJournalEntry = async (
         };
       }
 
-      for (const entry of entries) {
+      for (const entry of lines) {
         if (!entry.accountId) {
           return {
             success: false,
@@ -289,13 +286,13 @@ export const updateJournalEntry = async (
       }
 
       // 2. Si vienen nuevas entradas → eliminar y recrear
-      if (entries) {
-        await tx.ledgerEntry.deleteMany({
+      if (lines) {
+        await tx.journalEntryLine.deleteMany({
           where: { journalEntryId: id },
         });
 
-        await tx.ledgerEntry.createMany({
-          data: entries.map((e) => ({
+        await tx.journalEntryLine.createMany({
+          data: lines.map((e) => ({
             journalEntryId: id,
             tenantId: updated.tenantId,
             accountId: e.accountId,
@@ -310,7 +307,7 @@ export const updateJournalEntry = async (
       // 3. Retornar el asiento actualizado
       return tx.journalEntry.findUnique({
         where: { id },
-        include: { entries: true },
+        include: { lines: true },
       });
     });
 
@@ -330,7 +327,7 @@ export const updateJournalEntry = async (
       description: result.description || undefined,
       documentType: result.documentType || undefined,
       documentId: result.documentId || undefined,
-      entries: result.entries.map((e) => ({
+      lines: result.lines.map((e) => ({
         ...e,
         debit: typeof e.debit === "object" ? e.debit.toNumber() : e.debit,
         credit: typeof e.credit === "object" ? e.credit.toNumber() : e.credit,

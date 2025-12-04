@@ -6,7 +6,7 @@ import {
   updateJournalEntry,
 } from "@/actions/accounting/journal-entry";
 import { notifyError, notifyInfo } from "@/lib/notifications";
-import { Account } from "@/lib/validations";
+import { ChartOfAccount } from "@/lib/validations";
 import { CostCenter } from "@/lib/validations/accounting/cost-center";
 import {
   CreateJournalEntry,
@@ -39,7 +39,7 @@ const initialState: CreateJournalEntry = {
   type: $Enums.EntryType.JOURNAL,
   documentType: $Enums.DocumentType.OTHER,
   documentId: "null",
-  entries: [
+  lines: [
     {
       accountId: "",
       debit: 0,
@@ -63,7 +63,7 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
   journalEntryToEdit,
 }) => {
   const { data: session } = useSession();
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
 
   useEffect(() => {
@@ -118,7 +118,7 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: "entries",
+    name: "lines",
   });
 
   useEffect(() => {
@@ -129,11 +129,11 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
         type: journalEntryToEdit.type,
         documentType: journalEntryToEdit.documentType,
         documentId: journalEntryToEdit.documentId,
-        entries: journalEntryToEdit.entries.map((entry) => ({
-          accountId: entry.accountId,
-          debit: entry.debit,
-          credit: entry.credit,
-          costCenterId: entry.costCenterId,
+        lines: journalEntryToEdit.lines.map((line) => ({
+          accountId: line.accountId,
+          debit: line.debit,
+          credit: line.credit,
+          costCenterId: line.costCenterId,
         })),
       });
     } else {
@@ -259,7 +259,7 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
                   <TableCell sx={{ width: 260 }}>
                     <Controller
                       control={control}
-                      name={`entries.${index}.accountId`}
+                      name={`lines.${index}.accountId`}
                       render={({ field }) => (
                         <TextField
                           {...field}
@@ -283,7 +283,7 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
                   {/* Débito */}
                   <TableCell align="right" sx={{ width: 140 }}>
                     <Controller
-                      name={`entries.${index}.debit`}
+                      name={`lines.${index}.debit`}
                       control={control}
                       render={({ field }) => (
                         <TextField
@@ -318,7 +318,7 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
                   {/* Crédito */}
                   <TableCell align="right" sx={{ width: 140 }}>
                     <Controller
-                      name={`entries.${index}.credit`}
+                      name={`lines.${index}.credit`}
                       control={control}
                       render={({ field }) => (
                         <TextField
@@ -353,7 +353,7 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
                   {/* Centro de costo */}
                   <TableCell sx={{ width: 220 }}>
                     <Controller
-                      name={`entries.${index}.costCenterId`}
+                      name={`lines.${index}.costCenterId`}
                       control={control}
                       render={({ field }) => (
                         <TextField
@@ -399,7 +399,7 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
                     {fields
                       .reduce((sum, entry, idx) => {
                         const value = parseFloat(
-                          watch(`entries.${idx}.debit`)?.toString() || "0"
+                          watch(`lines.${idx}.debit`)?.toString() || "0"
                         );
                         return sum + (isNaN(value) ? 0 : value);
                       }, 0)
@@ -411,7 +411,7 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
                     {fields
                       .reduce((sum, entry, idx) => {
                         const value = parseFloat(
-                          watch(`entries.${idx}.credit`)?.toString() || "0"
+                          watch(`lines.${idx}.credit`)?.toString() || "0"
                         );
                         return sum + (isNaN(value) ? 0 : value);
                       }, 0)

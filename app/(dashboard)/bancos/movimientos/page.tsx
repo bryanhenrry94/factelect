@@ -8,7 +8,6 @@ import {
   Button,
   Card,
   CardContent,
-  Dialog,
   IconButton,
   Table,
   TableBody,
@@ -33,17 +32,18 @@ import {
 } from "@/actions/bank/bank-movement";
 
 import { formatCurrency, formatDate, toInputDate } from "@/utils/formatters";
-import { BankMovementForm } from "@/components/bank/BankMovementForm";
 import { $Enums } from "@/prisma/generated/prisma/wasm";
 import { useDateRangeFilter } from "@/hooks/useDateRangeFilter";
 import { useSearchFilter } from "@/hooks/useSearchFilter";
 import { AlertService } from "@/lib/alerts";
+import { useRouter } from "next/navigation";
 
 const now = new Date();
 const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
 const BankMovementsPage = () => {
+  const router = useRouter();
   const { data: session } = useSession();
 
   const { search, setSearch } = useSearchFilter();
@@ -52,12 +52,9 @@ const BankMovementsPage = () => {
     defaultTo: toInputDate(lastDayOfMonth),
   });
 
-  const [open, setOpen] = useState(false);
   const [bankMovements, setBankMovements] = useState<BankMovementWithAccount[]>(
     []
   );
-  const [bankMovementSelected, setBankMovementSelected] =
-    useState<BankMovement | null>(null);
 
   const [page, setPage] = useState(0);
   const rowsPerPage = 5;
@@ -90,11 +87,6 @@ const BankMovementsPage = () => {
     fetchBankMovements();
   }, [session?.user?.tenantId, search, dateFrom, dateTo]);
 
-  const handleEdit = (m: BankMovement) => {
-    setBankMovementSelected(m);
-    setOpen(true);
-  };
-
   const handleDelete = async (id: string) => {
     const confirm = await AlertService.showConfirm(
       "Aviso",
@@ -110,22 +102,34 @@ const BankMovementsPage = () => {
     } else notifyError("Error al eliminar el movimiento");
   };
 
-  const getSimbol = (t: $Enums.BankMovementType) =>
-    ["DEPOSIT", "TRANSFER_IN"].includes(t) ? "+" : "-";
+  const getSimbol = (t: $Enums.BankMovementType) => {
+    switch (t) {
+      case "DEBIT":
+        return "-";
+      case "CREDIT":
+        return "+";
+      default:
+        return "+";
+    }
+  };
 
   const getTypeMovementLabel = (t: $Enums.BankMovementType) => {
     switch (t) {
-      case "DEPOSIT":
-        return "Depósito";
-      case "WITHDRAWAL":
-        return "Retiro";
-      case "TRANSFER_IN":
-        return "Transferencia Entrada";
-      case "TRANSFER_OUT":
-        return "Transferencia Salida";
+      case "DEBIT":
+        return "ND";
+      case "CREDIT":
+        return "NC";
       default:
         return t;
     }
+  };
+
+  const handleNew = () => {
+    router.push("/bancos/movimientos/nuevo");
+  };
+
+  const handleEdit = (m: BankMovement) => {
+    router.push(`/bancos/movimientos/${m.id}/editar`);
   };
 
   return (
@@ -175,7 +179,7 @@ const BankMovementsPage = () => {
         <Button
           variant="contained"
           startIcon={<Plus />}
-          onClick={() => setOpen(true)}
+          onClick={handleNew}
           size="small"
         >
           Nuevo Movimiento
@@ -268,26 +272,6 @@ const BankMovementsPage = () => {
           )}
         </CardContent>
       </Card>
-
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <BankMovementForm
-          onSave={() => {
-            fetchBankMovements();
-            setOpen(false);
-            setBankMovementSelected(null);
-          }}
-          onCancel={() => {
-            setOpen(false);
-            setBankMovementSelected(null);
-          }}
-          bankMovementSelected={bankMovementSelected}
-        />
-      </Dialog>
     </PageContainer>
   );
 };

@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -39,6 +40,9 @@ import {
   getAllBankAccounts,
   updateBankAccount,
 } from "@/actions/bank/bank-account";
+import { useSearchFilter } from "@/hooks/useSearchFilter";
+import { getAccounts } from "@/actions/accounting/chart-of-account";
+import { ChartOfAccount } from "@/lib/validations";
 
 const initialBankAccount: BankAccount = {
   id: "",
@@ -61,9 +65,9 @@ const BankAccountsPage = () => {
   const [open, setOpen] = useState(false);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [bankSelected, setBankAccount] = useState<BankAccount | null>(null);
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
 
-  const [search, setSearch] = useState(params.get("search") ?? "");
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const { search, setSearch } = useSearchFilter();
 
   const [page, setPage] = useState(0);
   const rowsPerPage = 5;
@@ -81,14 +85,6 @@ const BankAccountsPage = () => {
     setPage(newPage);
   };
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search); // actualiza el valor definitivo
-    }, 300);
-
-    return () => clearTimeout(handler); // limpia si sigue escribiendo
-  }, [search]);
-
   const handleEdit = (account: BankAccount) => {
     setBankAccount(account);
     reset({
@@ -98,13 +94,13 @@ const BankAccountsPage = () => {
       type: account.type,
       accountId: account.accountId,
     });
-    handleOpen();
+    setOpen(true);
   };
 
   const handleDelete = async (id: string) => {
     const confirm = await AlertService.showConfirm(
       "Aviso",
-      "¿Deseas eliminar la cuenta?"
+      "¿Deseas eliminar la cuenta bancaria?"
     );
     if (!confirm) return;
 
@@ -124,10 +120,7 @@ const BankAccountsPage = () => {
     try {
       if (!session?.user?.tenantId) return;
 
-      const response = await getAllBankAccounts(
-        session.user.tenantId,
-        debouncedSearch
-      );
+      const response = await getAllBankAccounts(session.user.tenantId, search);
       if (!response.success) {
         notifyError("Error al cargar las categorías");
         return;
@@ -139,13 +132,29 @@ const BankAccountsPage = () => {
     }
   };
 
-  useEffect(() => {
-    fetchBankAccounts();
-  }, [session?.user?.tenantId, debouncedSearch]);
+  const fetchAccounts = async () => {
+    try {
+      if (!session?.user?.tenantId) return;
+
+      const response = await getAccounts(session.user.tenantId);
+      if (!response.success) {
+        notifyError("Error al cargar las cuentas contables");
+        return;
+      }
+
+      setAccounts(response.data || []);
+    } catch (error) {
+      notifyError("Error al cargar las cuentas contables");
+    }
+  };
 
   useEffect(() => {
-    updateParam("search", debouncedSearch);
-  }, [debouncedSearch]);
+    fetchBankAccounts();
+  }, [session?.user?.tenantId, search]);
+
+  useEffect(() => {
+    fetchAccounts();
+  }, [session?.user?.tenantId]);
 
   const updateParam = (key: string, value: string) => {
     const query = new URLSearchParams(params.toString());
@@ -197,6 +206,21 @@ const BankAccountsPage = () => {
     }
   };
 
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case "CURRENT":
+        return "Corriente";
+      case "SAVINGS":
+        return "Ahorros";
+      case "CREDIT":
+        return "Crédito";
+      case "OTHER":
+        return "Otro";
+      default:
+        return type;
+    }
+  };
+
   return (
     <PageContainer
       title="Cuentas Bancarias"
@@ -230,7 +254,7 @@ const BankAccountsPage = () => {
           onClick={handleOpen}
           sx={{ width: { xs: "100%", sm: "auto" } }}
         >
-          Agregar Cuenta
+          Nuevo
         </Button>
       </Box>
 
@@ -261,6 +285,9 @@ const BankAccountsPage = () => {
                       <strong>Alias</strong>
                     </TableCell>
                     <TableCell>
+                      <strong>Cuenta Contable</strong>
+                    </TableCell>
+                    <TableCell>
                       <strong>Tipo</strong>
                     </TableCell>
                     <TableCell align="right">
@@ -276,7 +303,13 @@ const BankAccountsPage = () => {
                         <TableCell>{account.bankName}</TableCell>
                         <TableCell>{account.accountNumber}</TableCell>
                         <TableCell>{account.alias}</TableCell>
-                        <TableCell>{account.type}</TableCell>
+                        <TableCell>
+                          {
+                            accounts.find((a) => a.id === account.accountId)
+                              ?.name
+                          }
+                        </TableCell>
+                        <TableCell>{getTypeLabel(account.type)}</TableCell>
                         <TableCell align="right">
                           <IconButton
                             color="primary"
@@ -318,8 +351,8 @@ const BankAccountsPage = () => {
           <DialogContent>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               {bankSelected
-                ? "Actualizar información de la cuenta"
-                : "Agregar una nueva cuenta a tu catálogo"}
+                ? "Actualizar información de la cuenta bancaria"
+                : "Agregar una nueva cuenta bancaria"}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column" }}>
               <Controller
@@ -390,6 +423,50 @@ const BankAccountsPage = () => {
                   />
                 )}
               />
+              <Controller
+                name="accountId"
+                control={control}
+                render={({ field }) => {
+                  const selectedOption =
+                    accounts.find((a) => a.id === field.value) || null;
+
+                  return (
+                    <Autocomplete
+                      options={accounts.slice(0, 10)} // primeros 10 resultados visibles
+                      filterOptions={(options, state) => {
+                        const input = state.inputValue.toLowerCase();
+                        return options
+                          .filter(
+                            (opt) =>
+                              opt.name.toLowerCase().includes(input) ||
+                              opt.id.toLowerCase().includes(input)
+                          )
+                          .slice(0, 10); // limitar resultados filtrados a 10
+                      }}
+                      getOptionLabel={(option) =>
+                        `${option.code} ${option.name}`
+                      }
+                      value={selectedOption}
+                      onChange={(_, value) => {
+                        field.onChange(value ? value.id : "");
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Cuenta Contable"
+                          variant="outlined"
+                          margin="dense"
+                          error={!!errors.accountId}
+                          helperText={errors.accountId?.message}
+                          fullWidth
+                        />
+                      )}
+                    />
+                  );
+                }}
+              />
+            </Box>
+            <Box sx={{ mt: 2 }}>
               <Box
                 sx={{
                   display: "flex",
