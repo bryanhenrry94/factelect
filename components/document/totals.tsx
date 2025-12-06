@@ -1,4 +1,4 @@
-import { DocumentItem } from "@/lib/validations/document-item";
+import { DocumentItem } from "@/lib/validations/document/document-item";
 import {
   Table,
   TableBody,

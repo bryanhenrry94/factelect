@@ -68,7 +68,7 @@ export default function DocumentsPage() {
   };
 
   const handleEdit = (id: string) => {
-    router.push(`/documentos/${id}`);
+    router.push(`/documentos/${id}/editar`);
   };
 
   const handlePageChange = (
@@ -106,7 +106,7 @@ export default function DocumentsPage() {
             startIcon={<Plus size={16} />}
             sx={{ width: { xs: "100%", sm: "auto" } }}
           >
-            Crear Documento
+            Nuevo
           </Button>
         </Link>
       </Box>

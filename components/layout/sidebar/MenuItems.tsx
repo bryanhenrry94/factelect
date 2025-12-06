@@ -311,32 +311,32 @@ const Menuitems = [
     ],
   },
 
-  // Finanzas
-  {
-    id: uniqueId(),
-    title: "Finanzas",
-    icon: Calculator,
-    children: [
-      {
-        id: uniqueId(),
-        title: "Flujo de Caja",
-        icon: CircleSmall,
-        href: "/finanzas/flujo-caja",
-      },
-      {
-        id: uniqueId(),
-        title: "Presupuestos",
-        icon: CircleSmall,
-        href: "/finanzas/presupuestos",
-      },
-      {
-        id: uniqueId(),
-        title: "Indicadores Financieros",
-        icon: CircleSmall,
-        href: "/finanzas/indicadores",
-      },
-    ],
-  },
+  // // Finanzas
+  // {
+  //   id: uniqueId(),
+  //   title: "Finanzas",
+  //   icon: Calculator,
+  //   children: [
+  //     {
+  //       id: uniqueId(),
+  //       title: "Flujo de Caja",
+  //       icon: CircleSmall,
+  //       href: "/finanzas/flujo-caja",
+  //     },
+  //     {
+  //       id: uniqueId(),
+  //       title: "Presupuestos",
+  //       icon: CircleSmall,
+  //       href: "/finanzas/presupuestos",
+  //     },
+  //     {
+  //       id: uniqueId(),
+  //       title: "Indicadores Financieros",
+  //       icon: CircleSmall,
+  //       href: "/finanzas/indicadores",
+  //     },
+  //   ],
+  // },
 
   // Reportes
   {

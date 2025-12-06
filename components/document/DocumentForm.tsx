@@ -1,5 +1,5 @@
 "use client";
-import { Box, Tabs, Tab, Alert, Stack, Grid } from "@mui/material";
+import { Box, Tabs, Tab, Alert, Stack, Grid, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import HeaderActions from "./HeaderActions";
 import DocumentInfo from "./DocumentInfo";
@@ -17,6 +17,7 @@ import {
   CreateDocument,
   CreateDocumentItem,
   createDocumentSchema,
+  DocumentPayment,
   Product,
 } from "@/lib/validations";
 import {
@@ -25,10 +26,11 @@ import {
   getDocumentItems,
   updateDocument,
 } from "@/actions";
-import { CreateDocumentFiscalInfo } from "@/lib/validations/document-fiscal-info";
-import { DocumentFiscalInfo } from "./DocumentFiscalInfo";
-import { getDocumentFiscalInfo } from "@/actions/document-fiscal-info";
+import { CreateDocumentFiscalInfo } from "@/lib/validations/document/document-fiscal-info";
+import { getDocumentFiscalInfo } from "@/actions/document/document-fiscal-info";
 import { notifyError, notifyInfo } from "@/lib/notifications";
+import { PaymentMethodsTable } from "./PaymentMethodsTable";
+import { getDocumentPayments } from "@/actions/document/document-payment";
 
 const initialItemsState: CreateDocumentItem[] = [
   {
@@ -74,23 +76,30 @@ const initialState: CreateDocument = {
   description: undefined,
   items: initialItemsState,
   fiscalInfo: initialFiscalInfoState,
+  documentPayments: [
+    {
+      paymentMethod: "20",
+      term: 0,
+      termUnit: "días",
+      amount: 0,
+    },
+  ],
 };
 
 interface DocumentFormProps {
   documentId?: string;
   persons: PersonInput[];
   products: Product[];
-  setError?: (error: string | null) => void;
 }
 
 export default function DocumentForm({
   documentId,
   persons,
   products,
-  setError,
 }: DocumentFormProps) {
   const router = useRouter();
 
+  const [error, setError] = useState<string | null>(null);
   const [modeEdit, setModeEdit] = useState<boolean>(!!documentId);
   const [tabValue, setTabValue] = useState(0);
   const { tenant } = useTenant();
@@ -110,10 +119,10 @@ export default function DocumentForm({
   useEffect(() => {
     if (!documentId) return;
 
-    loadSales();
+    loadDocument();
   }, [documentId, reset]);
 
-  const loadSales = async () => {
+  const loadDocument = async () => {
     try {
       if (!documentId) return;
 
@@ -142,8 +151,6 @@ export default function DocumentForm({
           });
         }
 
-        console.log("response.data: ", response.data);
-
         const infoFiscal: CreateDocumentFiscalInfo = initialFiscalInfoState;
 
         const responseFiscalInfo = await getDocumentFiscalInfo(
@@ -153,6 +160,12 @@ export default function DocumentForm({
           infoFiscal.establishmentId = responseFiscalInfo.data.establishmentId;
           infoFiscal.emissionPointId = responseFiscalInfo.data.emissionPointId;
           infoFiscal.sequence = responseFiscalInfo.data.sequence;
+        }
+
+        const resDocPayments = await getDocumentPayments(response.data.id!);
+        const documentPayments: DocumentPayment[] = [];
+        if (resDocPayments.success && resDocPayments.data) {
+          documentPayments.push(...resDocPayments.data);
         }
 
         const data: CreateDocument = {
@@ -170,6 +183,7 @@ export default function DocumentForm({
           description: response.data.description || "",
           items,
           fiscalInfo: infoFiscal,
+          documentPayments: documentPayments,
         };
         reset(data);
       } else {
@@ -235,7 +249,9 @@ export default function DocumentForm({
       <Box component="form" onSubmit={handleSubmit(onSubmit)}>
         <HeaderActions modeEdit={modeEdit} />
 
+        {error && <Alert severity="error">{error}</Alert>}
         {/* {JSON.stringify(errors)} */}
+
         {Object.keys(errors).length > 0 && (
           <Stack spacing={1} sx={{ mb: 2 }}>
             {Object.entries(errors).map(([field, error]: [string, any]) => (
@@ -247,28 +263,32 @@ export default function DocumentForm({
         )}
 
         <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" fontWeight={600}>
+            Información del Documento
+          </Typography>
           <Stack spacing={2} mt={2}>
             <Grid container spacing={5}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <DocumentInfo modeEdit={modeEdit} persons={persons} />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <DocumentFiscalInfo
-                  modeEdit={modeEdit}
-                  // documentType={watch("documentType") || "INVOICE"}
-                  documentType={"INVOICE"}
-                />
-              </Grid>
             </Grid>
           </Stack>
         </Box>
 
-        <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 2 }}>
+        <Tabs value={tabValue} onChange={handleTabChange}>
           <Tab label="Productos / Servicios" />
+          <Tab label="Cuentas" />
+          <Tab label="Retención" />
+          <Tab label="Formas de Pago" />
         </Tabs>
 
         <TabPanel value={tabValue} index={0}>
           <ItemsTable products={products} />
+        </TabPanel>
+        <TabPanel value={tabValue} index={1}></TabPanel>
+        <TabPanel value={tabValue} index={2}></TabPanel>
+        <TabPanel value={tabValue} index={3}>
+          <PaymentMethodsTable />
         </TabPanel>
 
         <TotalsSection />

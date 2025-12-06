@@ -1,7 +1,7 @@
 "use client";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { Paper, Divider, Alert } from "@mui/material";
+import { Paper } from "@mui/material";
 import { useParams } from "next/navigation";
 
 import PageContainer from "@/components/container/PageContainer";
@@ -17,7 +17,6 @@ export default function DocumentEditPage() {
   const { data: session } = useSession();
   const { id } = useParams();
 
-  const [error, setError] = useState<string | null>(null);
   const [persons, setPersons] = useState<PersonInput[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -44,18 +43,14 @@ export default function DocumentEditPage() {
     <PageContainer title="Editar Documento" description="Editar una Documento">
       <PageHeader
         title="Editar Documento"
-        routes={[{ name: "Documentos", href: "/Documentos" }]}
+        routes={[{ name: "Documentos", href: "/documentos" }]}
       />
 
       <Paper sx={{ p: 3, mb: 4 }}>
-        {error && <Alert severity="error">{error}</Alert>}
-        <Divider sx={{ mb: 2 }} />
-
         <DocumentForm
           documentId={id as string}
           persons={persons}
           products={products}
-          setError={setError}
         />
       </Paper>
     </PageContainer>

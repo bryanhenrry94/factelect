@@ -52,6 +52,9 @@ export const getDocuments = async (
               firstName: document.person.firstName,
               lastName: document.person.lastName,
               identification: document.person.identification || undefined,
+              fullname: document.person.firstName
+                ? `${document.person.firstName} ${document.person.lastName}`
+                : document.person.businessName,
             }
           : undefined,
         createdAt: document.createdAt,
@@ -87,92 +90,110 @@ export const createDocument = async (
   try {
     const balance = data.total - (data.paidAmount || 0);
 
-    const newDocument = await prisma.document.create({
-      data: {
-        tenantId,
-        entityType: data.entityType,
-        documentType: data.documentType as $Enums.DocumentType,
-        number: data.number || undefined,
-        issueDate: data.issueDate,
-        dueDate: data.dueDate || undefined,
-        status: data.status as "DRAFT" | "CONFIRMED" | "CANCELED",
-        personId: data.personId,
-        subtotal: data.subtotal,
-        taxTotal: data.taxTotal,
-        discount: data.discount,
-        total: data.total,
-        paidAmount: data.paidAmount,
-        balance: balance,
-        description: data.description || undefined,
-      },
-    });
+    // Validar pagos solo para facturas de clientes
+    if (data.entityType === "CUSTOMER" && data.documentType === "INVOICE") {
+      const totalPayments =
+        data.documentPayments?.reduce((sum, p) => sum + p.amount, 0) || 0;
 
-    if (data.items && data.items.length > 0) {
-      const documentItemsData = data.items.map((item) => ({
-        ...item,
-        documentId: newDocument.id,
-      }));
-
-      await prisma.documentItem.createMany({
-        data: documentItemsData,
-      });
+      if (totalPayments !== data.total) {
+        return {
+          success: false,
+          error: "El total de pagos debe ser igual al total del documento",
+        };
+      }
     }
 
-    const formattedDocuments: DocumentResponse = {
-      ...newDocument,
-      entityType: newDocument.entityType,
-      documentType: newDocument.documentType as
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Crear documento
+      const newDocument = await tx.document.create({
+        data: {
+          tenantId,
+          entityType: data.entityType,
+          documentType: data.documentType as $Enums.DocumentType,
+          number: data.number || undefined,
+          issueDate: data.issueDate,
+          dueDate: data.dueDate || undefined,
+          status: data.status,
+          personId: data.personId,
+          subtotal: data.subtotal,
+          taxTotal: data.taxTotal,
+          discount: data.discount,
+          total: data.total,
+          paidAmount: data.paidAmount,
+          balance,
+          description: data.description || undefined,
+        },
+      });
+
+      // 2. Items
+      if (data.items?.length) {
+        await tx.documentItem.createMany({
+          data: data.items.map((item) => ({
+            ...item,
+            documentId: newDocument.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      // 3. Fiscal Info + actualizar secuencia
+      if (data.fiscalInfo) {
+        await tx.documentFiscalInfo.create({
+          data: {
+            documentId: newDocument.id,
+            establishmentId: data.fiscalInfo.establishmentId,
+            emissionPointId: data.fiscalInfo.emissionPointId,
+            sequence: data.fiscalInfo.sequence,
+            environment: data.fiscalInfo.environment,
+            sriStatus: data.fiscalInfo.sriStatus,
+          },
+        });
+
+        await tx.sequenceControl.update({
+          where: {
+            tenantId_establishmentId_emissionPointId_documentType: {
+              tenantId,
+              establishmentId: data.fiscalInfo.establishmentId,
+              emissionPointId: data.fiscalInfo.emissionPointId,
+              documentType: data.documentType as $Enums.DocumentType,
+            },
+          },
+          data: {
+            currentSequence: data.fiscalInfo.sequence + 1,
+          },
+        });
+      }
+
+      // 4. Payments
+      if (data.documentPayments?.length) {
+        await tx.documentPayment.createMany({
+          data: data.documentPayments.map((p) => ({
+            ...p,
+            documentId: newDocument.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      return newDocument;
+    });
+
+    // Se formatea solo al final, fuera de la transacción
+    const formattedDocument: DocumentResponse = {
+      ...result,
+      number: result.number || undefined,
+      dueDate: result.dueDate || undefined,
+      description: result.description || undefined,
+      documentType: result.documentType as
         | "INVOICE"
         | "CREDIT_NOTE"
         | "DEBIT_NOTE",
-      number: newDocument.number || undefined,
-      issueDate: newDocument.issueDate,
-      dueDate: newDocument.dueDate || undefined,
-      status: newDocument.status as "DRAFT" | "CONFIRMED" | "CANCELED",
-      personId: newDocument.personId,
-      subtotal: newDocument.subtotal,
-      taxTotal: newDocument.taxTotal,
-      discount: newDocument.discount,
-      total: newDocument.total,
-      paidAmount: newDocument.paidAmount,
-      balance: newDocument.balance,
-      description: newDocument.description || undefined,
     };
 
-    // Guarda document fiscal info si es necesario
-    const fiscalInfo = data.fiscalInfo;
-    if (fiscalInfo) {
-      await prisma.documentFiscalInfo.create({
-        data: {
-          documentId: newDocument.id,
-          establishmentId: fiscalInfo.establishmentId,
-          emissionPointId: fiscalInfo.emissionPointId,
-          sequence: fiscalInfo.sequence,
-          environment: fiscalInfo.environment,
-          sriStatus: fiscalInfo.sriStatus,
-        },
-      });
-
-      // Actualiza secuencias en el punto de emisión
-      await prisma.sequenceControl.update({
-        where: {
-          tenantId_establishmentId_emissionPointId_documentType: {
-            tenantId,
-            establishmentId: fiscalInfo.establishmentId,
-            emissionPointId: fiscalInfo.emissionPointId,
-            documentType: data.documentType as $Enums.DocumentType,
-          },
-        },
-        data: {
-          currentSequence: fiscalInfo.sequence + 1,
-        },
-      });
-    }
-
-    return { success: true, data: formattedDocuments };
+    return { success: true, data: formattedDocument };
   } catch (error) {
     console.error("Error creating document:", error);
-    return { success: false, error: "Error creating document" };
+    return { success: false, error: "Error creando el documento" };
   }
 };
 
@@ -181,78 +202,96 @@ export const updateDocument = async (
   data: Partial<CreateDocument>
 ): Promise<{ success: boolean; data?: DocumentResponse; error?: string }> => {
   try {
-    const updatedDocument = await prisma.document.update({
-      where: { id },
-      data: {
-        personId: data.personId,
-        issueDate: data.issueDate,
-        status: data.status,
-        subtotal: data.subtotal,
-        taxTotal: data.taxTotal,
-        discount: data.discount,
-        total: data.total,
-        paidAmount: data.paidAmount,
-        balance: data.balance,
-        description: data.description,
-      },
-      include: {
-        person: true,
-      },
-    });
+    // Validar total de pagos solo para facturas de clientes
+    if (data.entityType === "CUSTOMER" && data.documentType === "INVOICE") {
+      const totalPayments =
+        data.documentPayments?.reduce((sum, p) => sum + p.amount, 0) || 0;
 
-    // eliminar y volver a crear los items de la venta podria ser una opcion dependiendo del caso de uso
-    await prisma.documentItem.deleteMany({
-      where: { documentId: id },
-    });
-
-    if (data.items && data.items.length > 0) {
-      const documentItemsData = data.items.map((item) => ({
-        ...item,
-        documentId: id,
-      }));
-
-      await prisma.documentItem.createMany({
-        data: documentItemsData,
-      });
+      if (data.total !== undefined && totalPayments !== data.total) {
+        return {
+          success: false,
+          error: "El total de pagos debe ser igual al total del documento",
+        };
+      }
     }
 
+    const updatedDocument = await prisma.$transaction(async (tx) => {
+      // 1. Actualizar documento
+      const doc = await tx.document.update({
+        where: { id },
+        data: {
+          personId: data.personId,
+          issueDate: data.issueDate,
+          status: data.status,
+          subtotal: data.subtotal,
+          taxTotal: data.taxTotal,
+          discount: data.discount,
+          total: data.total,
+          paidAmount: data.paidAmount,
+          balance:
+            data.total && data.paidAmount !== undefined
+              ? data.total - data.paidAmount
+              : data.balance, // recalculo seguro
+          description: data.description || undefined,
+        },
+        include: { person: true },
+      });
+
+      // 2. Items (delete + recreate)
+      if (data.items) {
+        await tx.documentItem.deleteMany({ where: { documentId: id } });
+
+        if (data.items.length > 0) {
+          await tx.documentItem.createMany({
+            data: data.items.map((item) => ({ ...item, documentId: id })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      // 3. Pagos (delete + recreate)
+      if (data.documentPayments) {
+        await tx.documentPayment.deleteMany({ where: { documentId: id } });
+
+        if (data.documentPayments.length > 0) {
+          await tx.documentPayment.createMany({
+            data: data.documentPayments.map((p) => ({
+              ...p,
+              documentId: id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      return doc;
+    });
+
+    // Formato de respuesta
     const formattedDocument: DocumentResponse = {
       ...updatedDocument,
-      entityType: updatedDocument.entityType,
-      documentType: updatedDocument.documentType as
-        | "INVOICE"
-        | "CREDIT_NOTE"
-        | "DEBIT_NOTE",
       number: updatedDocument.number || undefined,
-      issueDate: updatedDocument.issueDate,
       dueDate: updatedDocument.dueDate || undefined,
-      status: updatedDocument.status as "DRAFT" | "CONFIRMED" | "CANCELED",
-      personId: updatedDocument.personId,
-      subtotal: updatedDocument.subtotal,
-      taxTotal: updatedDocument.taxTotal,
-      discount: updatedDocument.discount,
-      total: updatedDocument.total,
-      paidAmount: updatedDocument.paidAmount,
-      balance: updatedDocument.balance,
       description: updatedDocument.description || undefined,
       person: updatedDocument.person
         ? {
             id: updatedDocument.person.id,
-            fullname:
-              updatedDocument.person.firstName
-                ? `${updatedDocument.person.firstName} ${updatedDocument.person.lastName}`
-                : updatedDocument.person.businessName || undefined,
+            fullname: updatedDocument.person.firstName
+              ? `${updatedDocument.person.firstName} ${updatedDocument.person.lastName}`
+              : updatedDocument.person.businessName || undefined,
             identification: updatedDocument.person.identification || undefined,
           }
         : undefined,
-      createdAt: updatedDocument.createdAt,
-      updatedAt: updatedDocument.updatedAt,
+      documentType: updatedDocument.documentType as
+        | "INVOICE"
+        | "CREDIT_NOTE"
+        | "DEBIT_NOTE",
     };
 
     return { success: true, data: formattedDocument };
   } catch (error) {
     console.error("Error updating document:", error);
-    return { success: false, error: "Error updating document" };
+    return { success: false, error: "Error actualizando el documento" };
   }
 };
 

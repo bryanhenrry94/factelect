@@ -89,15 +89,9 @@ const CustomRow: React.FC<CustomRowProps> = memo(
 
     return (
       <TableRow
+        hover
         sx={{
-          "& td, & th": {
-            borderBottom: "1px solid",
-            borderColor: "divider",
-            borderRight: "1px solid",
-            "&:last-child": {
-              borderRight: 0,
-            },
-          },
+          "& td": { py: 1 },
         }}
       >
         <TableCell>

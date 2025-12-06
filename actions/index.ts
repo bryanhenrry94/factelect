@@ -14,4 +14,4 @@ export * from "./tenant-sri-config";
 export * from "./tenant";
 export * from "./user";
 export * from "./transaction";
-export * from "./document";
+export * from "./document/document";

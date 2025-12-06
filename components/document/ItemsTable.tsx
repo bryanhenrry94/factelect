@@ -28,57 +28,35 @@ export default function InvoiceItemsTable({
 
   return (
     <Box>
-      <TableContainer>
-        <Table
-          sx={{
-            minWidth: 650,
-            "& .MuiTableCell-root": {
-              border: "1px solid rgba(224, 224, 224, 1)",
-            },
-          }}
-          size="small"
-          aria-label="a dense table"
-        >
+      <TableContainer
+        sx={{
+          mt: 2,
+          borderRadius: 2,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+          bgcolor: "background.paper",
+        }}
+      >
+        <Table size="small">
           <TableHead>
-            <TableRow>
-              <TableCell
-                sx={{ fontWeight: "bold", backgroundColor: "#f5f5f5" }}
-              >
-                Producto
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: "bold", backgroundColor: "#f5f5f5" }}
-              >
-                Cantidad
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: "bold", backgroundColor: "#f5f5f5" }}
-              >
-                Precio
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: "bold", backgroundColor: "#f5f5f5" }}
-              >
-                Impuesto
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: "bold", backgroundColor: "#f5f5f5" }}
-              >
-                % Descuento
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: "bold", backgroundColor: "#f5f5f5" }}
-              >
-                Descuento
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: "bold", backgroundColor: "#f5f5f5" }}
-              >
-                Subtotal
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: "bold", backgroundColor: "#f5f5f5" }}
-              />
+            <TableRow
+              sx={{
+                bgcolor: "grey.100",
+                "& th": {
+                  fontWeight: 600,
+                  py: 1.5,
+                  fontSize: "0.85rem",
+                  color: "grey.700",
+                },
+              }}
+            >
+              <TableCell>Producto</TableCell>
+              <TableCell align="center">Cantidad</TableCell>
+              <TableCell align="center">Precio</TableCell>
+              <TableCell align="center">Impuesto</TableCell>
+              <TableCell align="center">% Desc.</TableCell>
+              <TableCell align="center">Descuento</TableCell>
+              <TableCell align="center">Subtotal</TableCell>
+              <TableCell align="center" />
             </TableRow>
           </TableHead>
           <TableBody>
@@ -98,6 +76,8 @@ export default function InvoiceItemsTable({
       </TableContainer>
       <Button
         color="primary"
+        variant="outlined"
+        sx={{ mt: 2 }}
         onClick={() =>
           append({
             productId: "",
@@ -110,7 +90,7 @@ export default function InvoiceItemsTable({
             subtotal: 0,
           })
         }
-        startIcon={<Plus />}
+        startIcon={<Plus size={16} />}
       >
         Agregar detalle
       </Button>

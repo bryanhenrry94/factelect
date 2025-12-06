@@ -45,7 +45,7 @@ export default function HeaderActions({
         {modeEdit && (
           <Button
             variant="outlined"
-            color="success"
+            color="primary"
             startIcon={<Send />}
             onClick={handleSendToSRI}
             disabled={sendingSRI || watch("status") !== "DRAFT" || total === 0}

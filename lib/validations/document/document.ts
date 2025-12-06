@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createDocumentItemSchema } from "./document-item";
 import { createDocumentFiscalInfoSchema } from "./document-fiscal-info";
 import { DocumentFiscalInfo } from "@/components/document/DocumentFiscalInfo";
+import { createDocumentPaymentSchema } from "./document-payment";
 
 export const entityTypeEnum = z.enum(["CUSTOMER", "SUPPLIER"]);
 export const documentTypeEnum = z.enum([
@@ -37,6 +38,8 @@ export const documentSchema = z.object({
 
   // Relations (for response schemas)
   items: z.array(createDocumentItemSchema).optional(),
+  documentPayments: z.array(createDocumentPaymentSchema).optional(),
+
   taxes: z.array(z.any()).optional(), // Replace z.any() with your DocumentTax schema
   transactions: z.array(z.any()).optional(), // Replace z.any() with your Transaction schema
   invoices: z.array(z.any()).optional(), // Replace z.any() with your Invoice schema

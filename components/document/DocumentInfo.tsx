@@ -13,6 +13,7 @@ import { Controller } from "react-hook-form";
 import { UserPlus } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { PersonInput } from "@/lib/validations/person";
+import { DocumentFiscalInfo } from "./DocumentFiscalInfo";
 
 interface DocumentInfoProps {
   modeEdit: boolean;
@@ -27,9 +28,6 @@ export default function DocumentInfo({ persons, modeEdit }: DocumentInfoProps) {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <Typography variant="h6" fontWeight={600}>
-        Información del Cliente
-      </Typography>
       <Controller
         name="issueDate"
         control={control}
@@ -127,10 +125,17 @@ export default function DocumentInfo({ persons, modeEdit }: DocumentInfoProps) {
             />
           )}
         />
+
         <IconButton color="primary">
           <UserPlus size={20} />
         </IconButton>
       </Stack>
+
+      <DocumentFiscalInfo
+        modeEdit={modeEdit}
+        // documentType={watch("documentType") || "INVOICE"}
+        documentType={"INVOICE"}
+      />
     </Box>
   );
 }
