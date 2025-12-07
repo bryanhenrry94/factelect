@@ -11,11 +11,14 @@ import { PersonFilter } from "@/types";
 import { PersonInput } from "@/lib/validations/person";
 import { Product } from "@/lib/validations";
 import DocumentForm from "@/components/document/DocumentForm";
+import { Warehouse } from "@/lib/validations/inventory/warehouse";
+import { getWarehouses } from "@/actions/inventory/warehouse";
 
 export default function SaleNewPage() {
   const { data: session } = useSession();
 
   const [persons, setPersons] = useState<PersonInput[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
@@ -26,12 +29,14 @@ export default function SaleNewPage() {
         role: "CLIENT",
       };
 
-      const [c, p] = await Promise.all([
+      const [c, p, w] = await Promise.all([
         getPersonsByTenant(filter),
         getAllProducts(session.user.tenantId),
+        getWarehouses(session.user.tenantId),
       ]);
       if (c.success) setPersons(c.data);
       if (p.success) setProducts(p.data);
+      if (w.success) setWarehouses(w.data);
     };
     fetchData();
   }, [session?.user?.tenantId]);
@@ -47,7 +52,11 @@ export default function SaleNewPage() {
       />
 
       <Paper sx={{ p: 3, mb: 4 }}>
-        <DocumentForm persons={persons} products={products} />
+        <DocumentForm
+          persons={persons}
+          warehouses={warehouses}
+          products={products}
+        />
       </Paper>
     </PageContainer>
   );

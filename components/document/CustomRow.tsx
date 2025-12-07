@@ -11,6 +11,8 @@ import { PlusCircle, Delete } from "lucide-react";
 import { Controller, useFormContext } from "react-hook-form";
 import { taxOptions } from "@/constants/tax";
 import { getProductById } from "@/actions";
+import { Warehouse } from "@/lib/validations/inventory/warehouse";
+import { Product } from "@/lib/validations";
 
 const taxRates: Record<string, number> = {
   IVA_0: 0,
@@ -25,7 +27,8 @@ const taxRates: Record<string, number> = {
 interface CustomRowProps {
   field: any;
   index: number;
-  products: any[];
+  warehouses: Warehouse[];
+  products: Product[];
   remove: (index: number) => void;
 }
 
@@ -36,7 +39,7 @@ interface CustomRowProps {
  * - Actualiza el array padre solo cuando es necesario.
  */
 const CustomRow: React.FC<CustomRowProps> = memo(
-  ({ field, index, products, remove }) => {
+  ({ field, index, warehouses, products, remove }) => {
     const {
       control,
       formState: { errors },
@@ -94,7 +97,31 @@ const CustomRow: React.FC<CustomRowProps> = memo(
           "& td": { py: 1 },
         }}
       >
-        <TableCell>
+        <TableCell sx={{ minWidth: 160, width: "12%" }}>
+          <Controller
+            control={control}
+            name={`items.${index}.warehouseId`}
+            render={({ field }) => (
+              <TextField
+                fullWidth
+                size="small"
+                select
+                value={field.value || ""}
+                onChange={(e) => {
+                  field.onChange(e);
+                  handleChangeProduct(e.target.value);
+                }}
+              >
+                {warehouses?.map((warehouse) => (
+                  <MenuItem key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+          />
+        </TableCell>
+        <TableCell sx={{ minWidth: 230, width: "22%" }}>
           <Stack direction="row" gap={2}>
             <Controller
               control={control}
@@ -104,7 +131,6 @@ const CustomRow: React.FC<CustomRowProps> = memo(
                   fullWidth
                   size="small"
                   select
-                  sx={{ width: 200 }}
                   value={field.value || ""}
                   onChange={(e) => {
                     field.onChange(e);
@@ -125,7 +151,7 @@ const CustomRow: React.FC<CustomRowProps> = memo(
             </IconButton>
           </Stack>
         </TableCell>
-        <TableCell>
+        <TableCell sx={{ minWidth: 80, width: "7%" }}>
           <Controller
             control={control}
             name={`items.${index}.quantity`}
@@ -149,7 +175,7 @@ const CustomRow: React.FC<CustomRowProps> = memo(
             )}
           />
         </TableCell>
-        <TableCell>
+        <TableCell sx={{ minWidth: 100, width: "9%" }}>
           <Controller
             control={control}
             name={`items.${index}.unitPrice`}
@@ -173,7 +199,7 @@ const CustomRow: React.FC<CustomRowProps> = memo(
             )}
           />
         </TableCell>
-        <TableCell>
+        <TableCell sx={{ minWidth: 95, width: "8%" }}>
           <Controller
             control={control}
             name={`items.${index}.tax`}
@@ -194,7 +220,7 @@ const CustomRow: React.FC<CustomRowProps> = memo(
             )}
           />
         </TableCell>
-        <TableCell>
+        <TableCell sx={{ minWidth: 95, width: "8%" }}>
           <Controller
             control={control}
             name={`items.${index}.discountRate`}
@@ -219,9 +245,18 @@ const CustomRow: React.FC<CustomRowProps> = memo(
             )}
           />
         </TableCell>
-        <TableCell>{`$${(discountAmount ?? 0).toFixed(2)}`}</TableCell>
+        <TableCell
+          align="right"
+          sx={{ minWidth: 100, width: "10%", fontWeight: 600 }}
+        >{`$${(discountAmount ?? 0).toFixed(2)}`}</TableCell>
         <TableCell>{`$${totalWithTax.toFixed(2)}`}</TableCell>
-        <TableCell>
+        <TableCell
+          sx={{
+            minWidth: 60,
+            width: "6%",
+            textAlign: "center",
+          }}
+        >
           <IconButton color="error" onClick={() => remove(index)}>
             <Delete />
           </IconButton>

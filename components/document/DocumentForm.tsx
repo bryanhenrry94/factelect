@@ -31,9 +31,11 @@ import { getDocumentFiscalInfo } from "@/actions/document/document-fiscal-info";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { PaymentMethodsTable } from "./PaymentMethodsTable";
 import { getDocumentPayments } from "@/actions/document/document-payment";
+import { Warehouse } from "@/lib/validations/inventory/warehouse";
 
 const initialItemsState: CreateDocumentItem[] = [
   {
+    warehouseId: "",
     productId: "",
     quantity: 1,
     unitPrice: 0,
@@ -89,12 +91,14 @@ const initialState: CreateDocument = {
 interface DocumentFormProps {
   documentId?: string;
   persons: PersonInput[];
+  warehouses: Warehouse[];
   products: Product[];
 }
 
 export default function DocumentForm({
   documentId,
   persons,
+  warehouses,
   products,
 }: DocumentFormProps) {
   const router = useRouter();
@@ -138,6 +142,7 @@ export default function DocumentForm({
         if (itemsResponse.success && itemsResponse.data) {
           itemsResponse.data.forEach((item) => {
             items.push({
+              warehouseId: item.warehouseId,
               productId: item.productId,
               quantity: item.quantity,
               unitPrice: item.unitPrice,
@@ -283,7 +288,7 @@ export default function DocumentForm({
         </Tabs>
 
         <TabPanel value={tabValue} index={0}>
-          <ItemsTable products={products} />
+          <ItemsTable warehouses={warehouses} products={products} />
         </TabPanel>
         <TabPanel value={tabValue} index={1}></TabPanel>
         <TabPanel value={tabValue} index={2}></TabPanel>

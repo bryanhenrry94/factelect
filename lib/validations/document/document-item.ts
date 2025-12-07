@@ -3,6 +3,7 @@ import { z } from "zod";
 export const DocumentItemSchema = z.object({
   id: z.cuid().optional(),
   documentId: z.string(),
+  warehouseId: z.string(),
   productId: z.string(),
   quantity: z.number().positive(),
   unitPrice: z.number().positive(),

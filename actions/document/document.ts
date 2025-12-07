@@ -49,12 +49,10 @@ export const getDocuments = async (
         person: document.person
           ? {
               id: document.person.id,
-              firstName: document.person.firstName,
-              lastName: document.person.lastName,
               identification: document.person.identification || undefined,
               fullname: document.person.firstName
                 ? `${document.person.firstName} ${document.person.lastName}`
-                : document.person.businessName,
+                : document.person.businessName || undefined,
             }
           : undefined,
         createdAt: document.createdAt,
