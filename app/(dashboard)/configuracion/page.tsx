@@ -9,7 +9,6 @@ import SRIConfigForm from "@/components/setting/sri-config-form";
 import { getTenantById } from "@/actions/tenant";
 import { useSession } from "next-auth/react";
 import { Tenant } from "@/lib/validations/tenant";
-import { PageHeader } from "@/components/ui/PageHeader";
 import PageContainer from "@/components/container/PageContainer";
 import TabPanel from "@/components/ui/TabPanel";
 import { BillingForm } from "@/components/billing/BillingForm";
@@ -46,8 +45,6 @@ export default function SettingsPage() {
       description="Configuración de la cuenta"
     >
       {/* HEADER */}
-      <PageHeader title="Configuración" />
-
       <Card>
         <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
           <Tabs

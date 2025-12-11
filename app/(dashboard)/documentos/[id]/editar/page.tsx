@@ -5,7 +5,6 @@ import { Paper } from "@mui/material";
 import { useParams } from "next/navigation";
 
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 
 import { getPersonsByTenant, getAllProducts } from "@/actions";
 import { PersonFilter } from "@/types";
@@ -46,11 +45,6 @@ export default function DocumentEditPage() {
 
   return (
     <PageContainer title="Editar Documento" description="Editar una Documento">
-      <PageHeader
-        title="Editar Documento"
-        routes={[{ name: "Documentos", href: "/documentos" }]}
-      />
-
       <Paper sx={{ p: 3, mb: 4 }}>
         <DocumentForm
           documentId={id as string}

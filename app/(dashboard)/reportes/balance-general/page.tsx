@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import {
   Box,
   Button,
@@ -95,8 +94,6 @@ export default function BalanceGeneralPage() {
 
   return (
     <PageContainer title="Estado de Situación Financiera">
-      <PageHeader title="Estado de Situación Financiera" />
-
       {/* ========================== */}
       {/* Card filtros */}
       {/* ========================== */}

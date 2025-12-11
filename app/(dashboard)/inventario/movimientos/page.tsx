@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import {
   Box,
@@ -137,9 +136,6 @@ export default function MovimientosInventarioPage() {
       title="Movimientos de Inventario"
       description="Gestiona los movimientos de inventario de tu organización"
     >
-      {/* Header */}
-      <PageHeader title="Movimientos de Inventario" />
-
       <Box
         sx={{
           mb: 2,

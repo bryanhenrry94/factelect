@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, CardContent, Typography, Stack, Box } from "@mui/material";
+import { Card, CardContent } from "@/components/ui/card";
 
 type Props = {
   title?: string;
@@ -25,38 +25,29 @@ const DashboardCard = ({
   middlecontent,
 }: Props) => {
   return (
-    <Card sx={{ padding: 0 }} elevation={9} variant={undefined}>
+    <Card className="p-0 shadow-sm border rounded-xl">
       {cardheading ? (
-        <CardContent>
-          <Typography variant="h5">{headtitle}</Typography>
-          <Typography variant="subtitle2" color="textSecondary">
-            {headsubtitle}
-          </Typography>
+        <CardContent className="p-5">
+          <h2 className="text-xl font-semibold">{headtitle}</h2>
+          <p className="text-sm text-muted-foreground">{headsubtitle}</p>
         </CardContent>
       ) : (
-        <CardContent sx={{ p: "30px" }}>
-          {title ? (
-            <Stack
-              direction="row"
-              spacing={2}
-              justifyContent="space-between"
-              alignItems={"center"}
-              mb={3}
-            >
-              <Box>
-                {title ? <Typography variant="h5">{title}</Typography> : ""}
+        <CardContent className="p-8">
+          {title && (
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-semibold">{title}</h2>
 
-                {subtitle ? (
-                  <Typography variant="subtitle2" color="textSecondary">
+                {subtitle && (
+                  <p className="text-sm text-muted-foreground mt-1">
                     {subtitle}
-                  </Typography>
-                ) : (
-                  ""
+                  </p>
                 )}
-              </Box>
+              </div>
+
               {action}
-            </Stack>
-          ) : null}
+            </div>
+          )}
 
           {children}
         </CardContent>

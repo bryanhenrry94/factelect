@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import {
   Box,
@@ -137,8 +136,6 @@ const BankMovementsPage = () => {
       title="Movimientos Bancarios"
       description="Gestiona tus movimientos bancarios"
     >
-      <PageHeader title="Movimientos Bancarios" />
-
       {/* Filtros */}
       <Box
         sx={{

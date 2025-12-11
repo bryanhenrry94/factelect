@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -199,9 +198,6 @@ export default function CentrosCostoPage() {
       title="Centros de Costo"
       description="Gestiona los centros de costo de tu organización"
     >
-      {/* Header */}
-      <PageHeader title="Centros de Costo" />
-
       <Box
         sx={{
           mb: 2,

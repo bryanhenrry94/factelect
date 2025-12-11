@@ -1,6 +1,5 @@
 "use client";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Grid } from "@mui/material";
 
 import { EstablishmentForm } from "@/components/establishment/EstablishmentForm";
@@ -12,9 +11,6 @@ const EstablishmentsPage = () => {
       title="Establecimientos"
       description="Gestiona los establecimientos de tu negocio"
     >
-      {/* Header */}
-      <PageHeader title="Establecimientos" />
-
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 12 }}>
           <EstablishmentForm />

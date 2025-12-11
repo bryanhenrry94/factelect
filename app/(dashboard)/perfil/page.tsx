@@ -2,7 +2,6 @@
 import { updateUserProfile } from "@/actions/user";
 import PageContainer from "@/components/container/PageContainer";
 import ChangePasswordForm from "@/components/setting/change-password-form";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import {
   Box,
@@ -62,9 +61,6 @@ const ProfilePage = () => {
 
   return (
     <PageContainer title="Perfil" description="Gestión de perfil de usuario">
-      {/* Header */}
-      <PageHeader title="Perfil" />
-
       <Grid container spacing={3}>
         {/* Profile Card */}
         <Grid size={{ xs: 12, md: 4 }}>

@@ -28,7 +28,6 @@ import {
 import { useSession } from "next-auth/react";
 import { AlertService } from "@/lib/alerts";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -168,8 +167,6 @@ export default function ProductsPage() {
       title="Productos"
       description="Gestiona tus productos y servicios"
     >
-      <PageHeader title="Productos" />
-
       {/* Filtros */}
       <Box
         sx={{

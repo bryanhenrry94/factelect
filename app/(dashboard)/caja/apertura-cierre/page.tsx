@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import {
   Button,
   Card,
@@ -157,8 +156,6 @@ export default function CashSessionPage() {
       title="Apertura y Cierre de Caja"
       description="Apertura y Cierre de Caja"
     >
-      <PageHeader title="Apertura y Cierre de Caja" />
-
       {/* ======================= */}
       {/*    ESTADO DE LA CAJA    */}
       {/* ======================= */}

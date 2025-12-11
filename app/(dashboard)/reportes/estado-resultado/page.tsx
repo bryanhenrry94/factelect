@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import {
   Box,
   Button,
@@ -99,8 +98,6 @@ export default function EstadoResultadoPage() {
 
   return (
     <PageContainer title="Estado de Resultado">
-      <PageHeader title="Estado de Resultado" />
-
       {/* ========================== */}
       {/* Card filtros */}
       {/* ========================== */}

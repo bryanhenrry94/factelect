@@ -2,35 +2,39 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Button,
-  Card,
-  CardContent,
-  Typography,
+  Users,
+  Plus,
+  UserCheck,
+  Truck,
+  Edit,
+  Trash2,
+  Delete,
+} from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+import { deletePerson, getPersonsByTenant } from "@/actions/person";
+import { AlertService } from "@/lib/alerts";
+import { notifyInfo } from "@/lib/notifications";
+import { getRoleLabel } from "@/utils/person";
+
+import PersonFormDialog from "@/components/person/person-form-dialog";
+import FilterCard from "@/components/ui/FilterCard";
+
+// ⭐ SHADCN UI
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
   Table,
   TableBody,
   TableCell,
   TableHead,
+  TableHeader,
   TableRow,
-  IconButton,
-  Box,
-  Alert,
-  TextField,
-  Grid,
-  TablePagination,
-} from "@mui/material";
-import { Edit, Delete, Users, Plus, UserCheck, Truck } from "lucide-react";
-import { useSession } from "next-auth/react";
-
-import { deletePerson, getPersonsByTenant } from "@/actions/person";
-import { AlertService } from "@/lib/alerts";
-import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
+} from "@/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PersonInput } from "@/lib/validations/person";
-import PersonFormDialog from "@/components/person/person-form-dialog";
-import { getRoleLabel } from "@/utils/person";
-import FilterCard from "@/components/ui/FilterCard";
-import { useRouter, useSearchParams } from "next/navigation";
-import { notifyInfo } from "@/lib/notifications";
 
 export default function PersonsPage() {
   const router = useRouter();
@@ -50,23 +54,23 @@ export default function PersonsPage() {
   const [page, setPage] = useState(0);
   const rowsPerPage = 5;
 
-  const handleChangePage = (_event: unknown, newPage: number) => {
+  const handleChangePage = (newPage: number) => {
     setPage(newPage);
   };
 
+  // Debounce del buscador
   useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedSearch(search); // actualiza el valor definitivo
+      setDebouncedSearch(search);
     }, 300);
 
-    return () => clearTimeout(handler); // limpia si sigue escribiendo
+    return () => clearTimeout(handler);
   }, [search]);
 
   useEffect(() => {
     updateParam("search", debouncedSearch);
   }, [debouncedSearch]);
 
-  // 🔹 Función para actualizar un parámetro sin borrar los otros
   const updateParam = (key: string, value: string) => {
     const query = new URLSearchParams(params.toString());
     query.set(key, value);
@@ -76,7 +80,6 @@ export default function PersonsPage() {
   const [stats, setStats] = useState({ total: 0, clientes: 0, proveedores: 0 });
 
   useEffect(() => {
-    // Simular carga de estadísticas
     const loadStats = async () => {
       if (!session?.user?.tenantId) return;
 
@@ -103,25 +106,19 @@ export default function PersonsPage() {
   const loadPersons = useCallback(async () => {
     if (!session?.user?.tenantId) return;
 
-    // asignación correcta del rol según filtro
-    let role: "CLIENT" | "SUPPLIER" | undefined = undefined;
-
+    let role: "CLIENT" | "SUPPLIER" | "SELLER" | undefined;
     if (tipoValue === "cliente") role = "CLIENT";
     if (tipoValue === "proveedor") role = "SUPPLIER";
 
-    console.log("Cargando personas");
     const response = await getPersonsByTenant({
       tenantId: session.user.tenantId,
-      role, // solamente enviamos si existe
+      role: role ?? "CLIENT",
       search: debouncedSearch,
     });
 
-    if (response.success) {
-      setPersons(response.data);
-    }
+    if (response.success) setPersons(response.data);
   }, [session?.user?.tenantId, tipoValue, debouncedSearch]);
 
-  // Recargar tabla cuando cambie tipo o search
   useEffect(() => {
     loadPersons();
   }, [loadPersons]);
@@ -144,82 +141,62 @@ export default function PersonsPage() {
   const handleDelete = (personId: string) => {
     AlertService.showConfirm(
       "Confirmar eliminación",
-      "¿Estás seguro de que deseas eliminar la persona seleccionada? Esta acción no se puede deshacer.",
+      "¿Estás seguro de que deseas eliminar a esta persona?",
       "Eliminar",
       "Cancelar"
     ).then(async (confirmed) => {
       if (confirmed) {
         await deletePerson(personId);
-        await notifyInfo("Persona eliminada correctamente");
+        await notifyInfo("Persona eliminada");
         await loadPersons();
       }
     });
   };
 
   return (
-    <PageContainer title="Personas" description="Administra tus contactos">
-      <PageHeader title="Personas" />
-
+    <div className="space-y-6">
       {/* BUSCADOR */}
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
-        }}
-      >
-        <TextField
-          label="Buscar personas"
-          variant="outlined"
-          size="small"
+      <div className="flex flex-col sm:flex-row justify-between gap-3">
+        <Input
+          placeholder="Buscar personas..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
             updateParam("search", e.target.value);
           }}
+          className="max-w-xs"
         />
 
-        <Button variant="contained" startIcon={<Plus />} onClick={handleAdd}>
+        <Button onClick={handleAdd} className="gap-2">
+          <Plus className="w-4 h-4" />
           Agregar Persona
         </Button>
-      </Box>
+      </div>
 
       {/* FILTROS */}
-      <Box sx={{ mb: 2 }}>
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 4, md: 4 }}>
-            <FilterCard
-              title="Total Personas"
-              count={stats.total}
-              icon={Users}
-              color="blue"
-              onClick={() => updateParam("tipo", "todos")}
-            />
-          </Grid>
-
-          <Grid size={{ xs: 4, md: 4 }}>
-            <FilterCard
-              title="Clientes"
-              count={stats.clientes}
-              icon={UserCheck}
-              color="sky"
-              onClick={() => updateParam("tipo", "cliente")}
-            />
-          </Grid>
-
-          <Grid size={{ xs: 4, md: 4 }}>
-            <FilterCard
-              title="Proveedores"
-              count={stats.proveedores}
-              icon={Truck}
-              color="yellow"
-              onClick={() => updateParam("tipo", "proveedor")}
-            />
-          </Grid>
-        </Grid>
-      </Box>
+      <div className="grid grid-cols-3 gap-4">
+        <FilterCard
+          title="Total Personas"
+          count={stats.total}
+          icon={Users}
+          color="blue"
+          onClick={() => updateParam("tipo", "todos")}
+        />
+        <FilterCard
+          title="Clientes"
+          count={stats.clientes}
+          icon={UserCheck}
+          color="sky"
+          onClick={() => updateParam("tipo", "cliente")}
+        />
+        <FilterCard
+          title="Proveedores"
+          count={stats.proveedores}
+          icon={Truck}
+          color="yellow"
+          onClick={() => updateParam("tipo", "proveedor")}
+        />
+      </div>
 
       {/* DIALOGO */}
       <PersonFormDialog
@@ -232,49 +209,35 @@ export default function PersonsPage() {
       />
 
       {/* TABLA */}
-      <Card sx={{ mt: 3 }}>
+      <Card className="mt-4">
         <CardContent>
           {persons.length === 0 ? (
-            <Box textAlign="center" py={6}>
-              <Users />
-              <Typography variant="h6" mt={2}>
-                No hay personas aún
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
+            <div className="text-center py-8">
+              <Users className="mx-auto w-10 h-10 text-muted-foreground" />
+              <p className="text-lg font-semibold mt-2">No hay personas aún</p>
+              <p className="text-sm text-muted-foreground">
                 Agrega la primera persona
-              </Typography>
-            </Box>
+              </p>
+            </div>
           ) : (
-            <Box>
+            <div>
               <Table>
-                <TableHead>
+                <TableHeader>
                   <TableRow>
-                    <TableCell>
-                      <strong>Identificación</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Nombre / Razón Social</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Correo</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Teléfono</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Rol</strong>
-                    </TableCell>
-                    <TableCell align="right">
-                      <strong>Acciones</strong>
-                    </TableCell>
+                    <TableHead>Identificación</TableHead>
+                    <TableHead>Nombre / Razón Social</TableHead>
+                    <TableHead>Correo</TableHead>
+                    <TableHead>Teléfono</TableHead>
+                    <TableHead>Rol</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
 
                 <TableBody>
                   {persons
                     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                     .map((person) => (
-                      <TableRow key={person.id} hover>
+                      <TableRow key={person.id}>
                         <TableCell>{person.identification}</TableCell>
                         <TableCell>
                           {person.personKind === "NATURAL"
@@ -286,44 +249,60 @@ export default function PersonsPage() {
                         <TableCell>
                           {person.roles.map(getRoleLabel).join(", ")}
                         </TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            color="primary"
+
+                        <TableCell className="text-right space-x-2">
+                          <button
+                            className="p-1 hover:bg-muted rounded"
                             onClick={() => handleEdit(person)}
                           >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            color="error"
+                            <Edit size={18} />
+                          </button>
+
+                          <button
+                            className="p-1 hover:bg-destructive/20 rounded"
                             onClick={() => handleDelete(person.id)}
                           >
-                            <Delete />
-                          </IconButton>
+                            <Delete size={18} />
+                          </button>
                         </TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
               </Table>
 
-              <TablePagination
-                component="div"
-                color="primary"
-                count={persons.length}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                rowsPerPageOptions={[5]}
-              />
-            </Box>
+              {/* PAGINACIÓN SIMPLE (más elegante con shadcn) */}
+              <div className="flex justify-end items-center gap-4 mt-3">
+                <Button
+                  variant="outline"
+                  disabled={page === 0}
+                  onClick={() => handleChangePage(page - 1)}
+                >
+                  Anterior
+                </Button>
+
+                <span className="text-sm">
+                  Página {page + 1} / {Math.ceil(persons.length / rowsPerPage)}
+                </span>
+
+                <Button
+                  variant="outline"
+                  disabled={(page + 1) * rowsPerPage >= persons.length}
+                  onClick={() => handleChangePage(page + 1)}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
 
       {error && (
-        <Alert severity="error" sx={{ mt: 3 }}>
-          {error}
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-    </PageContainer>
+    </div>
   );
 }

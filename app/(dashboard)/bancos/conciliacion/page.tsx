@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import {
   Box,
@@ -129,8 +128,6 @@ const BankConciliacionPage = () => {
       title="Conciliación Bancaria"
       description="Gestiona los conciliaciones bancarios de tus cuentas."
     >
-      <PageHeader title="Conciliación Bancaria" />
-
       {/* Filtros */}
       <Box
         sx={{

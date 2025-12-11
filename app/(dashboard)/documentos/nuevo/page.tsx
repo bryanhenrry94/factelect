@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { Paper } from "@mui/material";
 
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
-
 import { getPersonsByTenant, getAllProducts } from "@/actions";
 import { PersonFilter } from "@/types";
 import { PersonInput } from "@/lib/validations/person";
@@ -46,11 +44,6 @@ export default function SaleNewPage() {
       title="Nuevo Documento"
       description="Crear un nuevo documento"
     >
-      <PageHeader
-        title="Nuevo Documento"
-        routes={[{ name: "Documentos", href: "/documentos" }]}
-      />
-
       <Paper sx={{ p: 3, mb: 4 }}>
         <DocumentForm
           persons={persons}

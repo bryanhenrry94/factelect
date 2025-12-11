@@ -1,8 +1,14 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { Select, MenuItem, CircularProgress, Box } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useTheme } from "next-themes";
 import dynamic from "next/dynamic";
 import DashboardCard from "@/components/shared/DashboardCard";
 import { getCategoriesForMonth, getLastMonths } from "@/utils/dashboard";
@@ -12,7 +18,7 @@ import { useSession } from "next-auth/react";
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 const SalesOverview: React.FC = () => {
-  const theme = useTheme();
+  const { theme } = useTheme();
 
   const { data: session } = useSession();
 
@@ -60,8 +66,8 @@ const SalesOverview: React.FC = () => {
   };
 
   // 🎨 Configuración del gráfico
-  const primary = theme.palette.primary.main;
-  const secondary = theme.palette.primary.light;
+  const primary = "#6366f1"; // Example primary color, replace with your theme value
+  const secondary = "#a5b4fc"; // Example secondary color, replace with your theme value
 
   const options: ApexCharts.ApexOptions = {
     chart: {
@@ -119,32 +125,26 @@ const SalesOverview: React.FC = () => {
       title="Resumen de ventas"
       action={
         <Select
-          value={month || ""}
-          size="small"
-          onChange={handleChange}
-          sx={{
-            minWidth: 120,
-            background: theme.palette.background.paper,
-            borderRadius: 2,
-          }}
+          value={month?.toString() || ""}
+          onValueChange={(val) =>
+            handleChange({ target: { value: Number(val) } })
+          }
         >
-          {months.map((m) => (
-            <MenuItem key={m.value} value={m.value}>
-              {m.label}
-            </MenuItem>
-          ))}
+          <SelectTrigger className="w-[120px] rounded-md bg-background" />
+          <SelectContent>
+            {months.map((m) => (
+              <SelectItem key={m.value} value={m.value.toString()}>
+                {m.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       }
     >
       {loading ? (
-        <Box
-          height={370}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <CircularProgress size={30} />
-        </Box>
+        <div className="flex items-center justify-center h-[370px]">
+          <Skeleton className="w-10 h-10 rounded-full" />
+        </div>
       ) : (
         <Chart options={options} series={series} type="bar" height={370} />
       )}

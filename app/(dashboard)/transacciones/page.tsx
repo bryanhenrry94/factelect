@@ -1,7 +1,6 @@
 "use client";
 
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import {
   Alert,
   Box,
@@ -73,8 +72,6 @@ const TransactionsPage = () => {
       title="Transacciones"
       description="Administra las transacciones de tu negocio"
     >
-      <PageHeader title="Transacciones" />
-
       {/* Header actions */}
       <Box
         sx={{
@@ -93,7 +90,7 @@ const TransactionsPage = () => {
         />
 
         <Button variant="contained" startIcon={<Plus />} onClick={handleAdd}>
-          Nueva Transacción
+          Nuevo
         </Button>
       </Box>
 

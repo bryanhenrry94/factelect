@@ -2,31 +2,26 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  IconButton,
-  Pagination,
-  TextField,
-} from "@mui/material";
-import { Plus, Files, Delete, Edit } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { AlertService } from "@/lib/alerts";
-import PageContainer from "@/components/container/PageContainer";
 import { useRouter } from "next/navigation";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { DocumentResponse } from "@/lib/validations";
 import { deleteDocument, getDocuments } from "@/actions";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
+import { Plus, Files, Delete, Edit } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 
 export default function DocumentsPage() {
   const router = useRouter();
@@ -71,10 +66,9 @@ export default function DocumentsPage() {
     router.push(`/documentos/${id}/editar`);
   };
 
-  const handlePageChange = (
-    _event: React.ChangeEvent<unknown>,
-    value: number
-  ) => {
+  const handlePageChange = (event: React.FormEvent<HTMLElement>) => {
+    const target = event.target as HTMLInputElement;
+    const value = Number(target.value);
     setCurrentPage(value);
   };
 
@@ -84,135 +78,122 @@ export default function DocumentsPage() {
   );
 
   return (
-    <PageContainer
-      title="Documentos"
-      description="Crea y gestiona tus documentos"
-    >
-      <PageHeader title="Documentos" />
-
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
-        }}
-      >
-        <TextField label="Buscar documentos" variant="outlined" size="small" />
-        <Link href="/documentos/nuevo" style={{ textDecoration: "none" }}>
-          <Button
-            variant="contained"
-            startIcon={<Plus size={16} />}
-            sx={{ width: { xs: "100%", sm: "auto" } }}
-          >
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between gap-2 mb-4">
+        <Input placeholder="Buscar documentos" className="max-w-xs" />
+        <Link href="/documentos/nuevo">
+          <Button className="flex items-center gap-2">
+            <Plus size={16} />
             Nuevo
           </Button>
         </Link>
-      </Box>
+      </div>
 
-      <Box>
-        <Card>
-          <CardContent sx={{ p: 3 }}>
-            {documents.length === 0 ? (
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  py: 6,
-                  textAlign: "center",
-                }}
-              >
-                <Files />
-                <Typography variant="h6" gutterBottom>
-                  No hay documentos aún
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Agrega tu primer documento
-                </Typography>
-              </Box>
-            ) : (
-              <Box>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Persona</TableCell>
-                      <TableCell>Fecha de Emisión</TableCell>
-                      <TableCell>Fecha de Vencimiento</TableCell>
-                      <TableCell>Total Venta</TableCell>
-                      <TableCell>Pagos</TableCell>
-                      <TableCell>Saldo</TableCell>
-                      <TableCell>Estado</TableCell>
-                      <TableCell align="right">Acciones</TableCell>
+      <Card>
+        <CardContent className="p-6">
+          {documents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
+              <Files />
+              <div className="text-lg font-semibold">No hay documentos aún</div>
+              <div className="text-sm text-muted-foreground">
+                Agrega tu primer documento
+              </div>
+            </div>
+          ) : (
+            <div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Persona</TableHead>
+                    <TableHead>Fecha de Emisión</TableHead>
+                    <TableHead>Fecha de Vencimiento</TableHead>
+                    <TableHead>Total Venta</TableHead>
+                    <TableHead>Pagos</TableHead>
+                    <TableHead>Saldo</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedDocuments.map((document) => (
+                    <TableRow key={document.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-normal text-base">
+                            {document?.person?.fullname || "N/A"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {document.person?.identification || "N/A"}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {formatDate(document.issueDate.toString())}
+                      </TableCell>
+                      <TableCell>
+                        {document.dueDate
+                          ? formatDate(document.dueDate?.toString())
+                          : "-"}
+                      </TableCell>
+                      <TableCell>{formatCurrency(document.total)}</TableCell>
+                      <TableCell>
+                        {formatCurrency(document.paidAmount)}
+                      </TableCell>
+                      <TableCell>{formatCurrency(document.balance)}</TableCell>
+                      <TableCell>{document.status}</TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleEdit(document.id || "")}
+                        >
+                          <Edit size={16} />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => handleDelete(document.id || "")}
+                          disabled={document.status !== "DRAFT"}
+                        >
+                          <Delete size={16} />
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {paginatedDocuments.map((document) => (
-                      <TableRow key={document.id}>
-                        <TableCell>
-                          <Box>
-                            <Typography
-                              variant="body2"
-                              sx={{ fontWeight: "normal" }}
-                            >
-                              {document?.person?.fullname || "N/A"}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {document.person?.identification || "N/A"}
-                            </Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          {formatDate(document.issueDate.toString())}
-                        </TableCell>
-                        <TableCell>
-                          {document.dueDate
-                            ? formatDate(document.dueDate?.toString())
-                            : "-"}
-                        </TableCell>
-                        <TableCell>{formatCurrency(document.total)}</TableCell>
-                        <TableCell>
-                          {formatCurrency(document.paidAmount)}
-                        </TableCell>
-                        <TableCell>
-                          {formatCurrency(document.balance)}
-                        </TableCell>
-                        <TableCell>{document.status}</TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            color="primary"
-                            onClick={() => handleEdit(document.id || "")}
-                          >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            color="error"
-                            onClick={() => handleDelete(document.id || "")}
-                            disabled={document.status !== "DRAFT"}
-                          >
-                            <Delete />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <Pagination
-                  sx={{ p: 2 }}
-                  count={Math.ceil(documents.length / itemsPerPage)}
-                  page={currentPage}
-                  onChange={handlePageChange}
-                />
-              </Box>
-            )}
-          </CardContent>
-        </Card>
-      </Box>
-    </PageContainer>
+                  ))}
+                </TableBody>
+              </Table>
+              <Pagination>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                  >
+                    Anterior
+                  </Button>
+                  <span>
+                    Página {currentPage} de{" "}
+                    {Math.max(1, Math.ceil(documents.length / itemsPerPage))}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={
+                      currentPage ===
+                        Math.ceil(documents.length / itemsPerPage) ||
+                      documents.length === 0
+                    }
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                  >
+                    Siguiente
+                  </Button>
+                </div>
+              </Pagination>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

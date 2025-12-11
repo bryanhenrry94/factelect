@@ -7,7 +7,6 @@ import {
   updateAccount,
 } from "@/actions/accounting/chart-of-account";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { ChartOfAccount, CreateChartOfAccount } from "@/lib/validations";
 import { useSession } from "next-auth/react";
 import { TreeTable } from "./TreeTable";
@@ -137,8 +136,6 @@ export default function PlanContablePage() {
 
   return (
     <PageContainer title="Plan Contable">
-      <PageHeader title="Plan Contable" />
-
       <TreeTable
         accounts={accounts}
         onCreate={(parentId) => openCreateModal(parentId)}

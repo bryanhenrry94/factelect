@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { Paper, Divider, Alert } from "@mui/material";
 
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
-
 import {
   getPersonsByTenant,
   getEstablishmentsByTenant,
@@ -52,11 +50,6 @@ export default function TransactionNewPage() {
       title="Nueva Transacción"
       description="Crear una nueva transacción"
     >
-      <PageHeader
-        title="Nueva Transacción"
-        routes={[{ name: "Transacciones", href: "/transacciones" }]}
-      />
-
       <Paper sx={{ p: 3, mb: 4 }}>
         {error && <Alert severity="error">{error}</Alert>}
         <Divider sx={{ mb: 2 }} />

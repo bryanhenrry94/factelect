@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import {
   Box,
@@ -119,8 +118,6 @@ export default function CashBoxMovementsPage() {
       title="Movimientos de Caja"
       description="Gestiona tus movimientos de caja"
     >
-      <PageHeader title="Movimientos de Caja" />
-
       {/* Filtros */}
       <Box
         sx={{

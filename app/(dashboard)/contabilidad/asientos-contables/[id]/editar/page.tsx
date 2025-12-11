@@ -2,7 +2,6 @@
 import { getJournalEntryById } from "@/actions/accounting/journal-entry";
 import { JournalEntryForm } from "@/components/accounting/JournalEntryForm";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError } from "@/lib/notifications";
 import { JournalEntry } from "@/lib/validations/accounting/journal_entry";
 import { Card, Typography } from "@mui/material";
@@ -33,16 +32,6 @@ export default function EditarAsientoContablePage() {
 
   return (
     <PageContainer title="Editar Asiento Contable">
-      <PageHeader
-        title="Editar Asiento"
-        routes={[
-          {
-            name: "Asientos Contables",
-            href: "/contabilidad/asientos-contables",
-          },
-        ]}
-      />
-
       <Card sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
           Editar Asiento Contable

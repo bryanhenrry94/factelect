@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import {
   Box,
@@ -85,8 +84,6 @@ export default function CashBoxPage() {
 
   return (
     <PageContainer title="Caja" description="Gestiona tus cajas">
-      <PageHeader title="Caja" />
-
       {/* Filtros */}
       <Box
         sx={{

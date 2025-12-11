@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { ChartOfAccount } from "@/lib/validations";
 import {
   Button,
@@ -113,8 +112,6 @@ export default function MovimientosCuentaPage() {
 
   return (
     <PageContainer title="Movimientos de Cuenta">
-      <PageHeader title="Movimientos de Cuenta" />
-
       <Card sx={{ mt: 4, p: 3, borderRadius: 3 }}>
         <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
           Filtros de Búsqueda

@@ -7,7 +7,6 @@ import {
   updateCategory,
 } from "@/actions/inventory/category";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import {
   Category,
@@ -186,9 +185,6 @@ const CategorysProductsPage = () => {
       title="Categorías de Productos"
       description="Gestiona las categorías de tus productos y servicios"
     >
-      {/* Header */}
-      <PageHeader title="Categorías de Productos" />
-
       <Box
         sx={{
           mb: 2,

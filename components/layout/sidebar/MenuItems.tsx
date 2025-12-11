@@ -238,8 +238,6 @@ const Menuitems = [
       },
     ],
   },
-
-  // Facturación Electrónica
   {
     id: uniqueId(),
     title: "Facturación Electrónica",

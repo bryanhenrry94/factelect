@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import {
   Box,
@@ -125,9 +124,6 @@ export default function CentrosCostoPage() {
       title="Asientos Contables"
       description="Gestiona los asientos contables de tu organización"
     >
-      {/* Header */}
-      <PageHeader title="Asientos Contables" />
-
       <Box
         sx={{
           mb: 2,

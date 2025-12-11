@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { Unit, CreateUnit, CreateUnitSchema } from "@/lib/validations/unit";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,12 +27,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { AlertService } from "@/lib/alerts";
 import { useSession } from "next-auth/react";
-import {
-  createUnit,
-  deleteUnit,
-  getUnits,
-  updateUnit,
-} from "@/actions/unit";
+import { createUnit, deleteUnit, getUnits, updateUnit } from "@/actions/unit";
 
 const UnitsPage = () => {
   const router = useRouter();
@@ -178,9 +172,6 @@ const UnitsPage = () => {
       title="Unidades de Medida"
       description="Gestiona las unidades de medida de tus productos y servicios"
     >
-      {/* Header */}
-      <PageHeader title="Unidades de Medida" />
-
       <Box
         sx={{
           mb: 2,

@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -190,9 +189,6 @@ export default function BodegasPage() {
       title="Bodegas"
       description="Gestiona las bodegas de tu organización"
     >
-      {/* Header */}
-      <PageHeader title="Bodegas" />
-
       <Box
         sx={{
           mb: 2,
