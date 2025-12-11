@@ -1,28 +1,42 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
 import { createPerson, updatePerson } from "@/actions";
 import { getAccounts } from "@/actions/accounting/chart-of-account";
 import { identificationOptions } from "@/constants/identification";
 import { notifyInfo } from "@/lib/notifications";
 import { ChartOfAccount } from "@/lib/validations";
+
 import {
-  CreatePersonInput,
   createPersonSchema,
+  CreatePersonInput,
   PersonInput,
 } from "@/lib/validations/person";
+
 import { getRoleLabel } from "@/utils/person";
-import { zodResolver } from "@hookform/resolvers/zod";
+
 import {
-  Button,
   Dialog,
-  DialogActions,
+  DialogHeader,
   DialogContent,
+  DialogFooter,
   DialogTitle,
-  Grid,
-  MenuItem,
-  TextField,
-  Typography,
-} from "@mui/material";
-import React, { useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
+} from "@/components/ui/dialog";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 interface PersonFormDialogProps {
   open: boolean;
@@ -33,15 +47,15 @@ interface PersonFormDialogProps {
   setError: (error: string | null) => void;
 }
 
-const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
+export default function PersonFormDialog({
   open,
   onClose,
   onSuccess,
   editingPerson,
   tenantId,
   setError,
-}) => {
-  const [accounts, setAccounts] = React.useState<ChartOfAccount[]>([]);
+}: PersonFormDialogProps) {
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
 
   const {
     register,
@@ -69,7 +83,6 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
     },
   });
 
-  // Rellena el formulario si se está editando
   useEffect(() => {
     if (editingPerson) {
       reset(editingPerson);
@@ -87,7 +100,6 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
     }
   }, [editingPerson, reset]);
 
-  // Fetch accounts when dialog opens
   useEffect(() => {
     const fetchAccounts = async () => {
       const response = await getAccounts(tenantId);
@@ -100,8 +112,6 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
 
   const onSubmit = async (data: CreatePersonInput) => {
     setError(null);
-
-    console.log("Submitting person data:", data);
 
     const action = editingPerson
       ? await updatePerson(editingPerson.id ?? "", data)
@@ -119,229 +129,246 @@ const PersonFormDialog: React.FC<PersonFormDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogTitle>
-          {editingPerson ? "Editar Persona" : "Agregar Persona"}
-        </DialogTitle>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            {editingPerson ? "Editar Persona" : "Agregar Persona"}
+          </DialogTitle>
+        </DialogHeader>
 
-        <DialogContent sx={{ display: "grid", gap: 2 }}>
-          <Typography variant="body2" color="text.secondary">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <p className="text-sm text-muted-foreground">
             {editingPerson
               ? "Actualiza la información de la persona."
               : "Agrega una nueva persona a tu base de datos."}
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                select
-                label="Tipo de Persona"
-                {...register("personKind")}
-                error={!!errors.personKind}
-                helperText={errors.personKind?.message}
-                value={watch("personKind") || "NATURAL"}
-                fullWidth
-                size="small"
-              >
-                <MenuItem value="NATURAL">NATURAL</MenuItem>
-                <MenuItem value="LEGAL">JURÍDICA</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid size={{ md: 6 }} />
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                select
-                label="Tipo de Identificación"
-                {...register("identificationType")}
-                error={!!errors.identificationType}
-                helperText={errors.identificationType?.message}
-                value={watch("identificationType") || "CEDULA"}
-                fullWidth
-                size="small"
-              >
-                {identificationOptions.map((opt) => (
-                  <MenuItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                label="Identificación"
-                {...register("identification")}
-                error={!!errors.identification}
-                helperText={errors.identification?.message}
-                fullWidth
-                size="small"
-              />
-            </Grid>
+          </p>
+
+          {/* GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Tipo de Persona */}
+            <Controller
+              name="personKind"
+              control={control}
+              render={({ field }) => (
+                <div className="flex flex-col gap-1">
+                  <Label>Tipo de Persona</Label>
+                  <Select
+                    defaultValue={field.value}
+                    onValueChange={field.onChange}
+                    value={field.value || ""}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NATURAL">NATURAL</SelectItem>
+                      <SelectItem value="LEGAL">JURÍDICA</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.personKind && (
+                    <p className="text-red-500 text-xs">
+                      {errors.personKind.message}
+                    </p>
+                  )}
+                </div>
+              )}
+            />
+
+            <div />
+
+            {/* Tipo identificacion */}
+            <Controller
+              name="identificationType"
+              control={control}
+              render={({ field }) => (
+                <div className="flex flex-col">
+                  <Label>Tipo de Identificación</Label>
+                  <Select
+                    defaultValue={field.value}
+                    onValueChange={field.onChange}
+                    value={field.value || ""}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {identificationOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.identificationType && (
+                    <p className="text-red-500 text-xs">
+                      {errors.identificationType.message}
+                    </p>
+                  )}
+                </div>
+              )}
+            />
+
+            {/* Identificacion */}
+            <div className="flex flex-col">
+              <Label>Identificación</Label>
+              <Input {...register("identification")} />
+              {errors.identification && (
+                <p className="text-red-500 text-xs">
+                  {errors.identification.message}
+                </p>
+              )}
+            </div>
+
+            {/* Si es Jurídica */}
             {watch("personKind") === "LEGAL" ? (
               <>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    label="Razón Social"
-                    {...register("businessName")}
-                    error={!!errors.businessName}
-                    helperText={errors.businessName?.message}
-                    fullWidth
-                    size="small"
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    label="Nombre Comercial"
-                    {...register("commercialName")}
-                    error={!!errors.commercialName}
-                    helperText={errors.commercialName?.message}
-                    fullWidth
-                    size="small"
-                  />
-                </Grid>
+                <div className="flex flex-col">
+                  <Label>Razón Social</Label>
+                  <Input {...register("businessName")} />
+                </div>
+
+                <div className="flex flex-col">
+                  <Label>Nombre Comercial</Label>
+                  <Input {...register("commercialName")} />
+                </div>
               </>
             ) : (
               <>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    label="Nombres"
-                    {...register("firstName")}
-                    error={!!errors.firstName}
-                    helperText={errors.firstName?.message}
-                    fullWidth
-                    size="small"
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    label="Apellidos"
-                    {...register("lastName")}
-                    error={!!errors.lastName}
-                    helperText={errors.lastName?.message}
-                    fullWidth
-                    size="small"
-                  />
-                </Grid>
+                {/* Nombres */}
+                <div className="flex flex-col">
+                  <Label>Nombres</Label>
+                  <Input {...register("firstName")} />
+                </div>
+
+                {/* Apellidos */}
+                <div className="flex flex-col">
+                  <Label>Apellidos</Label>
+                  <Input {...register("lastName")} />
+                </div>
               </>
             )}
 
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                label="Correo electrónico"
-                type="email"
-                {...register("email")}
-                error={!!errors.email}
-                helperText={errors.email?.message}
-                fullWidth
-                size="small"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                label="Teléfono"
-                {...register("phone")}
-                fullWidth
-                size="small"
-              />
-            </Grid>
-            <TextField
-              label="Dirección"
-              {...register("address")}
-              fullWidth
-              size="small"
-            />
+            {/* Correo */}
+            <div className="flex flex-col">
+              <Label>Correo electrónico</Label>
+              <Input type="email" {...register("email")} />
+            </div>
 
-            <Controller
-              name="roles"
-              control={control}
-              defaultValue={[]} // obligatorio cuando es multiple
-              render={({ field }) => (
-                <TextField
-                  select
-                  label="Roles"
-                  {...field}
-                  error={!!errors.roles}
-                  helperText={errors.roles?.message}
-                  SelectProps={{
-                    multiple: true,
-                  }}
-                  fullWidth
-                  size="small"
+            {/* Telefono */}
+            <div className="flex flex-col">
+              <Label>Teléfono</Label>
+              <Input {...register("phone")} />
+            </div>
+          </div>
+
+          {/* Dirección */}
+          <div className="flex flex-col">
+            <Label>Dirección</Label>
+            <Input {...register("address")} />
+          </div>
+
+          {/* Roles */}
+          <Controller
+            name="roles"
+            control={control}
+            defaultValue={[]}
+            render={({ field }) => (
+              <div className="flex flex-col">
+                <Label>Roles</Label>
+                <Select
+                  onValueChange={(val) => field.onChange([val])}
+                  defaultValue={field.value[0]}
+                  value={field.value[0] || ""}
                 >
-                  {["CLIENT", "SUPPLIER", "SELLER"].map((role) => (
-                    <MenuItem key={role} value={role}>
-                      {getRoleLabel(role)}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              )}
-            />
-          </Grid>
-          <Typography variant="body2" color="text.secondary">
-            Contabilidad
-          </Typography>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["CLIENT", "SUPPLIER", "SELLER"].map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {getRoleLabel(role)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          />
+
+          <p className="text-sm text-muted-foreground mt-2">Contabilidad</p>
+
+          {/* Cuenta por pagar */}
           <Controller
             name="accountPayableId"
             control={control}
-            defaultValue=""
             render={({ field }) => (
-              <TextField
-                label="Cuenta por Pagar"
-                {...field}
-                error={!!errors.accountPayableId}
-                helperText={errors.accountPayableId?.message}
-                fullWidth
-                size="small"
-                select
-                value={field.value || ""}
-                onChange={(e) => field.onChange(e)}
-              >
-                <MenuItem value={""}>Ninguna</MenuItem>
-                {accounts.map((account) => (
-                  <MenuItem key={account.id} value={account.id}>
-                    {account.code} - {account.name}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <div className="flex flex-col">
+                <Label>Cuenta por Pagar</Label>
+                <Select
+                  defaultValue={field.value || ""}
+                  onValueChange={(val) =>
+                    field.onChange(val === "none" ? null : val)
+                  }
+                  value={field.value ?? "none"}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Ninguna</SelectItem>
+                    {accounts.map((acc) => (
+                      <SelectItem key={acc.id} value={acc.id}>
+                        {acc.code} - {acc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           />
+
+          {/* Cuenta por cobrar */}
           <Controller
             name="accountReceivableId"
             control={control}
-            defaultValue=""
             render={({ field }) => (
-              <TextField
-                label="Cuenta por Cobrar"
-                {...field}
-                error={!!errors.accountReceivableId}
-                helperText={errors.accountReceivableId?.message}
-                fullWidth
-                size="small"
-                select
-                value={field.value || ""}
-                onChange={(e) => field.onChange(e)}
-              >
-                <MenuItem value={""}>Ninguna</MenuItem>
-                {accounts.map((account) => (
-                  <MenuItem key={account.id} value={account.id}>
-                    {account.code} - {account.name}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <div className="flex flex-col">
+                <Label>Cuenta por Cobrar</Label>
+                <Select
+                  defaultValue={field.value || ""}
+                  onValueChange={(val) =>
+                    field.onChange(val === "none" ? null : val)
+                  }
+                  value={field.value ?? "none"}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Ninguna</SelectItem>
+                    {accounts.map((acc) => (
+                      <SelectItem key={acc.id} value={acc.id}>
+                        {acc.code} - {acc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           />
-        </DialogContent>
 
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={onClose} variant="outlined">
-            Cancelar
-          </Button>
-          <Button type="submit" variant="contained" disabled={isSubmitting}>
-            {editingPerson ? "Actualizar" : "Agregar"}
-          </Button>
-        </DialogActions>
-      </form>
+          {/* Acciones */}
+          <DialogFooter className="mt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {editingPerson ? "Actualizar" : "Agregar"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
     </Dialog>
   );
-};
-
-export default PersonFormDialog;
+}

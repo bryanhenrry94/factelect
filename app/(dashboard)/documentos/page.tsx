@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 export default function DocumentsPage() {
   const router = useRouter();
@@ -142,54 +143,30 @@ export default function DocumentsPage() {
                       <TableCell>{formatCurrency(document.balance)}</TableCell>
                       <TableCell>{document.status}</TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleEdit(document.id || "")}
+                        <button
+                          className="p-1 hover:bg-muted rounded"
+                          onClick={() => handleEdit(document.id)}
                         >
-                          <Edit size={16} />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => handleDelete(document.id || "")}
-                          disabled={document.status !== "DRAFT"}
+                          <Edit size={18} />
+                        </button>
+
+                        <button
+                          className="p-1 hover:bg-destructive/20 rounded"
+                          onClick={() => handleDelete(document.id)}
                         >
-                          <Delete size={16} />
-                        </Button>
+                          <Delete size={18} />
+                        </button>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-              <Pagination>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                  >
-                    Anterior
-                  </Button>
-                  <span>
-                    Página {currentPage} de{" "}
-                    {Math.max(1, Math.ceil(documents.length / itemsPerPage))}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={
-                      currentPage ===
-                        Math.ceil(documents.length / itemsPerPage) ||
-                      documents.length === 0
-                    }
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                  >
-                    Siguiente
-                  </Button>
-                </div>
-              </Pagination>
+              <PaginationControls
+                currentPage={currentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={documents.length}
+                onPageChange={(page) => setCurrentPage(page)}
+              />
             </div>
           )}
         </CardContent>

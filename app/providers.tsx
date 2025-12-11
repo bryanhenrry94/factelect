@@ -2,10 +2,8 @@
 
 import { SessionProvider } from "next-auth/react";
 import { ToastContainer } from "react-toastify";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ModeToggle } from "@/components/mode-toogle";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +15,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <SessionProvider>{children}</SessionProvider>
       <ToastContainer />
+      <ConfirmDialog />
     </ThemeProvider>
   );
 }

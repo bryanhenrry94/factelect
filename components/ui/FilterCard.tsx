@@ -1,9 +1,6 @@
 import { Users } from "lucide-react";
-import Card from "@mui/material/Card";
-import CardActionArea from "@mui/material/CardActionArea";
-import CardContent from "@mui/material/CardContent";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface FilterCardProps {
   title: string;
@@ -13,26 +10,26 @@ interface FilterCardProps {
   onClick?: () => void;
 }
 
-const colorMap = {
+const colorClassMap = {
   blue: {
-    card: "#e3f2fd",
-    icon: "#2196f3",
-    text: "#1a237e",
+    card: "bg-blue-100 dark:bg-blue-900",
+    icon: "bg-blue-500 text-white",
+    text: "text-blue-900 dark:text-blue-100",
   },
   sky: {
-    card: "#e0f7fa",
-    icon: "#00bcd4",
-    text: "#006064",
+    card: "bg-sky-100 dark:bg-sky-900",
+    icon: "bg-sky-500 text-white",
+    text: "text-sky-900 dark:text-sky-100",
   },
   green: {
-    card: "#e8f5e9",
-    icon: "#43a047",
-    text: "#1b5e20",
+    card: "bg-green-100 dark:bg-green-900",
+    icon: "bg-green-500 text-white",
+    text: "text-green-900 dark:text-green-100",
   },
   yellow: {
-    card: "#fffde7",
-    icon: "#fbc02d",
-    text: "#f57f17",
+    card: "bg-yellow-100 dark:bg-yellow-900",
+    icon: "bg-yellow-500 text-white",
+    text: "text-yellow-900 dark:text-yellow-100",
   },
 };
 
@@ -43,43 +40,31 @@ export default function FilterCard({
   color = "blue",
   onClick,
 }: FilterCardProps) {
-  const colors = colorMap[color];
+  const colors = colorClassMap[color];
   return (
     <Card
-      sx={{
-        minWidth: 180,
-        backgroundColor: colors.card,
-        boxShadow: 0,
-      }}
+      className={cn("min-w-[180px] shadow-none transition-colors", colors.card)}
     >
-      <CardActionArea
+      <button
+        type="button"
         onClick={onClick}
-        sx={{ display: "flex", alignItems: "center", gap: 1, p: 1.5 }}
+        className="flex items-center gap-3 w-full p-4 bg-transparent hover:bg-muted/50 rounded-lg transition-colors"
       >
-        <Box
-          sx={{
-            minWidth: 50,
-            minHeight: 50,
-            backgroundColor: colors.icon,
-            color: "#fff",
-            borderRadius: 2,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            mr: 2,
-          }}
+        <span
+          className={cn(
+            "min-w-[50px] min-h-[50px] flex items-center justify-center rounded-lg mr-3",
+            colors.icon
+          )}
         >
           <Icon size={22} />
-        </Box>
-        <CardContent sx={{ p: 0 }}>
-          <Typography variant="subtitle1" fontWeight={500} color={colors.text}>
+        </span>
+        <CardContent className="p-0">
+          <div className={cn("font-medium text-base", colors.text)}>
             {title}
-          </Typography>
-          <Typography variant="h5" fontWeight={600}>
-            {count} Personas
-          </Typography>
+          </div>
+          <div className="font-semibold text-sm">{count} Personas</div>
         </CardContent>
-      </CardActionArea>
+      </button>
     </Card>
   );
 }

@@ -29,15 +29,12 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import Link from "next/link";
+import { useSidebar } from "@/components/ui/sidebar";
+import { Logo } from "@/components/logo";
+import { useSession } from "next-auth/react";
 
 // This is sample data.
 const data = {
@@ -279,17 +276,26 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { state } = useSidebar();
+  const { data: session } = useSession();
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <Logo collapsed={state === "collapsed"} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser
+          user={{
+            name: session?.user?.name || "",
+            email: session?.user?.email || "",
+            avatar: session?.user?.image || "",
+          }}
+        />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

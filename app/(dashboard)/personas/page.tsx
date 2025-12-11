@@ -14,7 +14,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { deletePerson, getPersonsByTenant } from "@/actions/person";
-import { AlertService } from "@/lib/alerts";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { notifyInfo } from "@/lib/notifications";
 import { getRoleLabel } from "@/utils/person";
 
@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PersonInput } from "@/lib/validations/person";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 export default function PersonsPage() {
   const router = useRouter();
@@ -48,6 +49,8 @@ export default function PersonsPage() {
 
   const [search, setSearch] = useState(params.get("search") ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const tipoValue = params.get("tipo") ?? "todos";
 
@@ -138,19 +141,19 @@ export default function PersonsPage() {
     setEditingPerson(null);
   };
 
-  const handleDelete = (personId: string) => {
-    AlertService.showConfirm(
-      "Confirmar eliminación",
-      "¿Estás seguro de que deseas eliminar a esta persona?",
+  const handleDelete = async (personId: string) => {
+    const ok = await ConfirmDialog.confirm(
+      "Eliminar registro",
+      "¿Estás seguro de que deseas eliminar este registro?",
       "Eliminar",
       "Cancelar"
-    ).then(async (confirmed) => {
-      if (confirmed) {
-        await deletePerson(personId);
-        await notifyInfo("Persona eliminada");
-        await loadPersons();
-      }
-    });
+    );
+
+    if (!ok) return;
+
+    await deletePerson(personId);
+    await notifyInfo("Persona eliminada");
+    await loadPersons();
   };
 
   return (
@@ -169,12 +172,12 @@ export default function PersonsPage() {
 
         <Button onClick={handleAdd} className="gap-2">
           <Plus className="w-4 h-4" />
-          Agregar Persona
+          Nuevo
         </Button>
       </div>
 
       {/* FILTROS */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row">
         <FilterCard
           title="Total Personas"
           count={stats.total}
@@ -210,7 +213,7 @@ export default function PersonsPage() {
 
       {/* TABLA */}
       <Card className="mt-4">
-        <CardContent>
+        <CardContent className="p-6">
           {persons.length === 0 ? (
             <div className="text-center py-8">
               <Users className="mx-auto w-10 h-10 text-muted-foreground" />
@@ -269,29 +272,12 @@ export default function PersonsPage() {
                     ))}
                 </TableBody>
               </Table>
-
-              {/* PAGINACIÓN SIMPLE (más elegante con shadcn) */}
-              <div className="flex justify-end items-center gap-4 mt-3">
-                <Button
-                  variant="outline"
-                  disabled={page === 0}
-                  onClick={() => handleChangePage(page - 1)}
-                >
-                  Anterior
-                </Button>
-
-                <span className="text-sm">
-                  Página {page + 1} / {Math.ceil(persons.length / rowsPerPage)}
-                </span>
-
-                <Button
-                  variant="outline"
-                  disabled={(page + 1) * rowsPerPage >= persons.length}
-                  onClick={() => handleChangePage(page + 1)}
-                >
-                  Siguiente
-                </Button>
-              </div>
+              <PaginationControls
+                currentPage={currentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={persons.length}
+                onPageChange={(page) => setCurrentPage(page)}
+              />
             </div>
           )}
         </CardContent>
