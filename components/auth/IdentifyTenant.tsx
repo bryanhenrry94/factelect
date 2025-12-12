@@ -1,49 +1,66 @@
 "use client";
 
-import { identifyTenantAction } from "@/actions/auth";
-import PageContainer from "@/components/container/PageContainer";
-import Logo from "@/components/layout/shared/logo/Logo";
-import CustomTextField from "@/components/ui/CustomTextField";
+import { getOnboardingStatus, identifyTenantAction } from "@/actions/auth";
 import { protocol, rootDomain } from "@/lib/config";
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  Grid,
-  Stack,
-  Typography,
-} from "@mui/material";
-import Link from "next/link";
+
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+} from "../ui/field";
+import { cn } from "@/lib/utils";
+import { Card } from "../ui/card";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { LucideMessageCircleWarning } from "lucide-react";
+import { Logo } from "@/components/logo";
+import { userExists } from "@/actions";
 
 type FormValues = {
   email: string;
 };
 
-export default function IdentifyTenant() {
+export default function IdentifyTenant({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
   const router = useRouter();
 
   const {
     handleSubmit,
     control,
-    formState: { errors },
+    formState: { isSubmitting },
   } = useForm<FormValues>({
     defaultValues: { email: "" },
   });
 
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
   const onSubmit = async (data: FormValues) => {
-    setMessage("");
     setError("");
-    setIsLoading(true);
 
     try {
+      const exists = await userExists(data.email);
+      if (!exists) {
+        setError("El correo electrónico no está registrado.");
+        return;
+      }
+
+      // Check if onboarding is complete
+      const onboardingStatus = await getOnboardingStatus(data.email);
+      console.log("Onboarding status:", onboardingStatus);
+      if (!onboardingStatus.onboardingCompleted) {
+        console.log("Redirecting to onboarding for:", data.email);
+        router.push(`/onboarding?email=${encodeURIComponent(data.email)}`);
+        return;
+      }
+
       const result = await identifyTenantAction(data.email);
 
       if (!result.success) {
@@ -59,139 +76,59 @@ export default function IdentifyTenant() {
       router.push(redirectUrl);
     } catch {
       setError("Ha ocurrido un error inesperado. Por favor intenta de nuevo.");
-    } finally {
-      setIsLoading(false);
     }
   };
 
   return (
-    <PageContainer
-      title="Verificar Subdominio"
-      description="this is Verify Tenant page"
-    >
-      <Box
-        sx={{
-          position: "relative",
-          "&:before": {
-            content: '""',
-            background: "radial-gradient(#d2f1df, #d3d7fa, #bad8f4)",
-            backgroundSize: "400% 400%",
-            animation: "gradient 15s ease infinite",
-            position: "absolute",
-            height: "100%",
-            width: "100%",
-            opacity: "0.3",
-          },
-        }}
-      >
-        <Grid
-          container
-          spacing={0}
-          justifyContent="center"
-          sx={{ height: "100vh" }}
-        >
-          <Grid
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            size={{
-              xs: 12,
-              sm: 12,
-              lg: 4,
-              xl: 3,
-            }}
-          >
-            <Card
-              elevation={9}
-              sx={{ p: 4, zIndex: 1, width: "100%", maxWidth: "500px" }}
-            >
-              <Box display="flex" alignItems="center" justifyContent="center">
-                <Logo />
-              </Box>
-
-              <Box
-                component="form"
-                onSubmit={handleSubmit(onSubmit)}
-                noValidate
-              >
-                <Typography
-                  variant="subtitle1"
-                  textAlign="center"
-                  color="textSecondary"
-                  mb={1}
-                >
-                  Ingresa el correo asociado a tu cuenta.
-                </Typography>
-                <Box>
-                  <Typography
-                    variant="subtitle1"
-                    fontWeight={600}
-                    component="label"
-                    htmlFor="email"
-                    mb="5px"
-                  >
-                    Correo
-                  </Typography>
+    <div className={cn("flex flex-col gap-6", className)} {...props}>
+      <Card className="p-4">
+        <div className="flex justify-center mb-4">
+          <Logo />
+        </div>
+        <FieldGroup>
+          <FieldSet>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
                   <Controller
                     name="email"
                     control={control}
-                    rules={{ required: "El correo es obligatorio" }}
                     render={({ field }) => (
-                      <CustomTextField
-                        {...field}
+                      <Input
                         id="email"
-                        variant="outlined"
-                        fullWidth
-                        placeholder="Ingresa tu correo"
-                        error={!!errors.email}
-                        helperText={errors.email ? errors.email.message : ""}
+                        type="email"
+                        placeholder="m@ejemplo.com"
+                        required
+                        {...field}
                       />
                     )}
                   />
-                </Box>
+                  <FieldDescription>
+                    Ingresa el correo asociado a tu cuenta.
+                  </FieldDescription>
+                </Field>
 
-                {message && (
-                  <Alert severity="success" sx={{ mt: 2 }}>
-                    {message}
-                  </Alert>
-                )}
                 {error && (
-                  <Alert severity="error" sx={{ mt: 2 }}>
-                    {error}
+                  <Alert variant="destructive">
+                    <LucideMessageCircleWarning />
+                    <AlertTitle>¡Atención!</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
-
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  fullWidth
-                  disabled={isLoading}
-                  sx={{ mt: 2 }}
-                >
-                  {isLoading ? "Cargando..." : "Continuar"}
-                </Button>
-              </Box>
-              <Stack direction="row" spacing={1} justifyContent="center" mt={3}>
-                <Typography color="textSecondary" variant="h6" fontWeight="500">
-                  Eres nuevo?
-                </Typography>
-                <Typography
-                  component={Link}
-                  href="/auth/signup"
-                  fontWeight="500"
-                  sx={{
-                    textDecoration: "none",
-                    color: "primary.main",
-                  }}
-                >
-                  Crear una cuenta
-                </Typography>
-              </Stack>
-            </Card>
-          </Grid>
-        </Grid>
-      </Box>
-    </PageContainer>
+                <Field>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? "Validando..." : "Continuar"}
+                  </Button>
+                  <FieldDescription className="text-center">
+                    ¿No tienes una cuenta? <a href="/auth/signup">Regístrate</a>
+                  </FieldDescription>
+                </Field>
+              </FieldGroup>
+            </form>
+          </FieldSet>
+        </FieldGroup>
+      </Card>
+    </div>
   );
 }

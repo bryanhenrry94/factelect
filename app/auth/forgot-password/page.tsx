@@ -3,12 +3,25 @@
 import { sendPasswordResetEmail } from "@/actions/auth";
 import PageContainer from "@/components/container/PageContainer";
 import Logo from "@/components/layout/shared/logo/Logo";
-import CustomTextField from "@/components/ui/CustomTextField";
-import { Alert, Box, Button, Card, Grid, Typography } from "@mui/material";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
+
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+import Link from "next/link";
+import { ArrowLeft, Mail, MessageCircleWarning } from "lucide-react";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+} from "@/components/ui/field";
 
 type FormValues = {
   email: string;
@@ -19,19 +32,17 @@ export default function ForgotPasswordPage() {
     handleSubmit,
     control,
     reset,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: { email: "" },
   });
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
   const onSubmit = async (data: FormValues) => {
     setMessage("");
     setError("");
-    setIsLoading(true);
 
     try {
       const result = await sendPasswordResetEmail(data.email);
@@ -45,139 +56,89 @@ export default function ForgotPasswordPage() {
         result.message ||
           "Si el correo existe, se enviará un enlace de restablecimiento."
       );
-      reset(); // Limpia el formulario tras enviar
+
+      reset();
     } catch {
       setError("Ha ocurrido un error inesperado. Por favor intenta de nuevo.");
-    } finally {
-      setIsLoading(false);
     }
   };
 
   return (
-    <PageContainer
-      title="Recuperar contraseña"
-      description="this is Forgot Password page"
-    >
-      <Box
-        sx={{
-          position: "relative",
-          "&:before": {
-            content: '""',
-            background: "radial-gradient(#d2f1df, #d3d7fa, #bad8f4)",
-            backgroundSize: "400% 400%",
-            animation: "gradient 15s ease infinite",
-            position: "absolute",
-            height: "100%",
-            width: "100%",
-            opacity: "0.3",
-          },
-        }}
-      >
-        <Grid
-          container
-          spacing={0}
-          justifyContent="center"
-          sx={{ height: "100vh" }}
-        >
-          <Grid
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            size={{
-              xs: 12,
-              sm: 12,
-              lg: 4,
-              xl: 3,
-            }}
-          >
-            <Card
-              elevation={9}
-              sx={{ p: 4, zIndex: 1, width: "100%", maxWidth: "500px" }}
-            >
-              <Box display="flex" alignItems="center" justifyContent="center">
-                <Logo />
-              </Box>
+    <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
+      <div className="flex w-full max-w-sm flex-col gap-6">
+        <div className="flex items-center justify-center h-full px-4 relative">
+          <Card className="w-full max-w-md p-6 z-10 shadow-lg">
+            {/* Logo */}
+            <div className="flex justify-center mb-4">
+              <Logo />
+            </div>
 
-              <Box
-                component="form"
-                onSubmit={handleSubmit(onSubmit)}
-                noValidate
-              >
-                <Typography
-                  variant="subtitle1"
-                  textAlign="center"
-                  color="textSecondary"
-                  mb={1}
-                >
-                  Recupera el acceso a tu cuenta ingresando tu correo
-                </Typography>
-                <Box>
-                  <Typography
-                    variant="subtitle1"
-                    fontWeight={600}
-                    component="label"
-                    htmlFor="email"
-                    mb="5px"
-                  >
-                    Correo
-                  </Typography>
-                  <Controller
-                    name="email"
-                    control={control}
-                    rules={{ required: "El correo es obligatorio" }}
-                    render={({ field }) => (
-                      <CustomTextField
-                        {...field}
-                        id="email"
-                        variant="outlined"
-                        fullWidth
-                        placeholder="Ingresa tu correo"
-                        error={!!errors.email}
-                        helperText={errors.email ? errors.email.message : ""}
-                      />
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <FieldSet>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
+
+                    <Controller
+                      name="email"
+                      control={control}
+                      rules={{ required: "El correo es obligatorio" }}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="email"
+                          type="email"
+                          placeholder="Ingresa tu correo"
+                          required
+                        />
+                      )}
+                    />
+
+                    {errors.email && (
+                      <p className="text-sm text-red-500">
+                        {errors.email.message}
+                      </p>
                     )}
-                  />
-                </Box>
+                    <FieldDescription>
+                      Recupera el acceso a tu cuenta ingresando tu correo
+                    </FieldDescription>
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
 
-                {message && (
-                  <Alert severity="success" sx={{ mt: 2 }}>
-                    {message}
-                  </Alert>
-                )}
-                {error && (
-                  <Alert severity="error" sx={{ mt: 2 }}>
-                    {error}
-                  </Alert>
-                )}
+              {/* Mensaje de éxito */}
+              {message && (
+                <Alert className="border-green-400">
+                  <Mail />
+                  <AlertDescription>{message}</AlertDescription>
+                </Alert>
+              )}
 
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  fullWidth
-                  disabled={isLoading}
-                  sx={{ mt: 2 }}
-                >
-                  {isLoading ? "Enviando..." : "Enviar correo"}
-                </Button>
+              {/* Mensaje de error */}
+              {error && (
+                <Alert variant="destructive">
+                  <MessageCircleWarning className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
-                <Box sx={{ mt: 2, textAlign: "center" }}>
-                  <Link href="/auth/signin" style={{ textDecoration: "none" }}>
-                    <Button
-                      variant="text"
-                      color="primary"
-                      sx={{ textTransform: "none" }}
-                      startIcon={<ArrowLeft />}
-                    >
-                      Regresar al inicio de sesión
-                    </Button>
-                  </Link>
-                </Box>
-              </Box>
-            </Card>
-          </Grid>
-        </Grid>
-      </Box>
-    </PageContainer>
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Enviando..." : "Enviar correo"}
+              </Button>
+
+              <div className="text-center">
+                <Link href="/auth/signin">
+                  <Button variant="ghost" className="gap-2">
+                    <ArrowLeft size={18} />
+                    Regresar al inicio de sesión
+                  </Button>
+                </Link>
+              </div>
+            </form>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }

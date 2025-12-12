@@ -19,14 +19,24 @@ export async function createUser(
   name?: string
 ) {
   const hashedPassword = await bcrypt.hash(password, 10);
-  return prisma.user.create({
+
+  const user = await prisma.user.create({
     data: {
       email,
       password: hashedPassword,
-      tenantId,
       name,
     },
   });
+
+  await prisma.membership.create({
+    data: {
+      userId: user.id,
+      tenantId,
+      role: "USER",
+    },
+  });
+
+  return;
 }
 
 export const getTenantById = async (

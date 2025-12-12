@@ -1,32 +1,30 @@
 "use client";
 
-import {
-  Box,
-  Container,
-  CssBaseline,
-  Typography,
-  Button,
-  Alert,
-  Card,
-  Grid,
-  Paper,
-} from "@mui/material";
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useForm, Controller } from "react-hook-form";
+
 import { resetPassword } from "@/actions/auth";
+import { protocol } from "@/lib/config";
+
 import PageContainer from "@/components/container/PageContainer";
 import Logo from "@/components/layout/shared/logo/Logo";
+
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 import Link from "next/link";
-import { useForm, Controller } from "react-hook-form";
-import CustomTextField from "@/components/ui/CustomTextField";
-import { protocol } from "@/lib/config";
+import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 
 type ResetPasswordForm = {
   password: string;
   confirmPassword: string;
 };
 
-const ResetPasswordPage = () => {
+export default function ResetPasswordPage() {
   const {
     handleSubmit,
     control,
@@ -70,7 +68,9 @@ const ResetPasswordPage = () => {
       const response = await resetPassword(token, data.password);
 
       if (!response.success) {
-        throw new Error(response.message || "Error al restablecer contraseña");
+        throw new Error(
+          response.message || "Error al restablecer la contraseña"
+        );
       }
 
       setSuccess(true);
@@ -85,132 +85,70 @@ const ResetPasswordPage = () => {
 
   if (success) {
     return (
-      <Container maxWidth="xs">
-        <CssBaseline />
-        <Box
-          sx={{
-            minHeight: "100vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Paper elevation={3} sx={{ p: 4, width: "100%" }}>
-            <Alert severity="success" sx={{ mb: 2 }}>
-              Contraseña restablecida exitosamente. Redirigiendo...
-            </Alert>
-          </Paper>
-        </Box>
-      </Container>
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <Card className="p-6 max-w-sm w-full">
+          <Alert variant="default">
+            <AlertTitle>Contraseña restablecida</AlertTitle>
+            <AlertDescription>
+              Redirigiendo al inicio de sesión...
+            </AlertDescription>
+          </Alert>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <PageContainer
-      title="Restablecer contraseña"
-      description="this is Reset Password page"
-    >
-      <Box
-        sx={{
-          position: "relative",
-          "&:before": {
-            content: '""',
-            background: "radial-gradient(#d2f1df, #d3d7fa, #bad8f4)",
-            backgroundSize: "400% 400%",
-            animation: "gradient 15s ease infinite",
-            position: "absolute",
-            height: "100%",
-            width: "100%",
-            opacity: "0.3",
-          },
-        }}
-      >
-        <Grid
-          container
-          spacing={0}
-          justifyContent="center"
-          sx={{ height: "100vh" }}
-        >
-          <Grid
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            size={{
-              xs: 12,
-              sm: 12,
-              lg: 4,
-              xl: 3,
-            }}
-          >
-            <Card
-              elevation={9}
-              sx={{ p: 4, zIndex: 1, width: "100%", maxWidth: "500px" }}
-            >
-              <Box display="flex" alignItems="center" justifyContent="center">
-                <Logo />
-              </Box>
+    <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
+      <div className="flex w-full max-w-sm flex-col gap-6">
+        <Card className="p-6 w-full max-w-md relative z-10 shadow-lg">
+          <div className="flex justify-center mb-4">
+            <Logo />
+          </div>
 
-              <Typography
-                variant="subtitle1"
-                textAlign="center"
-                color="textSecondary"
-                mb={1}
-              >
-                Ingresa tu nueva contraseña a continuación.
-              </Typography>
+          <p className="text-center text-sm text-muted-foreground mb-3">
+            Ingresa tu nueva contraseña a continuación.
+          </p>
 
-              {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {error}
-                </Alert>
-              )}
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-              <Box
-                component="form"
-                onSubmit={handleSubmit(onSubmit)}
-                sx={{ mt: 1 }}
-              >
-                <Box>
-                  <Typography
-                    variant="subtitle1"
-                    fontWeight={600}
-                    component="label"
-                    htmlFor="email"
-                    mb="5px"
-                  >
-                    Contraseña
-                  </Typography>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <FieldGroup>
+              <FieldSet>
+                {/* Password */}
+                <Field>
+                  <FieldLabel htmlFor="password">Contraseña</FieldLabel>
                   <Controller
                     name="password"
                     control={control}
                     rules={{ required: "La contraseña es obligatoria" }}
                     render={({ field }) => (
-                      <CustomTextField
+                      <Input
                         {...field}
                         id="password"
-                        variant="outlined"
-                        fullWidth
-                        placeholder="Contraseña"
                         type="password"
-                        error={!!errors.password}
-                        helperText={
-                          errors.password ? errors.password.message : ""
-                        }
+                        placeholder="Contraseña"
+                        required
                       />
                     )}
                   />
-                </Box>
+                  {errors.password && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.password.message}
+                    </p>
+                  )}
+                </Field>
 
-                <Box mt={3}>
-                  <Typography
-                    variant="subtitle1"
-                    fontWeight={600}
-                    component="label"
-                    htmlFor="email"
-                    mb="5px"
-                  >
-                    Confirmar Contraseña
-                  </Typography>
+                {/* Confirm Password */}
+                <Field>
+                  <FieldLabel htmlFor="confirmPassword">
+                    Confirmar contraseña
+                  </FieldLabel>
                   <Controller
                     name="confirmPassword"
                     control={control}
@@ -221,52 +159,41 @@ const ResetPasswordPage = () => {
                         "Las contraseñas no coinciden",
                     }}
                     render={({ field }) => (
-                      <CustomTextField
+                      <Input
                         {...field}
                         id="confirmPassword"
-                        variant="outlined"
-                        fullWidth
-                        placeholder="Confirmar Contraseña"
                         type="password"
-                        error={!!errors.confirmPassword}
-                        helperText={
-                          errors.confirmPassword
-                            ? errors.confirmPassword.message
-                            : ""
-                        }
+                        placeholder="Confirmar contraseña"
+                        required
                       />
                     )}
                   />
-                </Box>
+                  {errors.confirmPassword && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.confirmPassword.message}
+                    </p>
+                  )}
+                </Field>
+              </FieldSet>
 
+              <Field orientation="vertical">
                 <Button
                   type="submit"
-                  fullWidth
-                  variant="contained"
-                  sx={{ mt: 3 }}
+                  className="w-full"
                   disabled={loading || !token}
                 >
                   {loading ? "Procesando..." : "Restablecer contraseña"}
                 </Button>
-
-                <Box sx={{ mt: 2, textAlign: "center" }}>
-                  <Link href="/auth/signin" style={{ textDecoration: "none" }}>
-                    <Button
-                      variant="text"
-                      color="primary"
-                      sx={{ textTransform: "none" }}
-                    >
-                      Inicio de sesión
-                    </Button>
+                <div className="text-center mt-2">
+                  <Link href="/auth/signin" className="text-primary text-sm">
+                    Regresar al inicio de sesión
                   </Link>
-                </Box>
-              </Box>
-            </Card>
-          </Grid>
-        </Grid>
-      </Box>
-    </PageContainer>
+                </div>
+              </Field>
+            </FieldGroup>
+          </form>
+        </Card>
+      </div>
+    </div>
   );
-};
-
-export default ResetPasswordPage;
+}

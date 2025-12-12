@@ -25,7 +25,6 @@ model Tenant {
   updatedAt               DateTime                  @map("updated_at")           @updatedAt
 
   //                      Relaciones
-  users                   User[]
   documents               Document[]
   products                Product[]
   persons                 Person[]
@@ -53,6 +52,7 @@ model Tenant {
   inventoryMovementItems  InventoryMovementItem[]
   inventoryAdjustmentItem InventoryAdjustmentItem[]
   bankMovementDetail      BankMovementDetail[]
+  memberships             Membership[]
 
   @@map("tenant")
 }
@@ -113,21 +113,33 @@ model SequenceControl {
 }
 
 model User {
-  id                  String               @map("id")         @id @default(cuid())
-  email               String               @map("email")      @unique
-  password            String               @map("password")
+  id                  String               @map("id")                   @id @default(cuid())
   name                String?              @map("name")
-  role                UserRole             @map("role")       @default(USER)
+  email               String               @map("email")                @unique
+  password            String               @map("password")
+  onboardingCompleted Boolean              @map("onboarding_completed") @default(false)
 
-  tenantId            String               @map("tenant_id")
-  createdAt           DateTime             @map("created_at") @default(now())
-  updatedAt           DateTime             @map("updated_at") @updatedAt
-  tenant              Tenant               @relation(fields: [tenantId], references: [id])
+  createdAt           DateTime             @map("created_at")           @default(now())
+  updatedAt           DateTime             @map("updated_at")           @updatedAt
 
   passwordResetTokens PasswordResetToken[]
   cashSessions        CashSession[]
+  memberships         Membership[]
 
   @@map("user")
+}
+
+model Membership {
+  id       String   @map("id")        @id @default(cuid())
+  userId   String   @map("user_id")
+  tenantId String   @map("tenant_id")
+  role     UserRole @map("role")      @default(USER)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@map("membership")
 }
 
 model Product {

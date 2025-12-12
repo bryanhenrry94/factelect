@@ -41,7 +41,17 @@ async function main() {
       email: "bryanhenrry94@gmail.com",
       name: "Bryan Navarrete",
       password: password_hash,
+    },
+  });
+
+  await prisma.membership.upsert({
+    where: { id: "5c4e4f3e-3f4e-4c3e-8f4e-5c4e4f3e3f4e" },
+    update: {},
+    create: {
+      id: "5c4e4f3e-3f4e-4c3e-8f4e-5c4e4f3e3f4e",
+      userId: "28112419-5c53-47c5-b109-a29d02c1bb5d",
       tenantId: "0874303e-6795-46ef-8416-5d76bba8071b",
+      role: "ADMIN",
     },
   });
 

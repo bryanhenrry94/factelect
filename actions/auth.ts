@@ -4,22 +4,30 @@ import { Resend } from "resend";
 import bcrypt from "bcrypt";
 import { $Enums } from "@/prisma/generated/prisma";
 import { cloneCOAForTenant } from "./accounting/clone-coa";
+import { SignupData } from "@/lib/validations/auth/signup";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+type FormValues = {
+  ruc: string;
+  tenantName: string;
+  tenantAddress: string;
+  acceptTerms: boolean;
+};
 
 export const identifyTenantAction = async (
   email: string
 ): Promise<{ success: boolean; message?: string; subdomain?: string }> => {
   const user = await prisma.user.findUnique({
     where: { email },
-    include: { tenant: true },
+    include: { memberships: { include: { tenant: true } } },
   });
 
-  if (!user || !user.tenant) {
+  if (!user || !user.memberships.length) {
     return { success: false, message: "Usuario o tenant no encontrado" };
   }
 
-  return { success: true, subdomain: user.tenant.subdomain };
+  return { success: true, subdomain: user.memberships[0].tenant.subdomain };
 };
 
 export async function sendPasswordResetEmail(email: string) {
@@ -123,35 +131,14 @@ export async function resetPassword(
   }
 }
 
-type FormValues = {
-  name: string;
-  email: string;
-  password: string;
-  ruc: string;
-  tenantName: string;
-  tenantAddress: string;
-  acceptTerms: boolean;
-};
-
 export const registerAccount = async (
+  email: string,
   data: FormValues
 ): Promise<{ success: boolean; error?: string; data?: any }> => {
   try {
     // ---------------------
     // VALIDACIONES
     // ---------------------
-
-    const emailExists = await prisma.user.findFirst({
-      where: { email: data.email },
-    });
-
-    if (emailExists) {
-      return {
-        success: false,
-        error: "Ya existe una cuenta registrada con el correo ingresado",
-      };
-    }
-
     const subdomainExists = await prisma.tenant.findFirst({
       where: { subdomain: data.ruc },
     });
@@ -166,7 +153,6 @@ export const registerAccount = async (
     // ---------------------
     // TRANSACCIÓN PRINCIPAL
     // ---------------------
-
     const result = await prisma.$transaction(async (tx) => {
       // Crear tenant
       const tenant = await tx.tenant.create({
@@ -185,15 +171,20 @@ export const registerAccount = async (
         },
       });
 
-      // Crear usuario
-      const hashedPassword = await bcrypt.hash(data.password, 10);
+      const user = await tx.user.findFirst({
+        where: { email: email },
+      });
 
-      await tx.user.create({
+      if (!user) {
+        throw new Error("Usuario no encontrado durante la creación del tenant");
+      }
+
+      // Membership ADMIN
+      await tx.membership.create({
         data: {
-          name: data.name,
-          email: data.email,
-          password: hashedPassword,
+          userId: user.id,
           tenantId: tenant.id,
+          role: "ADMIN",
         },
       });
 
@@ -255,6 +246,11 @@ export const registerAccount = async (
         },
       });
 
+      await tx.user.update({
+        where: { id: user.id },
+        data: { onboardingCompleted: true },
+      });
+
       // Retornar tenant al final
       return tenant;
     });
@@ -271,5 +267,66 @@ export const registerAccount = async (
   } catch (error) {
     console.error(`Error al momento de crear la cuenta: ${error}`);
     return { success: false, error: "Error al crear la cuenta" };
+  }
+};
+
+export const signup = async (
+  data: SignupData
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const emailExists = await prisma.user.findFirst({
+      where: { email: data.email },
+    });
+
+    if (emailExists) {
+      return {
+        success: false,
+        error: "Ya existe una cuenta registrada con el correo ingresado",
+      };
+    }
+
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    await prisma.user.create({
+      data: {
+        name: data.name,
+        email: data.email,
+        password: hashedPassword,
+      },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error(`Error during signup: ${error}`);
+    return { success: false, error: "Error al registrar el usuario" };
+  }
+};
+
+export const getOnboardingStatus = async (
+  email: string
+): Promise<{
+  success: boolean;
+  onboardingCompleted?: boolean;
+  error?: string;
+}> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email: email },
+      select: { onboardingCompleted: true },
+    });
+
+    console.log("Onboarding status user:", user);
+
+    if (!user) {
+      return { success: false, error: "Usuario no encontrado" };
+    }
+
+    return { success: true, onboardingCompleted: user.onboardingCompleted };
+  } catch (error) {
+    console.error(`Error fetching onboarding status: ${error}`);
+    return {
+      success: false,
+      error: "Error al obtener el estado de onboarding",
+    };
   }
 };

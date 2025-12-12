@@ -13,7 +13,7 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" },
         subdomain: { label: "Subdomain", type: "text" },
       },
-      async authorize(credentials, req) {        
+      async authorize(credentials, req) {
         if (
           !credentials?.email ||
           !credentials?.password ||
@@ -28,10 +28,13 @@ export const authOptions: AuthOptions = {
         if (!tenant) return null;
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email, tenantId: tenant?.id },
-          include: { tenant: true }, // cargar tenant
+          where: {
+            email: credentials.email,
+            memberships: { some: { tenantId: tenant?.id } },
+          },
+          include: { memberships: { include: { tenant: true } } }, // cargar tenant
         });
-        
+
         if (!user) return null;
 
         const isValid = await bcrypt.compare(
@@ -40,14 +43,19 @@ export const authOptions: AuthOptions = {
         );
         if (!isValid) return null;
 
+        const membership = user.memberships.find(
+          (m) => m.tenantId === tenant.id
+        );
+        if (!membership) return null;
+
         // Devuelve objeto que estará disponible en session
         return {
           id: user.id,
           name: user.name || undefined,
           email: user.email,
-          tenantId: user.tenantId,
-          tenantName: user.tenant.name,
-          tenantSubdomain: user.tenant.subdomain,
+          tenantId: membership.tenantId,
+          tenantName: membership.tenant.name,
+          tenantSubdomain: membership.tenant.subdomain,
         };
       },
     }),

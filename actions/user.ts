@@ -59,3 +59,10 @@ export const updateUserProfile = async (
     return { success: false, error: "Error updating user profile" };
   }
 };
+
+export const userExists = async (email: string): Promise<boolean> => {
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+  return !!user;
+};
