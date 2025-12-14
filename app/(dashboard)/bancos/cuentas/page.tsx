@@ -1,33 +1,14 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Autocomplete,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
-import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
-import { AlertService } from "@/lib/alerts";
 import { useSession } from "next-auth/react";
+import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
+
 import {
   BankAccount,
   CreateBankAccount,
@@ -39,9 +20,48 @@ import {
   getAllBankAccounts,
   updateBankAccount,
 } from "@/actions/bank/bank-account";
-import { useSearchFilter } from "@/hooks/useSearchFilter";
 import { getAccounts } from "@/actions/accounting/chart-of-account";
 import { ChartOfAccount } from "@/lib/validations";
+import { useSearchFilter } from "@/hooks/useSearchFilter";
+
+/* shadcn */
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const initialBankAccount: BankAccount = {
   id: "",
@@ -55,116 +75,19 @@ const initialBankAccount: BankAccount = {
   updatedAt: new Date(),
 };
 
-const BankAccountsPage = () => {
+export default function BankAccountsPage() {
   const router = useRouter();
   const params = useSearchParams();
-
   const { data: session } = useSession();
 
   const [open, setOpen] = useState(false);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [bankSelected, setBankAccount] = useState<BankAccount | null>(null);
+  const [bankSelected, setBankSelected] = useState<BankAccount | null>(null);
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
-
-  const { search, setSearch } = useSearchFilter();
-
   const [page, setPage] = useState(0);
   const rowsPerPage = 5;
 
-  const handleOpen = () => {
-    reset(initialBankAccount);
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
-
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleEdit = (account: BankAccount) => {
-    setBankAccount(account);
-    reset({
-      bankName: account.bankName,
-      accountNumber: account.accountNumber,
-      alias: account.alias,
-      type: account.type,
-      accountId: account.accountId,
-    });
-    setOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    const confirm = await AlertService.showConfirm(
-      "Aviso",
-      "¿Deseas eliminar la cuenta bancaria?"
-    );
-    if (!confirm) return;
-
-    try {
-      const result = await deleteBankAccount(id);
-
-      if (result.success) {
-        notifyInfo("Cuenta eliminada correctamente");
-        fetchBankAccounts();
-      } else notifyError("Error al eliminar la cuenta");
-    } catch (error) {
-      notifyError("Error al eliminar la cuenta");
-    }
-  };
-
-  const fetchBankAccounts = async () => {
-    try {
-      if (!session?.user?.tenantId) return;
-
-      const response = await getAllBankAccounts(session.user.tenantId, search);
-      if (!response.success) {
-        notifyError("Error al cargar las categorías");
-        return;
-      }
-
-      setBankAccounts(response.data || []);
-    } catch (error) {
-      notifyError("Error al cargar las categorías");
-    }
-  };
-
-  const fetchAccounts = async () => {
-    try {
-      if (!session?.user?.tenantId) return;
-
-      const response = await getAccounts(session.user.tenantId);
-      if (!response.success) {
-        notifyError("Error al cargar las cuentas contables");
-        return;
-      }
-
-      setAccounts(response.data || []);
-    } catch (error) {
-      notifyError("Error al cargar las cuentas contables");
-    }
-  };
-
-  useEffect(() => {
-    fetchBankAccounts();
-  }, [session?.user?.tenantId, search]);
-
-  useEffect(() => {
-    fetchAccounts();
-  }, [session?.user?.tenantId]);
-
-  const updateParam = (key: string, value: string) => {
-    const query = new URLSearchParams(params.toString());
-    query.set(key, value);
-
-    if (query.get("search") === "") {
-      query.delete("search");
-    }
-
-    router.push(`/bancos/cuentas?${query.toString()}`);
-  };
+  const { search, setSearch } = useSearchFilter();
 
   const {
     control,
@@ -176,312 +99,262 @@ const BankAccountsPage = () => {
     defaultValues: initialBankAccount,
   });
 
+  /* ======================= */
+  /* Fetch data */
+  /* ======================= */
+
+  const fetchBankAccounts = async () => {
+    if (!session?.user?.tenantId) return;
+    const res = await getAllBankAccounts(session.user.tenantId, search);
+    if (!res.success) return notifyError("Error al cargar cuentas");
+    setBankAccounts(res.data || []);
+  };
+
+  const fetchAccounts = async () => {
+    if (!session?.user?.tenantId) return;
+    const res = await getAccounts(session.user.tenantId);
+    if (!res.success) return notifyError("Error al cargar cuentas contables");
+    setAccounts(res.data || []);
+  };
+
+  useEffect(() => {
+    fetchBankAccounts();
+  }, [session?.user?.tenantId, search]);
+
+  useEffect(() => {
+    fetchAccounts();
+  }, [session?.user?.tenantId]);
+
+  /* ======================= */
+  /* Actions */
+  /* ======================= */
+
+  const handleOpen = () => {
+    reset(initialBankAccount);
+    setBankSelected(null);
+    setOpen(true);
+  };
+
+  const handleEdit = (account: BankAccount) => {
+    setBankSelected(account);
+    reset(account);
+    setOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    const confirm = await ConfirmDialog.confirm(
+      "Aviso",
+      "¿Deseas eliminar la cuenta bancaria?"
+    );
+    if (!confirm) return;
+
+    const res = await deleteBankAccount(id);
+    if (res.success) {
+      notifyInfo("Cuenta eliminada");
+      fetchBankAccounts();
+    } else notifyError("Error al eliminar");
+  };
+
   const onSubmit = async (data: CreateBankAccount) => {
-    try {
-      if (!session?.user?.tenantId) {
-        notifyError("No se encontró el tenantId del usuario");
-        return;
-      }
+    if (!session?.user?.tenantId) return;
 
-      const response = bankSelected
-        ? await updateBankAccount(bankSelected.id, data)
-        : await createBankAccount(session.user.tenantId, data);
+    const res = bankSelected
+      ? await updateBankAccount(bankSelected.id, data)
+      : await createBankAccount(session.user.tenantId, data);
 
-      if (response.success) {
-        await notifyInfo(
-          `Cuenta ${bankSelected ? "actualizada" : "creada"} correctamente`
-        );
-        fetchBankAccounts();
-        handleClose();
-        setBankAccount(null);
-      } else {
-        notifyError(
-          `Error al ${bankSelected ? "actualizar" : "crear"} la cuenta`
-        );
-      }
-    } catch (error) {
-      console.log(error);
-      notifyError("Error al guardar la cuenta");
+    if (res.success) {
+      notifyInfo(
+        `Cuenta ${bankSelected ? "actualizada" : "creada"} correctamente`
+      );
+      setOpen(false);
+      fetchBankAccounts();
+    } else {
+      notifyError("Error al guardar");
     }
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case "CURRENT":
-        return "Corriente";
-      case "SAVINGS":
-        return "Ahorros";
-      case "CREDIT":
-        return "Crédito";
-      case "OTHER":
-        return "Otro";
-      default:
-        return type;
-    }
-  };
+  /* ======================= */
+  /* UI */
+  /* ======================= */
 
   return (
     <PageContainer
       title="Cuentas Bancarias"
       description="Gestiona las cuentas bancarias de tu organización"
     >
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
-        }}
-      >
-        <TextField
-          label="Buscar cuentas"
-          variant="outlined"
-          size="small"
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row gap-2 justify-between mb-4">
+        <Input
+          placeholder="Buscar cuentas"
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            updateParam("search", e.target.value);
-          }}
+          onChange={(e) => setSearch(e.target.value)}
+          className="sm:max-w-xs"
         />
-        <Button
-          variant="contained"
-          startIcon={<Plus />}
-          onClick={handleOpen}
-          sx={{ width: { xs: "100%", sm: "auto" } }}
-        >
-          Nuevo
+
+        <Button onClick={handleOpen}>
+          <Plus className="mr-2 h-4 w-4" /> Nuevo
         </Button>
-      </Box>
+      </div>
 
-      <Card sx={{ mt: 3 }}>
-        <CardContent>
+      {/* Table */}
+      <Card>
+        <CardContent className="p-4">
           {bankAccounts.length === 0 ? (
-            <Box textAlign="center" py={6}>
-              <ShoppingBag />
-              <Typography variant="h6" mt={2}>
-                No hay cuentas aún
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Agrega la primera cuenta bancaria
-              </Typography>
-            </Box>
+            <div className="text-center py-10 text-muted-foreground">
+              <ShoppingBag className="mx-auto mb-2" />
+              No hay cuentas registradas
+            </div>
           ) : (
-            <Box>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>
-                      <strong>Nombre</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Nro Cuenta</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Alias</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Cuenta Contable</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Tipo</strong>
-                    </TableCell>
-                    <TableCell align="right">
-                      <strong>Acciones</strong>
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {bankAccounts
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((account) => (
-                      <TableRow key={account.id} hover>
-                        <TableCell>{account.bankName}</TableCell>
-                        <TableCell>{account.accountNumber}</TableCell>
-                        <TableCell>{account.alias}</TableCell>
-                        <TableCell>
-                          {
-                            accounts.find((a) => a.id === account.accountId)
-                              ?.name
-                          }
-                        </TableCell>
-                        <TableCell>{getTypeLabel(account.type)}</TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            color="primary"
-                            onClick={() => handleEdit(account)}
-                          >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            color="error"
-                            onClick={() => handleDelete(account.id)}
-                          >
-                            <Delete />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-
-              <TablePagination
-                component="div"
-                color="primary"
-                count={bankAccounts.length}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                rowsPerPageOptions={[5]}
-              />
-            </Box>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Nro Cuenta</TableHead>
+                  <TableHead>Alias</TableHead>
+                  <TableHead>Cuenta Contable</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bankAccounts
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell>{a.bankName}</TableCell>
+                      <TableCell>{a.accountNumber}</TableCell>
+                      <TableCell>{a.alias}</TableCell>
+                      <TableCell>
+                        {accounts.find((c) => c.id === a.accountId)?.name}
+                      </TableCell>
+                      <TableCell>{a.type}</TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleEdit(a)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDelete(a.id)}
+                        >
+                          <Delete className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
 
-      <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogTitle>
-            {bankSelected ? "Editar Cuenta" : "Agregar Cuenta"}
-          </DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {bankSelected
-                ? "Actualizar información de la cuenta bancaria"
-                : "Agregar una nueva cuenta bancaria"}
-            </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column" }}>
-              <Controller
-                name="type"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Tipo de Cuenta"
-                    variant="outlined"
-                    fullWidth
-                    margin="dense"
-                    error={errors.type ? true : false}
-                    helperText={errors.type?.message}
-                    value={field.value || ""}
-                    select
-                  >
-                    <MenuItem value="CURRENT">Corriente</MenuItem>
-                    <MenuItem value="SAVINGS">Ahorros</MenuItem>
-                    <MenuItem value="CREDIT">Crédito</MenuItem>
-                    <MenuItem value="OTHER">Otro</MenuItem>
-                  </TextField>
-                )}
-              />
-              <Controller
-                name="bankName"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Nombre de la Cuenta"
-                    variant="outlined"
-                    fullWidth
-                    margin="dense"
-                    error={errors.bankName ? true : false}
-                    helperText={errors.bankName?.message}
-                  />
-                )}
-              />
-              <Controller
-                name="accountNumber"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Número de Cuenta"
-                    variant="outlined"
-                    fullWidth
-                    margin="dense"
-                    error={errors.accountNumber ? true : false}
-                    helperText={errors.accountNumber?.message}
-                  />
-                )}
-              />
-              <Controller
-                name="alias"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Alias"
-                    variant="outlined"
-                    fullWidth
-                    margin="dense"
-                    value={field.value || ""}
-                    error={errors.alias ? true : false}
-                    helperText={errors.alias?.message}
-                  />
-                )}
-              />
-              <Controller
-                name="accountId"
-                control={control}
-                render={({ field }) => {
-                  const selectedOption =
-                    accounts.find((a) => a.id === field.value) || null;
+      {/* Dialog */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {bankSelected ? "Editar Cuenta" : "Nueva Cuenta"}
+            </DialogTitle>
+          </DialogHeader>
 
-                  return (
-                    <Autocomplete
-                      options={accounts.slice(0, 10)} // primeros 10 resultados visibles
-                      filterOptions={(options, state) => {
-                        const input = state.inputValue.toLowerCase();
-                        return options
-                          .filter(
-                            (opt) =>
-                              opt.name.toLowerCase().includes(input) ||
-                              opt.id.toLowerCase().includes(input)
-                          )
-                          .slice(0, 10); // limitar resultados filtrados a 10
-                      }}
-                      getOptionLabel={(option) =>
-                        `${option.code} ${option.name}`
-                      }
-                      value={selectedOption}
-                      onChange={(_, value) => {
-                        field.onChange(value ? value.id : "");
-                      }}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Cuenta Contable"
-                          variant="outlined"
-                          margin="dense"
-                          error={!!errors.accountId}
-                          helperText={errors.accountId?.message}
-                          fullWidth
-                        />
-                      )}
-                    />
-                  );
-                }}
-              />
-            </Box>
-            <Box sx={{ mt: 2 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 2,
-                  mt: 2,
-                }}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+            <Controller
+              name="type"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tipo de cuenta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CURRENT">Corriente</SelectItem>
+                    <SelectItem value="SAVINGS">Ahorros</SelectItem>
+                    <SelectItem value="CREDIT">Crédito</SelectItem>
+                    <SelectItem value="OTHER">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+
+            <Controller
+              name="bankName"
+              control={control}
+              render={({ field }) => (
+                <Input placeholder="Nombre de la cuenta" {...field} />
+              )}
+            />
+
+            <Controller
+              name="accountNumber"
+              control={control}
+              render={({ field }) => (
+                <Input placeholder="Número de cuenta" {...field} />
+              )}
+            />
+
+            <Controller
+              name="alias"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  placeholder="Alias"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              )}
+            />
+
+            {/* Autocomplete cuenta contable */}
+            <Controller
+              name="accountId"
+              control={control}
+              render={({ field }) => (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start">
+                      {accounts.find((a) => a.id === field.value)?.name ??
+                        "Seleccionar cuenta contable"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-0">
+                    <Command>
+                      <CommandInput placeholder="Buscar cuenta..." />
+                      <CommandEmpty>No hay resultados</CommandEmpty>
+                      <CommandGroup>
+                        {accounts.slice(0, 10).map((a) => (
+                          <CommandItem
+                            key={a.id}
+                            onSelect={() => field.onChange(a.id)}
+                          >
+                            {a.code} — {a.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
+            />
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
               >
-                <Button onClick={handleClose}>Cancelar</Button>
-                <Button variant="contained" type="submit">
-                  Guardar
-                </Button>
-              </Box>
-            </Box>
-          </DialogContent>
-        </form>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                Guardar
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
       </Dialog>
     </PageContainer>
   );
-};
-
-export default BankAccountsPage;
+}

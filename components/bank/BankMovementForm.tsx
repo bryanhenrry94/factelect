@@ -1,3 +1,13 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus, Trash } from "lucide-react";
+
+/* actions */
 import { getAccounts } from "@/actions/accounting/chart-of-account";
 import { getCostCenters } from "@/actions/accounting/cost-center";
 import { getAllBankAccounts } from "@/actions/bank/bank-account";
@@ -6,6 +16,28 @@ import {
   getBankMovementById,
   updateBankMovement,
 } from "@/actions/bank/bank-movement";
+
+/* ui */
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+/* domain */
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { ChartOfAccount } from "@/lib/validations";
 import { CostCenter } from "@/lib/validations/accounting/cost-center";
@@ -15,29 +47,8 @@ import {
   BankMovementSchema,
 } from "@/lib/validations/bank/bank_movement";
 import { $Enums } from "@/prisma/generated/prisma";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Autocomplete,
-  Box,
-  Button,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
-import { Delete, Plus } from "lucide-react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+
+/* -------------------------------- */
 
 const bankMovementTypeLabels: Record<$Enums.BankMovementType, string> = {
   DEBIT: "Nota de Débito",
@@ -54,18 +65,18 @@ const initialBankMovement: BankMovement = {
   description: "",
   reference: "",
   createdAt: new Date(),
+  details: [],
 };
 
-interface BankMovementFormProps {
+interface Props {
   bankMovementId?: string;
 }
 
-export const BankMovementForm: React.FC<BankMovementFormProps> = ({
-  bankMovementId,
-}) => {
+export function BankMovementForm({ bankMovementId }: Props) {
   const { data: session } = useSession();
   const router = useRouter();
-  const [bankAccounts, setBankAccounts] = React.useState<BankAccount[]>([]);
+
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
 
@@ -73,9 +84,9 @@ export const BankMovementForm: React.FC<BankMovementFormProps> = ({
     control,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
-    setValue,
     watch,
+    setValue,
+    formState: { isSubmitting },
   } = useForm<BankMovement>({
     resolver: zodResolver(BankMovementSchema),
     defaultValues: initialBankMovement,
@@ -86,458 +97,283 @@ export const BankMovementForm: React.FC<BankMovementFormProps> = ({
     name: "details",
   });
 
-  const fetchBankAccounts = async () => {
+  /* -------------------- load data -------------------- */
+
+  useEffect(() => {
     if (!session?.user?.tenantId) return;
 
-    try {
-      const response = await getAllBankAccounts(session.user.tenantId);
-
-      if (response.success && response.data) {
-        setBankAccounts(response.data);
-      }
-    } catch (error) {
-      console.error("Error fetching bank accounts:", error);
-    }
-  };
-
-  const fetchAccounts = async () => {
-    try {
-      if (!session?.user?.tenantId) return;
-
-      const response = await getAccounts(session.user.tenantId);
-      if (response.success) {
-        setAccounts(response.data || []);
-      } else {
-        notifyError("Error al cargar las cuentas");
-      }
-    } catch (error) {
-      console.error("Error fetching accounts:", error);
-      notifyError("Error al cargar las cuentas");
-    }
-  };
-
-  const fetchCostCenters = async () => {
-    try {
-      if (!session?.user?.tenantId) return;
-
-      const response = await getCostCenters(session.user.tenantId);
-      if (response.success) {
-        setCostCenters(response.data || []);
-        return;
-      } else {
-        notifyError("Error al cargar los centros de costo");
-      }
-      setCostCenters([]);
-    } catch (error) {
-      console.error("Error fetching cost centers:", error);
-      notifyError("Error al cargar los centros de costo");
-    }
-  };
-
-  /** 🔄 Cargar cuentas bancarias */
-  useEffect(() => {
-    fetchBankAccounts();
-    fetchAccounts();
-    fetchCostCenters();
+    getAllBankAccounts(session.user.tenantId).then(
+      (r) => r.success && setBankAccounts(r.data || [])
+    );
+    getAccounts(session.user.tenantId).then(
+      (r) => r.success && setAccounts(r.data || [])
+    );
+    getCostCenters(session.user.tenantId).then(
+      (r) => r.success && setCostCenters(r.data || [])
+    );
   }, [session?.user?.tenantId]);
 
-  /** 🔄 Cargar o limpiar movimiento editable */
   useEffect(() => {
-    if (!bankMovementId) {
-      reset(initialBankMovement);
+    if (!bankMovementId) return;
+
+    getBankMovementById(bankMovementId).then((r) => {
+      if (r.success && r.data) reset(r.data);
+    });
+  }, [bankMovementId, reset]);
+
+  /* -------------------- total -------------------- */
+
+  const details = watch("details");
+
+  const total = useMemo(() => {
+    return (details || []).reduce((sum, d) => sum + Number(d?.amount || 0), 0);
+  }, [details?.map((d) => d.amount).join(",")]);
+
+  useEffect(() => {
+    setValue("amount", total, { shouldDirty: true });
+  }, [total, setValue]);
+
+  /* -------------------- submit -------------------- */
+
+  const onSubmit = async (data: BankMovement) => {
+    if (!session?.user?.tenantId) return;
+
+    const res = bankMovementId
+      ? await updateBankMovement(bankMovementId, data)
+      : await createBankMovement(session.user.tenantId, data);
+
+    if (!res.success) {
+      notifyError("Error al guardar");
       return;
     }
 
-    const fetchBankMovement = async () => {
-      try {
-        const response = await getBankMovementById(bankMovementId);
-        if (response.success && response.data) {
-          reset(response.data);
-        } else {
-          notifyError("No se pudo cargar el movimiento bancario");
-        }
-      } catch (error) {
-        notifyError("Error al cargar el movimiento bancario");
-        console.error("Error fetching bank movement:", error);
-      }
-    };
-
-    fetchBankMovement();
-  }, [bankMovementId, reset]);
-
-  /** 💾 Guardar */
-  const onSubmit = async (data: BankMovement) => {
-    try {
-      if (!session?.user?.tenantId) {
-        notifyError("No se encontró el tenantId del usuario");
-        return;
-      }
-
-      const response = bankMovementId
-        ? await updateBankMovement(bankMovementId, data)
-        : await createBankMovement(session.user.tenantId, data);
-
-      if (response.success) {
-        notifyInfo(
-          `Movimiento ${
-            bankMovementId ? "actualizado" : "registrado"
-          } correctamente`
-        );
-
-        router.push(`/bancos/movimientos/${response.data?.id}/editar`);
-      } else {
-        notifyError("Error al guardar el movimiento");
-      }
-    } catch (error) {
-      notifyError("Error inesperado al guardar el movimiento");
-      console.error(error);
-    }
+    notifyInfo("Movimiento guardado correctamente");
+    router.push(`/bancos/movimientos/${res.data?.id}/editar`);
   };
 
-  const details = watch("details");
-  useEffect(() => {
-    const total = (details || []).reduce(
-      (sum: number, item: any) => sum + (Number(item.amount) || 0),
-      0
-    );
-    setValue("amount", total);
-  }, [details?.map((d) => d.amount).join(","), setValue]);
+  /* ==================== UI ==================== */
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <Box sx={{ display: "flex", flexDirection: "column", maxWidth: 400 }}>
-        {/* Tipo de Movimiento */}
-        <Controller
-          name="type"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label="Tipo de Movimiento"
-              fullWidth
-              margin="dense"
-              error={!!errors.type}
-              helperText={errors.type?.message}
-              select
-              size="small"
-            >
-              {Object.values($Enums.BankMovementType).map((type) => (
-                <MenuItem key={type} value={type}>
-                  {bankMovementTypeLabels[type]}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
-        />
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="flex items-center justify-between border-b pb-4">
+        <div>
+          <h2 className="text-xl font-semibold">Movimiento Bancario</h2>
+          <p className="text-sm text-muted-foreground">
+            {bankMovementId ? "Editar movimiento" : "Nuevo movimiento"}
+          </p>
+        </div>
 
-        <Controller
-          name="date"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label="Fecha de Emisión"
-              type="date"
-              fullWidth
-              margin="dense"
-              value={
-                field.value
-                  ? new Date(field.value).toISOString().split("T")[0]
-                  : ""
-              }
-              onChange={(e) => {
-                field.onChange(new Date(e.target.value));
-              }}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              error={!!errors.date}
-              helperText={errors.date?.message}
-              size="small"
-            />
-          )}
-        />
+        <div className="text-sm text-muted-foreground">
+          Total:
+          <span className="ml-2 text-lg font-semibold text-foreground">
+            {new Intl.NumberFormat("es-EC", {
+              style: "currency",
+              currency: "USD",
+            }).format(total)}
+          </span>
+        </div>
+      </div>
 
-        {/* Cuenta Bancaria */}
-        <Controller
-          name="bankAccountId"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label="Cuenta Bancaria"
-              fullWidth
-              margin="dense"
-              error={!!errors.bankAccountId}
-              helperText={errors.bankAccountId?.message}
-              select
-              size="small"
-            >
-              {bankAccounts.map((account) => (
-                <MenuItem key={account.id} value={account.id}>
-                  {account.bankName} - {account.accountNumber}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
-        />
+      {/* Datos principales */}
+      <div className="rounded-lg border bg-muted/30 p-4">
+        <h3 className="mb-3 text-sm font-medium text-muted-foreground">
+          Datos generales
+        </h3>
 
-        {/* Monto */}
-        {/* <Controller
-          name="amount"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label="Monto"
-              fullWidth
-              margin="dense"
-              value={field.value ?? 1}
-              onChange={(e) => {
-                const text = e.target.value;
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* type */}
+          <Controller
+            name="type"
+            control={control}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo de movimiento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values($Enums.BankMovementType).map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {bankMovementTypeLabels[t]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
 
-                // Mantén siempre string en el campo
-                field.onChange(text);
-              }}
-              onBlur={() => {
-                const numeric = parseFloat(
-                  field.value ? field.value.toString() : "0"
-                );
+          {/* date */}
+          <Controller
+            name="date"
+            control={control}
+            render={({ field }) => (
+              <Input
+                type="date"
+                value={field.value?.toISOString().split("T")[0]}
+                onChange={(e) => field.onChange(new Date(e.target.value))}
+              />
+            )}
+          />
 
-                // Al salir del input conviertes a number seguro
-                field.onChange(isNaN(numeric) ? 0 : Number(numeric.toFixed(2)));
-              }}
-              inputProps={{ inputMode: "decimal" }}
-              type="number"
-              error={!!errors.amount}
-              helperText={errors.amount?.message}
-              size="small"
-            />
-          )}
-        /> */}
+          {/* bankAccount */}
+          <Controller
+            name="bankAccountId"
+            control={control}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Cuenta bancaria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {bankAccounts.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.bankName} - {b.accountNumber}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
 
-        {/* Referencia */}
-        <Controller
-          name="reference"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label="Referencia"
-              fullWidth
-              margin="dense"
-              error={!!errors.reference}
-              helperText={errors.reference?.message}
-              size="small"
-            />
-          )}
-        />
+          {/* reference */}
+          <Controller
+            name="reference"
+            control={control}
+            render={({ field }) => (
+              <Input {...field} placeholder="Referencia" />
+            )}
+          />
 
-        {/* Descripción */}
-        <Controller
-          name="description"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label="Descripción"
-              fullWidth
-              margin="dense"
-              multiline
-              rows={3}
-              error={!!errors.description}
-              helperText={errors.description?.message}
-              size="small"
-            />
-          )}
-        />
-      </Box>
-      {/* Cuentas */}
-      <TableContainer
-        sx={{
-          mt: 2,
-          borderRadius: 2,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-          bgcolor: "background.paper",
-        }}
-      >
-        <Table size="small">
-          <TableHead>
-            <TableRow
-              sx={{
-                bgcolor: "grey.100",
-                "& th": {
-                  fontWeight: 600,
-                  py: 1.5,
-                  fontSize: "0.85rem",
-                  color: "grey.700",
-                },
-              }}
-            >
-              <TableCell>Cuenta</TableCell>
-              <TableCell align="center">Monto</TableCell>
-              <TableCell align="center">Centro de costo</TableCell>
-              <TableCell align="center">Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {fields.map((field, index) => (
-              <TableRow
-                key={field.id}
-                hover
-                sx={{
-                  "& td": { py: 1 },
-                }}
-              >
-                {/* Cuenta */}
-                <TableCell sx={{ width: 300 }}>
-                  <Controller
-                    name={`details.${index}.accountId`}
-                    control={control}
-                    render={({ field }) => {
-                      const selectedOption =
-                        accounts.find((a) => a.id === field.value) || null;
+          {/* description */}
+          <Controller
+            name="description"
+            control={control}
+            render={({ field }) => (
+              <Textarea {...field} placeholder="Descripción" />
+            )}
+          />
+        </div>
+      </div>
 
-                      return (
-                        <Autocomplete
-                          options={accounts}
-                          getOptionLabel={(option) =>
-                            `${option.code} ${option.name}`
-                          }
-                          value={selectedOption}
-                          onChange={(_, value) => {
-                            field.onChange(value ? value.id : "");
-                          }}
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              // label="Cuenta Contable"
-                              variant="outlined"
-                              margin="dense"
-                              error={!!errors.details?.[index]?.accountId}
-                              helperText={
-                                errors.details?.[index]?.accountId?.message
-                              }
-                              value={field.value || ""}
-                              size="small"
-                              fullWidth
-                            />
-                          )}
-                        />
-                      );
-                    }}
-                  />
-                </TableCell>
+      {/* Detalles */}
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/40">
+            <TableHead>Cuenta contable</TableHead>
+            <TableHead className="text-right">Monto</TableHead>
+            <TableHead>Centro de costo</TableHead>
+            <TableHead className="w-10" />
+          </TableRow>
+        </TableHeader>
 
-                {/* Valor */}
-                <TableCell align="right" sx={{ width: 140 }}>
-                  <Controller
-                    name={`details.${index}.amount`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        // label="Monto"
-                        variant="outlined"
-                        size="small"
-                        type="number"
-                        fullWidth
-                        onChange={(e) => {
-                          const text = e.target.value;
-
-                          // Mantén siempre string en el campo
-                          field.onChange(text);
-                        }}
-                        onBlur={() => {
-                          const numeric = parseFloat(
-                            field.value ? field.value.toString() : "0"
-                          );
-
-                          // Al salir del input conviertes a number seguro
-                          field.onChange(
-                            isNaN(numeric) ? 0 : Number(numeric.toFixed(2))
-                          );
-                        }}
-                        inputProps={{ inputMode: "decimal" }}
-                      />
-                    )}
-                  />
-                </TableCell>
-
-                {/* Centro de costo */}
-                <TableCell sx={{ width: 220 }}>
-                  <Controller
-                    name={`details.${index}.costCenterId`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="Centro de costo"
-                        variant="outlined"
-                        size="small"
-                        fullWidth
-                        value={field.value || ""}
-                        select
-                      >
-                        <MenuItem value="">Ninguno</MenuItem>
-                        {costCenters.map((costCenter) => (
-                          <MenuItem key={costCenter.id} value={costCenter.id}>
-                            {costCenter.code} {costCenter.name}
-                          </MenuItem>
+        <TableBody>
+          {fields.map((f, i) => (
+            <TableRow key={f.id}>
+              <TableCell>
+                <Controller
+                  name={`details.${i}.accountId`}
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || "__none"}
+                      onValueChange={(v) =>
+                        field.onChange(v === "__none" ? "" : v)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Cuenta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">Seleccionar</SelectItem>
+                        {accounts.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.code} {a.name}
+                          </SelectItem>
                         ))}
-                      </TextField>
-                    )}
-                  />
-                </TableCell>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </TableCell>
 
-                {/* Eliminar */}
-                <TableCell align="center" sx={{ width: 60 }}>
-                  <IconButton
-                    color="error"
-                    onClick={() => remove(index)}
-                    sx={{ p: 0.5 }}
-                  >
-                    <Delete size={18} />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
+              <TableCell className="text-right">
+                <Controller
+                  name={`details.${i}.amount`}
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      type="number"
+                      className="text-right font-mono"
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  )}
+                />
+              </TableCell>
 
-            {/* Agregar línea */}
-            <TableRow>
-              <TableCell colSpan={5} align="left" sx={{ py: 2.5 }}>
+              <TableCell>
+                <Controller
+                  name={`details.${i}.costCenterId`}
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || "__none"}
+                      onValueChange={(v) =>
+                        field.onChange(v === "__none" ? null : v)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Centro de costo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">Ninguno</SelectItem>
+                        {costCenters.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.code} {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </TableCell>
+
+              <TableCell>
                 <Button
-                  variant="outlined"
-                  onClick={() =>
-                    append({
-                      accountId: "",
-                      amount: 0,
-                      costCenterId: null,
-                    })
-                  }
-                  sx={{ textTransform: "none", px: 3 }}
-                  startIcon={<Plus size={16} />}
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => remove(i)}
                 >
-                  Agregar línea
+                  <Trash className="h-4 w-4 text-destructive" />
                 </Button>
               </TableCell>
             </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
-      {/* Botones */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: 2,
-          mt: 2,
-        }}
-      >
-        <Button variant="contained" type="submit" disabled={isSubmitting}>
+          ))}
+
+          <TableRow>
+            <TableCell colSpan={4}>
+              <div className="flex justify-start py-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() =>
+                    append({ accountId: "", amount: 0, costCenterId: null })
+                  }
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Agregar línea contable
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+
+      <div className="flex justify-end">
+        <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Guardando..." : "Guardar Movimiento"}
         </Button>
-      </Box>
+      </div>
     </form>
   );
-};
+}

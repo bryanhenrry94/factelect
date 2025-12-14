@@ -65,7 +65,7 @@ const data = {
       title: "Personas",
       url: "#",
       icon: SquareTerminal,
-      isActive: true,
+      // isActive: true,
       items: [
         {
           title: "Clientes",

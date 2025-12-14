@@ -1,23 +1,25 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
 import { notifyError, notifyInfo } from "@/lib/notifications";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Dialog,
-  IconButton,
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TablePagination,
+  TableHeader,
   TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
 import { useSession } from "next-auth/react";
 
@@ -32,6 +34,7 @@ import {
 } from "@/actions/bank/bank-movement";
 
 import { formatCurrency, formatDate, toInputDate } from "@/utils/formatters";
+
 import { BankMovementForm } from "@/components/bank/BankMovementForm";
 import { $Enums } from "@/prisma/generated/prisma/wasm";
 import { useDateRangeFilter } from "@/hooks/useDateRangeFilter";
@@ -42,7 +45,7 @@ const now = new Date();
 const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-const BankConciliacionPage = () => {
+export default function BankConciliacionPage() {
   const { data: session } = useSession();
 
   const { search, setSearch } = useSearchFilter();
@@ -55,44 +58,29 @@ const BankConciliacionPage = () => {
   const [bankMovements, setBankMovements] = useState<BankMovementWithAccount[]>(
     []
   );
-  const [bankMovementSelected, setBankMovementSelected] =
-    useState<BankMovement | null>(null);
-
-  const [page, setPage] = useState(0);
-  const rowsPerPage = 5;
+  const [selected, setSelected] = useState<BankMovement | null>(null);
 
   const fetchBankMovements = async () => {
     const tenantId = session?.user?.tenantId;
     if (!tenantId) return;
 
     try {
-      const response = await getAllBankMovements(
-        tenantId,
-        search,
-        dateFrom,
-        dateTo
-      );
+      const res = await getAllBankMovements(tenantId, search, dateFrom, dateTo);
 
-      if (!response.success) {
-        notifyError("Error al cargar los conciliaciones");
+      if (!res.success) {
+        notifyError("Error al cargar conciliaciones");
         return;
       }
 
-      setBankMovements(response.data || []);
-    } catch (error) {
-      notifyError("Error al cargar los conciliaciones");
+      setBankMovements(res.data || []);
+    } catch {
+      notifyError("Error al cargar conciliaciones");
     }
   };
 
-  // Ejecuta la carga
   useEffect(() => {
     // fetchBankMovements();
   }, [session?.user?.tenantId, search, dateFrom, dateTo]);
-
-  const handleEdit = (m: BankMovement) => {
-    setBankMovementSelected(m);
-    setOpen(true);
-  };
 
   const handleDelete = async (id: string) => {
     const confirm = await AlertService.showConfirm(
@@ -101,168 +89,136 @@ const BankConciliacionPage = () => {
     );
     if (!confirm) return;
 
-    const result = await deleteBankMovement(id);
-
-    if (result.success) {
-      notifyInfo("Movimiento eliminado correctamente");
+    const res = await deleteBankMovement(id);
+    if (res.success) {
+      notifyInfo("Movimiento eliminado");
       fetchBankMovements();
-    } else notifyError("Error al eliminar el movimiento");
-  };
-
-  const getSimbol = (t: $Enums.BankMovementType) =>
-    ["CREDIT", "DEBIT"].includes(t) ? "+" : "-";
-
-  const getTypeMovementLabel = (t: $Enums.BankMovementType) => {
-    switch (t) {
-      case "DEBIT":
-        return "ND";
-      case "CREDIT":
-        return "NC";
-      default:
-        return t;
+    } else {
+      notifyError("Error al eliminar");
     }
   };
+
+  const getTypeLabel = (t: $Enums.BankMovementType) =>
+    t === "DEBIT" ? "ND" : "NC";
+
+  const getSymbol = (t: $Enums.BankMovementType) =>
+    t === "CREDIT" ? "+" : "-";
 
   return (
     <PageContainer
       title="Conciliación Bancaria"
-      description="Gestiona los conciliaciones bancarios de tus cuentas."
+      description="Gestiona las conciliaciones bancarias"
     >
       {/* Filtros */}
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 2,
-          flexWrap: "wrap",
-        }}
-      >
-        <Box sx={{ flexGrow: 1, display: "flex", gap: 2, flexWrap: "wrap" }}>
-          <TextField
-            label="Buscar"
-            size="small"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      <div className="flex flex-wrap items-end gap-3 mb-4">
+        <Input
+          placeholder="Buscar"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
 
-          <TextField
-            label="Desde"
-            type="date"
-            size="small"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
+        <Input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="w-[150px]"
+        />
 
-          <TextField
-            label="Hasta"
-            type="date"
-            size="small"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-        </Box>
+        <Input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="w-[150px]"
+        />
 
         <Button
-          variant="contained"
-          startIcon={<Plus />}
-          onClick={() => setOpen(true)}
-          size="small"
+          className="ml-auto"
+          onClick={() => {
+            setSelected(null);
+            setOpen(true);
+          }}
         >
+          <Plus className="w-4 h-4 mr-2" />
           Nueva Conciliación
         </Button>
-      </Box>
+      </div>
 
-      {/* Tabla */}
-      <Card sx={{ mt: 3 }}>
+      <Card>
+        <CardHeader>
+          <CardTitle>Movimientos</CardTitle>
+        </CardHeader>
         <CardContent>
           {bankMovements.length === 0 ? (
-            <Box textAlign="center" py={6}>
-              <ShoppingBag />
-              <Typography variant="h6" mt={2}>
-                No hay conciliaciones aún
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Agrega la primera conciliación bancaria
-              </Typography>
-            </Box>
+            <div className="flex flex-col items-center py-12 text-muted-foreground">
+              <ShoppingBag className="w-8 h-8 mb-3" />
+              <p className="font-medium">No hay conciliaciones aún</p>
+              <p className="text-sm">Agrega la primera conciliación bancaria</p>
+            </div>
           ) : (
-            <>
-              <Table>
-                <TableHead>
-                  <TableRow>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cuenta</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Monto</TableHead>
+                  <TableHead>Referencia</TableHead>
+                  <TableHead>Descripción</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {bankMovements.map((m) => (
+                  <TableRow key={m.id}>
+                    <TableCell>{m.account?.name}</TableCell>
+                    <TableCell>{getTypeLabel(m.type)}</TableCell>
+                    <TableCell>{formatDate(m.date.toString())}</TableCell>
                     <TableCell>
-                      <strong>Cuenta</strong>
+                      {getSymbol(m.type)} {formatCurrency(m.amount)}
                     </TableCell>
-                    <TableCell>
-                      <strong>Tipo</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Fecha</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Monto</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Referencia</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Descripción</strong>
-                    </TableCell>
-                    <TableCell align="right">
-                      <strong>Acciones</strong>
+                    <TableCell>{m.reference}</TableCell>
+                    <TableCell>{m.description}</TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setSelected(m);
+                          setOpen(true);
+                        }}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleDelete(m.id)}
+                      >
+                        <Delete className="w-4 h-4 text-red-500" />
+                      </Button>
                     </TableCell>
                   </TableRow>
-                </TableHead>
-
-                <TableBody>
-                  {bankMovements
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((m) => (
-                      <TableRow key={m.id} hover>
-                        <TableCell>{m.account?.name}</TableCell>
-                        <TableCell>{getTypeMovementLabel(m.type)}</TableCell>
-                        <TableCell>{formatDate(m.date.toString())}</TableCell>
-                        <TableCell>
-                          {`${getSimbol(m.type)} ${formatCurrency(m.amount)}`}
-                        </TableCell>
-                        <TableCell>{m.reference}</TableCell>
-                        <TableCell>{m.description}</TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            color="primary"
-                            onClick={() => handleEdit(m)}
-                          >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            color="error"
-                            onClick={() => handleDelete(m.id)}
-                          >
-                            <Delete />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-
-              <TablePagination
-                component="div"
-                count={bankMovements.length}
-                page={page}
-                onPageChange={(_, newPage) => setPage(newPage)}
-                rowsPerPage={rowsPerPage}
-                rowsPerPageOptions={[5]}
-              />
-            </>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
+
+      {/* Modal */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selected ? "Editar Conciliación" : "Nueva Conciliación"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <BankMovementForm bankMovementId={selected?.id} />
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
-};
-
-export default BankConciliacionPage;
+}
