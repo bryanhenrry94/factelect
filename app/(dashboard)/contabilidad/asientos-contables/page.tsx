@@ -1,225 +1,193 @@
 "use client";
+
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
+
 import PageContainer from "@/components/container/PageContainer";
 import { notifyError, notifyInfo } from "@/lib/notifications";
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  IconButton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
-import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { AlertService } from "@/lib/alerts";
-import { useSession } from "next-auth/react";
-import { JournalEntry } from "@/lib/validations/accounting/journal_entry";
+
 import {
   deleteJournalEntry,
   getJournalEntries,
 } from "@/actions/accounting/journal-entry";
+import { JournalEntry } from "@/lib/validations/accounting/journal_entry";
 import { formatDate } from "@/utils/formatters";
 
-export default function CentrosCostoPage() {
+/* ShadCN */
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+
+export default function AsientosContablesPage() {
   const router = useRouter();
   const params = useSearchParams();
-
   const { data: session } = useSession();
 
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
-
   const [search, setSearch] = useState(params.get("search") ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(search);
 
-  const [page, setPage] = useState(0);
-  const rowsPerPage = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
+  /* ---------------- Debounce ---------------- */
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  /* ---------------- URL params ---------------- */
+  useEffect(() => {
+    const query = new URLSearchParams(params.toString());
+    debouncedSearch
+      ? query.set("search", debouncedSearch)
+      : query.delete("search");
+
+    router.push(`/contabilidad/asientos-contables?${query.toString()}`);
+  }, [debouncedSearch]);
+
+  /* ---------------- Fetch ---------------- */
+  const fetchJournalEntries = async () => {
+    if (!session?.user?.tenantId) return;
+
+    const response = await getJournalEntries(
+      session.user.tenantId,
+      debouncedSearch
+    );
+
+    if (!response.success) {
+      notifyError("Error al cargar los asientos contables");
+      return;
+    }
+
+    setJournalEntries(response.data || []);
   };
 
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search); // actualiza el valor definitivo
-    }, 300);
+    fetchJournalEntries();
+  }, [session?.user?.tenantId, debouncedSearch]);
 
-    return () => clearTimeout(handler); // limpia si sigue escribiendo
-  }, [search]);
-
+  /* ---------------- Actions ---------------- */
   const handleCreate = () => {
-    router.push(`/contabilidad/asientos-contables/nuevo`);
+    router.push("/contabilidad/asientos-contables/nuevo");
   };
 
-  const handleEdit = (journalEntry: JournalEntry) => {
-    router.push(`/contabilidad/asientos-contables/${journalEntry.id}/editar`);
+  const handleEdit = (entry: JournalEntry) => {
+    router.push(`/contabilidad/asientos-contables/${entry.id}/editar`);
   };
 
   const handleDelete = async (id: string) => {
-    const confirm = await AlertService.showConfirm(
+    const confirmed = await AlertService.showConfirm(
       "Aviso",
       "¿Deseas eliminar el asiento contable?"
     );
-    if (!confirm) return;
+    if (!confirmed) return;
 
-    try {
-      const result = await deleteJournalEntry(id);
+    const response = await deleteJournalEntry(id);
 
-      if (result.success) {
-        notifyInfo("Asiento contable eliminado correctamente");
-        fetchCostCenters();
-      } else notifyError("Error al eliminar el asiento contable");
-    } catch (error) {
+    if (response.success) {
+      notifyInfo("Asiento contable eliminado correctamente");
+      fetchJournalEntries();
+    } else {
       notifyError("Error al eliminar el asiento contable");
     }
   };
 
-  const fetchCostCenters = async () => {
-    try {
-      if (!session?.user?.tenantId) return;
-
-      const response = await getJournalEntries(
-        session.user.tenantId,
-        debouncedSearch
-      );
-      if (!response.success) {
-        notifyError("Error al cargar los asientos contables");
-        return;
-      }
-
-      setJournalEntries(response.data || []);
-    } catch (error) {
-      notifyError("Error al cargar los asientos contables");
-    }
-  };
-
-  useEffect(() => {
-    fetchCostCenters();
-  }, [session?.user?.tenantId, debouncedSearch]);
-
-  useEffect(() => {
-    updateParam("search", debouncedSearch);
-  }, [debouncedSearch]);
-
-  const updateParam = (key: string, value: string) => {
-    const query = new URLSearchParams(params.toString());
-    query.set(key, value);
-
-    if (query.get("search") === "") {
-      query.delete("search");
-    }
-
-    router.push(`/contabilidad/asientos-contables?${query.toString()}`);
-  };
-
+  /* ---------------- UI ---------------- */
   return (
     <PageContainer
       title="Asientos Contables"
       description="Gestiona los asientos contables de tu organización"
     >
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
-        }}
-      >
-        <TextField
-          label="Buscar"
-          variant="outlined"
-          size="small"
+      {/* Top bar */}
+      <div className="flex flex-col sm:flex-row gap-2 justify-between mb-4">
+        <Input
+          placeholder="Buscar..."
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            updateParam("search", e.target.value);
-          }}
+          onChange={(e) => setSearch(e.target.value)}
+          className="sm:max-w-xs"
         />
-        <Button
-          variant="contained"
-          startIcon={<Plus />}
-          onClick={handleCreate}
-          sx={{ width: { xs: "100%", sm: "auto" } }}
-        >
+
+        <Button onClick={handleCreate}>
+          <Plus className="mr-2 h-4 w-4" />
           Nuevo
         </Button>
-      </Box>
+      </div>
 
-      <Card sx={{ mt: 3 }}>
+      <Card>
         <CardContent>
           {journalEntries.length === 0 ? (
-            <Box textAlign="center" py={6}>
-              <ShoppingBag />
-              <Typography variant="h6" mt={2}>
-                No hay asientos contables aún
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Agrega el primer asiento contable para comenzar a organizar tus
-                finanzas.
-              </Typography>
-            </Box>
+            <div className="flex flex-col items-center py-10 text-center">
+              <ShoppingBag className="h-10 w-10 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">
+                No hay asientos contables
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Agrega el primero para comenzar
+              </p>
+            </div>
           ) : (
-            <Box>
+            <>
               <Table>
-                <TableHead>
+                <TableHeader>
                   <TableRow>
-                    <TableCell>
-                      <strong>Código</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Descripción</strong>
-                    </TableCell>
-                    <TableCell align="right">
-                      <strong>Acciones</strong>
-                    </TableCell>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
                 <TableBody>
                   {journalEntries
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((journalEntry) => (
-                      <TableRow key={journalEntry.id} hover>
+                    .slice(
+                      (currentPage - 1) * itemsPerPage,
+                      (currentPage - 1) * itemsPerPage + itemsPerPage
+                    )
+                    .map((entry) => (
+                      <TableRow key={entry.id}>
                         <TableCell>
-                          {formatDate(journalEntry.date.toString())}
+                          {formatDate(entry.date.toString())}
                         </TableCell>
-                        <TableCell>{journalEntry.description}</TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            color="primary"
-                            onClick={() => handleEdit(journalEntry)}
+                        <TableCell>{entry.description}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(entry)}
                           >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            color="error"
-                            onClick={() => handleDelete(journalEntry.id)}
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(entry.id)}
                           >
-                            <Delete />
-                          </IconButton>
+                            <Delete className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
               </Table>
 
-              <TablePagination
-                component="div"
-                color="primary"
-                count={journalEntries.length}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                rowsPerPageOptions={[5]}
+              <PaginationControls
+                currentPage={currentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={journalEntries.length}
+                onPageChange={(page) => setCurrentPage(page)}
               />
-            </Box>
+            </>
           )}
         </CardContent>
       </Card>

@@ -2,9 +2,19 @@
 import { getJournalEntryById } from "@/actions/accounting/journal-entry";
 import { JournalEntryForm } from "@/components/accounting/JournalEntryForm";
 import PageContainer from "@/components/container/PageContainer";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Card, CardContent } from "@/components/ui/card";
 import { notifyError } from "@/lib/notifications";
 import { JournalEntry } from "@/lib/validations/accounting/journal_entry";
-import { Card, Typography } from "@mui/material";
+import { SlashIcon } from "lucide-react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -32,11 +42,36 @@ export default function EditarAsientoContablePage() {
 
   return (
     <PageContainer title="Editar Asiento Contable">
-      <Card sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-          Editar Asiento Contable
-        </Typography>
-        <JournalEntryForm journalEntryToEdit={journalEntryToEdit} />
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/">Inicio</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator>
+            <SlashIcon />
+          </BreadcrumbSeparator>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/contabilidad/asientos-contables">
+                Asientos Contables
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator>
+            <SlashIcon />
+          </BreadcrumbSeparator>
+          <BreadcrumbItem>
+            <BreadcrumbPage>Editar</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+      <Card className="mt-4">
+        <CardContent className="p-6">
+          <h2 className="mb-4 text-lg font-semibold">Nuevo Asiento Contable</h2>
+          <JournalEntryForm journalEntryToEdit={journalEntryToEdit} />
+        </CardContent>
       </Card>
     </PageContainer>
   );

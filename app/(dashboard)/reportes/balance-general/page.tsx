@@ -2,25 +2,30 @@
 
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
+import { useSession } from "next-auth/react";
+import { Search } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
-  Box,
-  Button,
-  Card,
-  Divider,
-  Grid,
-  MenuItem,
-  Skeleton,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
-import { useSession } from "next-auth/react";
-import { Search } from "lucide-react";
+} from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+
 import { notifyError, notifyWarning } from "@/lib/notifications";
 import { getCostCenters } from "@/actions/accounting/cost-center";
 import { getBalanceGeneral } from "@/actions/accounting/balance-general";
@@ -40,8 +45,7 @@ export default function BalanceGeneralPage() {
   const [rows, setRows] = useState<AccountBalance[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Filtros
-  const [costCenterId, setCostCenterId] = useState("");
+  const [costCenterId, setCostCenterId] = useState<string | undefined>();
   const [dateFrom, setDateFrom] = useState(
     firstDayOfYear.toISOString().split("T")[0]
   );
@@ -49,9 +53,6 @@ export default function BalanceGeneralPage() {
     lastDayOfYear.toISOString().split("T")[0]
   );
 
-  // ==========================
-  // Load dropdown data
-  // ==========================
   useEffect(() => {
     async function loadData() {
       if (!session?.user?.tenantId) return;
@@ -73,7 +74,7 @@ export default function BalanceGeneralPage() {
 
     try {
       const response = await getBalanceGeneral({
-        costCenter: costCenterId || undefined,
+        costCenter: costCenterId,
         dateFrom: new Date(dateFrom),
         dateTo: new Date(dateTo),
       });
@@ -84,7 +85,7 @@ export default function BalanceGeneralPage() {
         setRows([]);
         notifyError(response.error || "Error al cargar información.");
       }
-    } catch (error) {
+    } catch {
       notifyError("Error al cargar información.");
       setRows([]);
     } finally {
@@ -94,117 +95,77 @@ export default function BalanceGeneralPage() {
 
   return (
     <PageContainer title="Estado de Situación Financiera">
-      {/* ========================== */}
-      {/* Card filtros */}
-      {/* ========================== */}
-      <Card sx={{ mt: 4, p: 3, borderRadius: 3 }}>
-        <Typography variant="h6" fontWeight={600} mb={2}>
-          Filtros de búsqueda
-        </Typography>
-
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <TextField
-              select
-              label="Centro de Costo"
-              fullWidth
-              size="small"
-              value={costCenterId}
-              onChange={(e) => setCostCenterId(e.target.value)}
-            >
-              <MenuItem value="">Todos</MenuItem>
+      {/* Filtros */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Filtros de búsqueda</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <Select value={costCenterId} onValueChange={setCostCenterId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Centro de costo (Todos)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">Todos</SelectItem>
               {costCenters.map((c) => (
-                <MenuItem key={c.id} value={c.id}>
+                <SelectItem key={c.id} value={c.id}>
                   {c.code} — {c.name}
-                </MenuItem>
+                </SelectItem>
               ))}
-            </TextField>
-          </Grid>
+            </SelectContent>
+          </Select>
 
-          <Grid size={{ xs: 12, sm: 3, md: 2 }}>
-            <TextField
-              label="Desde"
-              type="date"
-              fullWidth
-              size="small"
-              InputLabelProps={{ shrink: true }}
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-            />
-          </Grid>
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
 
-          <Grid size={{ xs: 12, sm: 3, md: 2 }}>
-            <TextField
-              label="Hasta"
-              type="date"
-              fullWidth
-              size="small"
-              InputLabelProps={{ shrink: true }}
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12 }}>
-            <Button
-              variant="contained"
-              startIcon={<Search />}
-              onClick={handleSearch}
-              disabled={loading}
-              sx={{
-                mt: 1,
-                px: 4,
-                borderRadius: 2,
-                textTransform: "none",
-                fontWeight: 600,
-              }}
-            >
-              {loading ? "Cargando..." : "Consultar"}
-            </Button>
-          </Grid>
-        </Grid>
+          <Button
+            onClick={handleSearch}
+            disabled={loading}
+            className="md:mt-0 mt-2"
+          >
+            <Search className="mr-2 h-4 w-4" />
+            {loading ? "Cargando..." : "Consultar"}
+          </Button>
+        </CardContent>
       </Card>
 
-      {/* ========================== */}
-      {/* Tabla de resultados */}
-      {/* ========================== */}
+      {/* Resultados */}
+      <Card className="mt-6">
+        <CardContent>
+          <div className="text-center mb-4">
+            <h2 className="font-semibold">{session?.user?.tenantName}</h2>
+            <p className="text-sm">Estado de Situación Financiera</p>
+            <p className="text-xs text-muted-foreground">
+              Del {formatDate(dateFrom)} al{" "}
+              {formatDate(dateTo)}
+            </p>
+          </div>
 
-      <Card sx={{ mt: 4, p: 3, borderRadius: 3 }}>
-        <Box textAlign="center" mb={3}>
-          <Typography variant="h6">{session?.user?.tenantName}</Typography>
-          <Typography variant="subtitle1">
-            Estado de Situación Financiera
-          </Typography>
-          <Typography variant="subtitle2">
-            Del {formatDate(dateFrom)} al {formatDate(dateTo)}
-          </Typography>
-        </Box>
+          <Separator className="mb-4" />
 
-        <Divider sx={{ mb: 2 }} />
-
-        <TableContainer
-          sx={{
-            borderRadius: 2,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-          }}
-        >
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: "grey.100" }}>
-                <TableCell sx={{ fontWeight: 700 }}>Cuenta</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700 }}>
-                  Total
-                </TableCell>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Cuenta</TableHead>
+                <TableHead className="text-right">Total</TableHead>
               </TableRow>
-            </TableHead>
-
+            </TableHeader>
             <TableBody>
               {!loading && rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={2} align="center" sx={{ py: 3 }}>
-                    <Typography color="grey.600" fontStyle="italic">
-                      No se encontraron datos.
-                    </Typography>
+                  <TableCell
+                    colSpan={2}
+                    className="text-center italic text-muted-foreground"
+                  >
+                    No se encontraron datos.
                   </TableCell>
                 </TableRow>
               )}
@@ -213,36 +174,27 @@ export default function BalanceGeneralPage() {
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell>
-                      <Skeleton width={180} />
+                      <Skeleton className="h-4 w-40" />
                     </TableCell>
-                    <TableCell align="right">
-                      <Skeleton width={60} />
+                    <TableCell className="text-right">
+                      <Skeleton className="h-4 w-20 ml-auto" />
                     </TableCell>
                   </TableRow>
                 ))}
 
               {rows.map((row) => (
-                <TableRow
-                  key={row.code}
-                  hover
-                  sx={{
-                    "&:hover": { bgcolor: "grey.50" },
-                  }}
-                >
-                  <TableCell>
-                    <Typography fontWeight={500}>
-                      {row.code} — {row.name}
-                    </Typography>
+                <TableRow key={row.code}>
+                  <TableCell className="font-medium">
+                    {row.code} — {row.name}
                   </TableCell>
-
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>
+                  <TableCell className="text-right font-semibold">
                     {formatCurrency(row.balance)}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </TableContainer>
+        </CardContent>
       </Card>
     </PageContainer>
   );

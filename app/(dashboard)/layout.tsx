@@ -1,7 +1,5 @@
 "use client";
 import React from "react";
-import Header from "@/components/layout/header/Header";
-import Sidebar from "@/components/layout/sidebar/Sidebar";
 import {
   SidebarInset,
   SidebarProvider,

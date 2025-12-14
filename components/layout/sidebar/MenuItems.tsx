@@ -55,6 +55,32 @@ const Menuitems = [
       },
     ],
   },
+  // Contabilidad
+  {
+    id: uniqueId(),
+    title: "Contabilidad",
+    icon: Book,
+    children: [
+      {
+        id: uniqueId(),
+        title: "Plan Contable",
+        icon: CircleSmall,
+        href: "/contabilidad/plan-contable",
+      },
+      {
+        id: uniqueId(),
+        title: "Centros de Costo",
+        icon: CircleSmall,
+        href: "/contabilidad/centros-costo",
+      },
+      {
+        id: uniqueId(),
+        title: "Asientos Contables",
+        icon: CircleSmall,
+        href: "/contabilidad/asientos-contables",
+      },
+    ],
+  },
   {
     id: uniqueId(),
     title: "POS",
@@ -281,34 +307,6 @@ const Menuitems = [
       },
     ],
   },
-
-  // Contabilidad
-  {
-    id: uniqueId(),
-    title: "Contabilidad",
-    icon: Book,
-    children: [
-      {
-        id: uniqueId(),
-        title: "Plan Contable",
-        icon: CircleSmall,
-        href: "/contabilidad/plan-contable",
-      },
-      {
-        id: uniqueId(),
-        title: "Centros de Costo",
-        icon: CircleSmall,
-        href: "/contabilidad/centros-costo",
-      },
-      {
-        id: uniqueId(),
-        title: "Asientos Contables",
-        icon: CircleSmall,
-        href: "/contabilidad/asientos-contables",
-      },
-    ],
-  },
-
   // // Finanzas
   // {
   //   id: uniqueId(),

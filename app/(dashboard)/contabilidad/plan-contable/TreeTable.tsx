@@ -8,23 +8,38 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TableHeader,
   TableRow,
-  IconButton,
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Stack,
-  MenuItem,
-  Menu,
-} from "@mui/material";
+} from "@/components/ui/table";
+
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+
+import { Separator } from "@/components/ui/separator";
 
 import {
   ChevronRight,
   ChevronDown,
-  Delete,
   Edit,
+  Trash2,
   Plus,
   EllipsisVertical,
 } from "lucide-react";
@@ -40,44 +55,24 @@ interface TreeNode extends ChartOfAccount {
   children?: TreeNode[];
 }
 
-export const TreeTable: React.FC<TreeTableProps> = ({
+export function TreeTable({
   accounts,
   onCreate,
   onEdit,
   onDelete,
-}) => {
+}: TreeTableProps) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState("");
-
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
-
-  const open = Boolean(anchorEl);
-
-  const handleOpenMenu = (
-    event: React.MouseEvent<HTMLButtonElement>,
-    node: TreeNode
-  ) => {
-    setSelectedNode(node); // GUARDAMOS EL REGISTRO REAL
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-    setSelectedNode(null);
-  };
+  const [filterType, setFilterType] = useState<string | undefined>(undefined);
 
   // -------------------------
-  // Convertir lista plana → árbol
+  // Construir árbol
   // -------------------------
   const buildTree = (list: ChartOfAccount[]): TreeNode[] => {
     const map: Record<string, TreeNode> = {};
     const roots: TreeNode[] = [];
 
-    list.forEach((acc) => {
-      map[acc.id] = { ...acc, children: [] };
-    });
+    list.forEach((acc) => (map[acc.id] = { ...acc, children: [] }));
 
     list.forEach((acc) => {
       if (acc.parentId && map[acc.parentId]) {
@@ -91,7 +86,7 @@ export const TreeTable: React.FC<TreeTableProps> = ({
   };
 
   // -------------------------
-  // Filtros + búsqueda
+  // Filtros
   // -------------------------
   const filteredAccounts = useMemo(() => {
     return accounts.filter((acc) => {
@@ -108,7 +103,7 @@ export const TreeTable: React.FC<TreeTableProps> = ({
   const tree = buildTree(filteredAccounts);
 
   // -------------------------
-  // Expandir / contraer todo
+  // Expandir / Contraer
   // -------------------------
   const expandAll = () => {
     const all: Record<string, boolean> = {};
@@ -116,199 +111,155 @@ export const TreeTable: React.FC<TreeTableProps> = ({
     setExpanded(all);
   };
 
-  const collapseAll = () => {
-    setExpanded({});
-  };
+  const collapseAll = () => setExpanded({});
 
-  const toggle = (id: string) => {
+  const toggle = (id: string) =>
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
 
   // -------------------------
   // Render recursivo
   // -------------------------
-  const renderNode = (node: TreeNode, level: number = 0) => {
-    if (!node) return null;
-
+  const renderNode = (node: TreeNode, level = 0) => {
     const isOpen = expanded[node.id];
-    const hasChildren = node.children && node.children.length > 0;
+    const hasChildren = !!node.children?.length;
 
     return (
       <Fragment key={node.id}>
-        <TableRow hover>
-          {/* Expandir/Contraer */}
-          <TableCell width={50}>
+        <TableRow>
+          <TableCell className="w-10">
             {hasChildren ? (
-              <IconButton size="small" onClick={() => toggle(node.id)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => toggle(node.id)}
+              >
                 {isOpen ? (
-                  <ChevronDown size={18} />
+                  <ChevronDown size={16} />
                 ) : (
-                  <ChevronRight size={18} />
+                  <ChevronRight size={16} />
                 )}
-              </IconButton>
+              </Button>
             ) : (
-              <Box width={24} />
+              <div className="w-6" />
             )}
           </TableCell>
 
-          {/* Código con indentación */}
           <TableCell>
-            <Box ml={level * 2}>
-              <Typography fontFamily="monospace">{node.code}</Typography>
-            </Box>
+            <div
+              className="font-mono"
+              style={{ paddingLeft: `${level * 16}px` }}
+            >
+              {node.code}
+            </div>
           </TableCell>
 
-          {/* Nombre */}
           <TableCell>{node.name}</TableCell>
 
-          {/* Tipo */}
-          {/* <TableCell>{node.accountType || ""}</TableCell> */}
+          <TableCell className="text-right">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <EllipsisVertical size={16} />
+                </Button>
+              </DropdownMenuTrigger>
 
-          {/* Acciones */}
-          <TableCell>
-            <IconButton
-              size="small"
-              onClick={(e) => handleOpenMenu(e, node)}
-              title="Más opciones"
-            >
-              <EllipsisVertical size={16} />
-            </IconButton>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={() => onCreate?.(node.id)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Agregar
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem onClick={() => onEdit?.(node)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => onDelete?.(node)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Eliminar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </TableCell>
         </TableRow>
 
-        {/* Render hijos */}
         {isOpen && node.children?.map((child) => renderNode(child, level + 1))}
       </Fragment>
     );
   };
 
   return (
-    <Paper elevation={2} sx={{ padding: 2 }}>
-      <Typography variant="h6" mb={2}>
-        Plan de Cuentas
-      </Typography>
-      {/* ===================== */}
-      {/* Controles superiores */}
-      {/* ===================== */}
-      <Stack direction="row" spacing={2} mb={2}>
-        <TextField
-          label="Buscar"
-          size="small"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+    <Card>
+      <CardHeader>
+        <CardTitle>Plan de Cuentas</CardTitle>
+      </CardHeader>
 
-        <TextField
-          label="Filtrar por tipo"
-          select
-          size="small"
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
-          sx={{ width: 200 }}
-        >
-          <MenuItem value="">Todos</MenuItem>
-          <MenuItem value="ASSET">Activo</MenuItem>
-          <MenuItem value="LIABILITY">Pasivo</MenuItem>
-          <MenuItem value="EQUITY">Patrimonio</MenuItem>
-          <MenuItem value="INCOME">Ingreso</MenuItem>
-          <MenuItem value="EXPENSE">Gasto</MenuItem>
-        </TextField>
+      <CardContent className="space-y-4">
+        {/* Controles */}
+        <div className="flex flex-wrap gap-2">
+          <Input
+            placeholder="Buscar por código o nombre"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-64"
+          />
 
-        <Button variant="contained" onClick={expandAll}>
-          Expandir todo
-        </Button>
+          <Select
+            value={filterType}
+            onValueChange={(value) =>
+              setFilterType(value === "ALL" ? undefined : value)
+            }
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Tipo de cuenta" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todas</SelectItem>
+              <SelectItem value="ASSET">Activo</SelectItem>
+              <SelectItem value="LIABILITY">Pasivo</SelectItem>
+              <SelectItem value="EQUITY">Patrimonio</SelectItem>
+              <SelectItem value="INCOME">Ingreso</SelectItem>
+              <SelectItem value="EXPENSE">Gasto</SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Button variant="outlined" onClick={collapseAll}>
-          Contraer todo
-        </Button>
+          <Button variant="outline" onClick={expandAll}>
+            Expandir todo
+          </Button>
 
-        <Button
-          variant="contained"
-          color="success"
-          onClick={() => onCreate?.(null)}
-        >
-          Crear cuenta raíz
-        </Button>
-      </Stack>
-      {/* ===================== */}
-      {/* Tabla */}
-      {/* ===================== */}
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell />
-            <TableCell>Código</TableCell>
-            <TableCell>Nombre</TableCell>
-            {/* <TableCell>Tipo</TableCell> */}
-            <TableCell>Acciones</TableCell>
-          </TableRow>
-        </TableHead>
+          <Button variant="outline" onClick={collapseAll}>
+            Contraer todo
+          </Button>
 
-        <TableBody>{tree.map((n) => renderNode(n))}</TableBody>
-      </Table>
-      <Menu
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleClose}
-        slotProps={{
-          paper: {
-            elevation: 3,
-            sx: { mt: 1, minWidth: 200, py: 0.5, borderRadius: 2 },
-          },
-        }}
-      >
-        <MenuItem
-          onClick={() => {
-            if (selectedNode) onCreate?.(selectedNode.id);
-            handleClose();
-          }}
-          sx={{
-            minHeight: 40,
-            "&:hover": { backgroundColor: "#e3f2fd" },
-          }}
-        >
-          <Box display="flex" alignItems="center" gap={1.5}>
-            <Plus size={18} color="#1976d2" />
-            <Typography fontWeight={500}>Agregar</Typography>
-          </Box>
-        </MenuItem>
-        <Box mx={2}>
-          <hr style={{ border: "none", borderTop: "1px solid #eee" }} />
-        </Box>
-        <MenuItem
-          onClick={() => {
-            if (selectedNode) onEdit?.(selectedNode);
-            handleClose();
-          }}
-          sx={{
-            minHeight: 40,
-            "&:hover": { backgroundColor: "#fffde7" },
-          }}
-        >
-          <Box display="flex" alignItems="center" gap={1.5}>
-            <Edit size={18} color="#fbc02d" />
-            <Typography fontWeight={500}>Modificar</Typography>
-          </Box>
-        </MenuItem>
-        <Box mx={2}>
-          <hr style={{ border: "none", borderTop: "1px solid #eee" }} />
-        </Box>
-        <MenuItem
-          onClick={() => {
-            if (selectedNode) onDelete?.(selectedNode);
-            handleClose();
-          }}
-          sx={{
-            minHeight: 40,
-            "&:hover": { backgroundColor: "#ffebee" },
-          }}
-        >
-          <Box display="flex" alignItems="center" gap={1.5}>
-            <Delete size={18} color="#d32f2f" />
-            <Typography fontWeight={500}>Eliminar</Typography>
-          </Box>
-        </MenuItem>
-      </Menu>
-    </Paper>
+          <Button onClick={() => onCreate?.(null)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Cuenta raíz
+          </Button>
+        </div>
+
+        <Separator />
+
+        {/* Tabla */}
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead />
+              <TableHead>Código</TableHead>
+              <TableHead>Nombre</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>{tree.map((node) => renderNode(node))}</TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
-};
+}

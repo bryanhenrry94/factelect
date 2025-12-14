@@ -2,36 +2,40 @@
 
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
-import {
-  Box,
-  Button,
-  Card,
-  Divider,
-  Grid,
-  MenuItem,
-  Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
 import { useSession } from "next-auth/react";
 import { Search } from "lucide-react";
+
 import { notifyError, notifyWarning } from "@/lib/notifications";
 import { getCostCenters } from "@/actions/accounting/cost-center";
-import { getBalanceGeneral } from "@/actions/accounting/balance-general";
-
-import { CostCenter } from "@/lib/validations/accounting/cost-center";
-import { AccountBalance } from "@/actions/accounting/balance-general";
-import { formatCurrency, formatDate } from "@/utils/formatters";
 import {
   getEstadoResultados,
   IncomeStatementAccount,
 } from "@/actions/accounting/estado-resultado";
+
+import { CostCenter } from "@/lib/validations/accounting/cost-center";
+import { formatCurrency, formatDate } from "@/utils/formatters";
+
+/* shadcn */
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 
 const today = new Date();
 const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
@@ -44,8 +48,7 @@ export default function EstadoResultadoPage() {
   const [rows, setRows] = useState<IncomeStatementAccount[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Filtros
-  const [costCenterId, setCostCenterId] = useState("");
+  const [costCenterId, setCostCenterId] = useState("ALL");
   const [dateFrom, setDateFrom] = useState(
     firstDayOfYear.toISOString().split("T")[0]
   );
@@ -53,17 +56,12 @@ export default function EstadoResultadoPage() {
     lastDayOfYear.toISOString().split("T")[0]
   );
 
-  // ==========================
-  // Load dropdown data
-  // ==========================
   useEffect(() => {
     async function loadData() {
       if (!session?.user?.tenantId) return;
-
       const ccRes = await getCostCenters(session.user.tenantId);
       if (ccRes.success) setCostCenters(ccRes.data || []);
     }
-
     loadData();
   }, [session?.user?.tenantId]);
 
@@ -77,7 +75,7 @@ export default function EstadoResultadoPage() {
 
     try {
       const response = await getEstadoResultados({
-        costCenter: costCenterId || undefined,
+        costCenter: costCenterId === "ALL" ? undefined : costCenterId,
         dateFrom: new Date(dateFrom),
         dateTo: new Date(dateTo),
       });
@@ -88,7 +86,7 @@ export default function EstadoResultadoPage() {
         setRows([]);
         notifyError(response.error || "Error al cargar información.");
       }
-    } catch (error) {
+    } catch {
       notifyError("Error al cargar información.");
       setRows([]);
     } finally {
@@ -98,115 +96,82 @@ export default function EstadoResultadoPage() {
 
   return (
     <PageContainer title="Estado de Resultado">
-      {/* ========================== */}
-      {/* Card filtros */}
-      {/* ========================== */}
-      <Card sx={{ mt: 4, p: 3, borderRadius: 3 }}>
-        <Typography variant="h6" fontWeight={600} mb={2}>
-          Filtros de búsqueda
-        </Typography>
+      {/* Filtros */}
+      <Card className="mt-6">
+        <CardHeader className="pb-2">
+          <h2 className="text-lg font-semibold">Filtros de búsqueda</h2>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
+            <div className="md:col-span-2">
+              <Select value={costCenterId} onValueChange={setCostCenterId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Centro de Costo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos</SelectItem>
+                  {costCenters.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.code} — {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <TextField
-              select
-              label="Centro de Costo"
-              fullWidth
-              size="small"
-              value={costCenterId}
-              onChange={(e) => setCostCenterId(e.target.value)}
-            >
-              <MenuItem value="">Todos</MenuItem>
-              {costCenters.map((c) => (
-                <MenuItem key={c.id} value={c.id}>
-                  {c.code} — {c.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 3, md: 2 }}>
-            <TextField
-              label="Desde"
+            <Input
               type="date"
-              fullWidth
-              size="small"
-              InputLabelProps={{ shrink: true }}
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
             />
-          </Grid>
-
-          <Grid size={{ xs: 12, sm: 3, md: 2 }}>
-            <TextField
-              label="Hasta"
+            <Input
               type="date"
-              fullWidth
-              size="small"
-              InputLabelProps={{ shrink: true }}
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
             />
-          </Grid>
 
-          <Grid size={{ xs: 12 }}>
-            <Button
-              variant="contained"
-              startIcon={<Search />}
-              onClick={handleSearch}
-              disabled={loading}
-              sx={{
-                mt: 1,
-                px: 4,
-                borderRadius: 2,
-                textTransform: "none",
-                fontWeight: 600,
-              }}
-            >
-              {loading ? "Cargando..." : "Consultar"}
-            </Button>
-          </Grid>
-        </Grid>
+            <div className="md:col-span-2">
+              <Button
+                onClick={handleSearch}
+                disabled={loading}
+                className="w-full gap-2"
+              >
+                <Search className="h-4 w-4" />
+                {loading ? "Cargando..." : "Consultar"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
-      {/* ========================== */}
-      {/* Tabla de resultados */}
-      {/* ========================== */}
+      {/* Tabla */}
+      <Card className="mt-6">
+        <CardContent>
+          <div className="mb-4 text-center">
+            <h3 className="font-semibold">{session?.user?.tenantName}</h3>
+            <p className="text-sm">Estado de Resultado</p>
+            <p className="text-xs text-muted-foreground">
+              Del {formatDate(dateFrom)} al {formatDate(dateTo)}
+            </p>
+          </div>
 
-      <Card sx={{ mt: 4, p: 3, borderRadius: 3 }}>
-        <Box textAlign="center" mb={3}>
-          <Typography variant="h6">{session?.user?.tenantName}</Typography>
-          <Typography variant="subtitle1">Estado de Resultado</Typography>
-          <Typography variant="subtitle2">
-            Del {formatDate(dateFrom)} al {formatDate(dateTo)}
-          </Typography>
-        </Box>
+          <Separator className="mb-4" />
 
-        <Divider sx={{ mb: 2 }} />
-
-        <TableContainer
-          sx={{
-            borderRadius: 2,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-          }}
-        >
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: "grey.100" }}>
-                <TableCell sx={{ fontWeight: 700 }}>Cuenta</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700 }}>
-                  Total
-                </TableCell>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Cuenta</TableHead>
+                <TableHead className="text-right">Total</TableHead>
               </TableRow>
-            </TableHead>
-
+            </TableHeader>
             <TableBody>
               {!loading && rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={2} align="center" sx={{ py: 3 }}>
-                    <Typography color="grey.600" fontStyle="italic">
-                      No se encontraron datos.
-                    </Typography>
+                  <TableCell
+                    colSpan={2}
+                    className="text-center italic text-muted-foreground"
+                  >
+                    No se encontraron datos.
                   </TableCell>
                 </TableRow>
               )}
@@ -215,36 +180,27 @@ export default function EstadoResultadoPage() {
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell>
-                      <Skeleton width={180} />
+                      <Skeleton className="h-4 w-40" />
                     </TableCell>
-                    <TableCell align="right">
-                      <Skeleton width={60} />
+                    <TableCell className="text-right">
+                      <Skeleton className="h-4 w-20" />
                     </TableCell>
                   </TableRow>
                 ))}
 
               {rows.map((row) => (
-                <TableRow
-                  key={row.code}
-                  hover
-                  sx={{
-                    "&:hover": { bgcolor: "grey.50" },
-                  }}
-                >
+                <TableRow key={row.code}>
                   <TableCell>
-                    <Typography fontWeight={500}>
-                      {row.code} — {row.name}
-                    </Typography>
+                    {row.code} — {row.name}
                   </TableCell>
-
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>
+                  <TableCell className="text-right font-semibold">
                     {formatCurrency(row.balance)}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </TableContainer>
+        </CardContent>
       </Card>
     </PageContainer>
   );

@@ -54,13 +54,6 @@ export default function PersonsPage() {
 
   const tipoValue = params.get("tipo") ?? "todos";
 
-  const [page, setPage] = useState(0);
-  const rowsPerPage = 5;
-
-  const handleChangePage = (newPage: number) => {
-    setPage(newPage);
-  };
-
   // Debounce del buscador
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -238,7 +231,10 @@ export default function PersonsPage() {
 
                 <TableBody>
                   {persons
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .slice(
+                      (currentPage - 1) * itemsPerPage,
+                      (currentPage - 1) * itemsPerPage + itemsPerPage
+                    )
                     .map((person) => (
                       <TableRow key={person.id}>
                         <TableCell>{person.identification}</TableCell>

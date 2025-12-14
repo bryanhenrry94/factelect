@@ -3,31 +3,37 @@
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
 import { ChartOfAccount } from "@/lib/validations";
-import {
-  Button,
-  Card,
-  Grid,
-  MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { CostCenter } from "@/lib/validations/accounting/cost-center";
 import { useSession } from "next-auth/react";
 import { getAccounts } from "@/actions/accounting/chart-of-account";
-import { CostCenter } from "@/lib/validations/accounting/cost-center";
 import { getCostCenters } from "@/actions/accounting/cost-center";
-import { Search } from "lucide-react";
 import {
   AccountActivityRow,
   getAccountActivity,
 } from "@/actions/accounting/account-activity";
 import { notifyError, notifyWarning } from "@/lib/notifications";
 import { formatCurrency, formatDate } from "@/utils/formatters";
+import { Search } from "lucide-react";
+
+/* ShadCN */
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function MovimientosCuentaPage() {
   const { data: session } = useSession();
@@ -37,9 +43,7 @@ export default function MovimientosCuentaPage() {
   const [rows, setRows] = useState<AccountActivityRow[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // ==========================
-  // Filtros de búsqueda
-  // ==========================
+  /* Fechas por defecto */
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
     .toISOString()
@@ -48,14 +52,14 @@ export default function MovimientosCuentaPage() {
     .toISOString()
     .substring(0, 10);
 
-  const [accountId, setAccountId] = useState("");
-  const [costCenterId, setCostCenterId] = useState("");
+  const [accountId, setAccountId] = useState<string | undefined>();
+  const [costCenterId, setCostCenterId] = useState<string | undefined>();
   const [dateFrom, setDateFrom] = useState(firstDayOfMonth);
   const [dateTo, setDateTo] = useState(lastDayOfMonth);
 
-  // ==========================
-  // Data Fetch
-  // ==========================
+  /* ==========================
+     Load accounts & cost centers
+     ========================== */
   useEffect(() => {
     async function loadData() {
       if (!session?.user.tenantId) return;
@@ -69,32 +73,31 @@ export default function MovimientosCuentaPage() {
         if (accRes.success) setAccounts(accRes.data || []);
         if (ccRes.success) setCostCenters(ccRes.data || []);
       } catch (error) {
-        console.error("Error loading data:", error);
+        console.error(error);
       }
     }
 
     loadData();
   }, [session?.user.tenantId]);
 
+  /* ==========================
+     Search
+     ========================== */
   const handleSearch = async () => {
+    if (!accountId || !dateFrom || !dateTo) {
+      notifyWarning("Por favor, complete los filtros obligatorios.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      if (!accountId || !dateFrom || !dateTo) {
-        notifyWarning("Por favor, complete los filtros obligatorios.");
-        setLoading(false);
-        return;
-      }
-
-      // Lógica para buscar movimientos de cuenta según los filtros
       const response = await getAccountActivity({
         accountId,
         dateFrom: new Date(dateFrom),
         dateTo: new Date(dateTo),
-        costCenter: costCenterId || undefined,
+        costCenter: costCenterId,
       });
-
-      console.log("ChartOfAccount activity response:", response);
 
       if (response.success) {
         setRows(response.data || []);
@@ -102,9 +105,8 @@ export default function MovimientosCuentaPage() {
         setRows([]);
       }
     } catch (error) {
-      console.error("Error fetching account activity:", error);
-      setRows([]);
       notifyError("Error al cargar los movimientos de cuenta");
+      setRows([]);
     } finally {
       setLoading(false);
     }
@@ -112,179 +114,126 @@ export default function MovimientosCuentaPage() {
 
   return (
     <PageContainer title="Movimientos de Cuenta">
-      <Card sx={{ mt: 4, p: 3, borderRadius: 3 }}>
-        <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-          Filtros de Búsqueda
-        </Typography>
+      {/* ================= Filtros ================= */}
+      <Card className="mt-4">
+        <CardContent className="p-6">
+          <h2 className="mb-4 text-lg font-semibold">Filtros de Búsqueda</h2>
 
-        <Grid container spacing={2}>
-          {/* Cuenta */}
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <TextField
-              label="Cuenta"
-              fullWidth
-              select
-              size="small"
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-            >
-              {accounts.map((account) => (
-                <MenuItem key={account.id} value={account.id}>
-                  {account.code} — {account.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
+            {/* Cuenta */}
+            <div className="md:col-span-2">
+              <Select value={accountId} onValueChange={setAccountId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccione cuenta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.code} — {acc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Centro de costo */}
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <TextField
-              label="Centro de Costo"
-              fullWidth
-              select
-              size="small"
-              value={costCenterId}
-              onChange={(e) => setCostCenterId(e.target.value)}
-            >
-              <MenuItem value="">Todos</MenuItem>
-              {costCenters.map((center) => (
-                <MenuItem key={center.id} value={center.id}>
-                  {center.code} — {center.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
+            {/* Centro de costo */}
+            <div className="md:col-span-2">
+              <Select
+                value={costCenterId}
+                onValueChange={(v) =>
+                  setCostCenterId(v === "ALL" ? undefined : v)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los centros de costo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos</SelectItem>
+                  {costCenters.map((cc) => (
+                    <SelectItem key={cc.id} value={cc.id}>
+                      {cc.code} — {cc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Fecha desde */}
-          <Grid size={{ xs: 12, sm: 3, md: 2 }}>
-            <TextField
-              label="Fecha Desde"
+            {/* Fecha desde */}
+            <Input
               type="date"
-              fullWidth
-              size="small"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              InputLabelProps={{ shrink: true }}
             />
-          </Grid>
 
-          {/* Fecha hasta */}
-          <Grid size={{ xs: 12, sm: 3, md: 2 }}>
-            <TextField
-              label="Fecha Hasta"
+            {/* Fecha hasta */}
+            <Input
               type="date"
-              fullWidth
-              size="small"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              InputLabelProps={{ shrink: true }}
             />
-          </Grid>
 
-          {/* Botón */}
-          <Grid size={{ xs: 12 }}>
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<Search />}
-              sx={{
-                mt: 1,
-                px: 4,
-                py: 1.4,
-                borderRadius: 2,
-                fontSize: "0.95rem",
-                fontWeight: 600,
-              }}
-              onClick={handleSearch}
-              disabled={loading}
-              loading={loading}
-            >
-              Consultar
-            </Button>
-          </Grid>
-        </Grid>
+            {/* Botón */}
+            <div className="flex items-end">
+              <Button
+                onClick={handleSearch}
+                disabled={loading}
+                className="gap-2"
+              >
+                <Search size={16} />
+                {loading ? "Consultando..." : "Consultar"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
-      <Card sx={{ mt: 4, p: 3, borderRadius: 3 }}>
-        <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-          Movimientos
-        </Typography>
+      {/* ================= Tabla ================= */}
+      <Card className="mt-6">
+        <CardContent className="p-6">
+          <h2 className="mb-4 text-lg font-semibold">Movimientos</h2>
 
-        <TableContainer
-          sx={{
-            mt: 2,
-            borderRadius: 2,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-            bgcolor: "background.paper",
-          }}
-        >
-          <Table size="small">
-            <TableHead>
-              <TableRow
-                sx={{
-                  bgcolor: "grey.100",
-                  "& th": {
-                    fontWeight: 600,
-                    py: 1.5,
-                    fontSize: "0.85rem",
-                    color: "grey.700",
-                  },
-                }}
-              >
-                <TableCell>Fecha</TableCell>
-                <TableCell>Descripción</TableCell>
-                <TableCell align="center">Debe</TableCell>
-                <TableCell align="center">Haber</TableCell>
-                <TableCell align="center">Centro de costo</TableCell>
-                <TableCell align="center">Saldo</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.length === 0 && !loading && (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    align="center"
-                    sx={{ py: 3, fontStyle: "italic", color: "grey.600" }}
-                  >
-                    No se encontraron movimientos.
-                  </TableCell>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Descripción</TableHead>
+                  <TableHead className="text-right">Debe</TableHead>
+                  <TableHead className="text-right">Haber</TableHead>
+                  <TableHead>Centro de costo</TableHead>
+                  <TableHead className="text-right">Saldo</TableHead>
                 </TableRow>
-              )}
+              </TableHeader>
 
-              {rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  hover
-                  sx={{
-                    "& td": { py: 1 },
-                  }}
-                >
-                  {/* Cuenta */}
-                  <TableCell sx={{ width: 160 }}>
-                    {formatDate(row.date.toString())}
-                  </TableCell>
-                  {/* Descripción */}
-                  <TableCell sx={{ width: 260 }}>{row.description}</TableCell>
-                  {/* Débito */}
-                  <TableCell align="right" sx={{ width: 140 }}>
-                    {formatCurrency(row.debit)}
-                  </TableCell>
-                  {/* Crédito */}
-                  <TableCell align="right" sx={{ width: 140 }}>
-                    {formatCurrency(row.credit)}
-                  </TableCell>
-                  {/* Centro de costo */}
-                  <TableCell sx={{ width: 220 }}>{row.costCenter}</TableCell>
-                  {/* Saldo */}
-                  <TableCell align="center" sx={{ width: 60 }}>
-                    {formatCurrency(row.balance)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              <TableBody>
+                {rows.length === 0 && !loading && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-6 text-center italic">
+                      No se encontraron movimientos.
+                    </TableCell>
+                  </TableRow>
+                )}
+
+                {rows.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell>{formatDate(row.date.toString())}</TableCell>
+                    <TableCell>{row.description}</TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(row.debit)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(row.credit)}
+                    </TableCell>
+                    <TableCell>{row.costCenter}</TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(row.balance)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
       </Card>
     </PageContainer>
   );

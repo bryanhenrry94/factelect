@@ -1,10 +1,40 @@
 "use client";
+
+import { useEffect, useState } from "react";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useSession } from "next-auth/react";
+import { Delete, Plus } from "lucide-react";
+
+/* Actions */
 import { getAccounts } from "@/actions/accounting/chart-of-account";
 import { getCostCenters } from "@/actions/accounting/cost-center";
 import {
   createJournalEntry,
   updateJournalEntry,
 } from "@/actions/accounting/journal-entry";
+
+/* UI */
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+/* Utils */
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { ChartOfAccount } from "@/lib/validations";
 import { CostCenter } from "@/lib/validations/accounting/cost-center";
@@ -14,24 +44,8 @@ import {
   JournalEntry,
 } from "@/lib/validations/accounting/journal_entry";
 import { $Enums } from "@/prisma/generated/prisma";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Box,
-  Button,
-  IconButton,
-  MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-} from "@mui/material";
-import { Delete, Plus } from "lucide-react";
-import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+
+/* ------------------------------------------------------------------ */
 
 const initialState: CreateJournalEntry = {
   date: new Date(),
@@ -40,77 +54,46 @@ const initialState: CreateJournalEntry = {
   documentType: $Enums.DocumentType.OTHER,
   documentId: "null",
   lines: [
-    {
-      accountId: "",
-      debit: 0,
-      credit: 0,
-      costCenterId: null,
-    },
-    {
-      accountId: "",
-      debit: 0,
-      credit: 0,
-      costCenterId: null,
-    },
+    { accountId: "", debit: 0, credit: 0, costCenterId: null },
+    { accountId: "", debit: 0, credit: 0, costCenterId: null },
   ],
 };
 
-interface JournalEntryFormProps {
+interface Props {
   journalEntryToEdit: JournalEntry | null;
 }
 
-export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
-  journalEntryToEdit,
-}) => {
+export function JournalEntryForm({ journalEntryToEdit }: Props) {
   const { data: session } = useSession();
+
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
 
+  /* ------------------------------------------------------------------ */
+  /* Fetch data */
   useEffect(() => {
-    fetchAccounts();
-    fetchCostCenters();
+    if (!session?.user?.tenantId) return;
+
+    getAccounts(session.user.tenantId).then((r) =>
+      r.success
+        ? setAccounts(r.data || [])
+        : notifyError("Error al cargar cuentas")
+    );
+
+    getCostCenters(session.user.tenantId).then((r) =>
+      r.success
+        ? setCostCenters(r.data || [])
+        : notifyError("Error al cargar centros de costo")
+    );
   }, [session?.user?.tenantId]);
 
-  const fetchAccounts = async () => {
-    try {
-      if (!session?.user?.tenantId) return;
-
-      const response = await getAccounts(session.user.tenantId);
-      if (response.success) {
-        setAccounts(response.data || []);
-      } else {
-        notifyError("Error al cargar las cuentas");
-      }
-    } catch (error) {
-      console.error("Error fetching accounts:", error);
-      notifyError("Error al cargar las cuentas");
-    }
-  };
-
-  const fetchCostCenters = async () => {
-    try {
-      if (!session?.user?.tenantId) return;
-
-      const response = await getCostCenters(session.user.tenantId);
-      if (response.success) {
-        setCostCenters(response.data || []);
-        return;
-      } else {
-        notifyError("Error al cargar los centros de costo");
-      }
-      setCostCenters([]);
-    } catch (error) {
-      console.error("Error fetching cost centers:", error);
-      notifyError("Error al cargar los centros de costo");
-    }
-  };
-
+  /* ------------------------------------------------------------------ */
   const {
     control,
     handleSubmit,
     reset,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { isSubmitting, errors },
   } = useForm<CreateJournalEntry>({
     resolver: zodResolver(createJournalEntrySchema),
     defaultValues: initialState,
@@ -121,349 +104,241 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({
     name: "lines",
   });
 
+  /* ------------------------------------------------------------------ */
   useEffect(() => {
-    if (journalEntryToEdit) {
-      reset({
-        date: journalEntryToEdit.date,
-        description: journalEntryToEdit.description,
-        type: journalEntryToEdit.type,
-        documentType: journalEntryToEdit.documentType,
-        documentId: journalEntryToEdit.documentId,
-        lines: journalEntryToEdit.lines.map((line) => ({
-          accountId: line.accountId,
-          debit: line.debit,
-          credit: line.credit,
-          costCenterId: line.costCenterId,
-        })),
-      });
-    } else {
+    if (!journalEntryToEdit) {
       reset(initialState);
+      return;
     }
+
+    reset({
+      ...journalEntryToEdit,
+      lines: journalEntryToEdit.lines.map((l) => ({
+        accountId: l.accountId,
+        debit: l.debit,
+        credit: l.credit,
+        costCenterId: l.costCenterId,
+      })),
+    });
   }, [journalEntryToEdit, reset]);
 
+  /* ------------------------------------------------------------------ */
   const onSubmit = async (data: CreateJournalEntry) => {
-    try {
-      if (!session?.user?.tenantId) {
-        notifyError("No se encontró el tenantId del usuario");
-        return;
-      }
+    if (!session?.user?.tenantId) {
+      notifyError("Tenant no encontrado");
+      return;
+    }
 
-      const response = journalEntryToEdit
-        ? await updateJournalEntry(journalEntryToEdit.id, data)
-        : await createJournalEntry(session.user.tenantId, data);
+    const res = journalEntryToEdit
+      ? await updateJournalEntry(journalEntryToEdit.id, data)
+      : await createJournalEntry(session.user.tenantId, data);
 
-      if (response.success) {
-        await notifyInfo(
-          `Asiento contable ${
-            journalEntryToEdit ? "actualizado" : "creado"
-          } correctamente`
-        );
-
-        if (journalEntryToEdit) {
-          return;
-        } else {
-          reset(initialState);
-        }
-      } else {
-        notifyError(response.error || "Error al guardar el asiento contable");
-      }
-    } catch (error) {
-      console.log(error);
-      notifyError("Error al guardar el asiento contable");
+    if (res.success) {
+      notifyInfo(
+        `Asiento ${journalEntryToEdit ? "actualizado" : "creado"} correctamente`
+      );
+      if (!journalEntryToEdit) reset(initialState);
+    } else {
+      notifyError(res.error || "Error al guardar asiento");
     }
   };
 
+  /* ------------------------------------------------------------------ */
+  const totalDebit = fields.reduce(
+    (_, __, i) => Number(watch(`lines.${i}.debit`) || 0),
+    0
+  );
+
+  const totalCredit = fields.reduce(
+    (_, __, i) => Number(watch(`lines.${i}.credit`) || 0),
+    0
+  );
+
+  /* ------------------------------------------------------------------ */
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <Box sx={{ display: "flex", flexDirection: "column" }}>
-        <Controller
-          name="date"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label="Fecha"
-              type="date"
-              variant="outlined"
-              //   fullWidth
-              margin="dense"
-              size="small"
-              onChange={(e) => {
-                const selectedDate = e.target.value;
-                field.onChange(new Date(selectedDate));
-              }}
-              value={field.value ? field.value.toISOString().split("T")[0] : ""}
-              error={errors.date ? true : false}
-              helperText={errors.date?.message}
-            />
-          )}
-        />
-        <Controller
-          name="description"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label="Glosa"
-              variant="outlined"
-              fullWidth
-              margin="dense"
-              size="small"
-              error={errors.description ? true : false}
-              helperText={errors.description?.message}
-              multiline
-              rows={3}
-            />
-          )}
-        />
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {/* {JSON.stringify(errors)} */}
+      {/* Fecha */}
+      <Controller
+        name="date"
+        control={control}
+        render={({ field }) => (
+          <Input
+            type="date"
+            value={field.value?.toISOString().split("T")[0]}
+            onChange={(e) => field.onChange(new Date(e.target.value))}
+          />
+        )}
+      />
 
-        <TableContainer
-          sx={{
-            mt: 2,
-            borderRadius: 2,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-            bgcolor: "background.paper",
-          }}
-        >
-          <Table size="small">
-            <TableHead>
-              <TableRow
-                sx={{
-                  bgcolor: "grey.100",
-                  "& th": {
-                    fontWeight: 600,
-                    py: 1.5,
-                    fontSize: "0.85rem",
-                    color: "grey.700",
-                  },
-                }}
-              >
-                <TableCell>Cuenta</TableCell>
-                <TableCell align="center">Débito</TableCell>
-                <TableCell align="center">Crédito</TableCell>
-                <TableCell align="center">Centro de costo</TableCell>
-                <TableCell align="center">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
+      {/* Glosa */}
+      <Controller
+        name="description"
+        control={control}
+        render={({ field }) => (
+          <Textarea {...field} placeholder="Glosa" rows={3} />
+        )}
+      />
 
-            <TableBody>
-              {fields.map((field, index) => (
-                <TableRow
-                  key={field.id}
-                  hover
-                  sx={{
-                    "& td": { py: 1 },
-                  }}
-                >
-                  {/* Cuenta */}
-                  <TableCell sx={{ width: 260 }}>
-                    <Controller
-                      control={control}
-                      name={`lines.${index}.accountId`}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Cuenta"
-                          variant="outlined"
-                          size="small"
-                          fullWidth
-                          select
-                          value={field.value || ""}
-                        >
-                          {accounts.map((account) => (
-                            <MenuItem key={account.id} value={account.id}>
-                              {account.code} {account.name}
-                            </MenuItem>
+      {/* Tabla */}
+      <div className="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Cuenta</TableHead>
+              <TableHead className="text-right">Débito</TableHead>
+              <TableHead className="text-right">Crédito</TableHead>
+              <TableHead>Centro de costo</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {fields.map((row, index) => (
+              <TableRow key={row.id}>
+                {/* Cuenta */}
+                <TableCell>
+                  <Controller
+                    name={`lines.${index}.accountId`}
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        value={field.value || "none"}
+                        onValueChange={(v) =>
+                          field.onChange(v === "none" ? "" : v)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar cuenta" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">—</SelectItem>
+                          {accounts.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.code} {a.name}
+                            </SelectItem>
                           ))}
-                        </TextField>
-                      )}
-                    />
-                  </TableCell>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </TableCell>
 
-                  {/* Débito */}
-                  <TableCell align="right" sx={{ width: 140 }}>
-                    <Controller
-                      name={`lines.${index}.debit`}
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Débito"
-                          variant="outlined"
-                          size="small"
-                          type="number"
-                          fullWidth
-                          onChange={(e) => {
-                            const text = e.target.value;
+                {/* Débito */}
+                <TableCell>
+                  <Controller
+                    name={`lines.${index}.debit`}
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        className="text-right"
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(e.target.valueAsNumber || 0)
+                        }
+                      />
+                    )}
+                  />
+                </TableCell>
 
-                            // Mantén siempre string en el campo
-                            field.onChange(text);
-                          }}
-                          onBlur={() => {
-                            const numeric = parseFloat(
-                              field.value ? field.value.toString() : "0"
-                            );
+                {/* Crédito */}
+                <TableCell>
+                  <Controller
+                    name={`lines.${index}.credit`}
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        className="text-right"
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(e.target.valueAsNumber || 0)
+                        }
+                      />
+                    )}
+                  />
+                </TableCell>
 
-                            // Al salir del input conviertes a number seguro
-                            field.onChange(
-                              isNaN(numeric) ? 0 : Number(numeric.toFixed(2))
-                            );
-                          }}
-                          inputProps={{ inputMode: "decimal" }}
-                        />
-                      )}
-                    />
-                  </TableCell>
-
-                  {/* Crédito */}
-                  <TableCell align="right" sx={{ width: 140 }}>
-                    <Controller
-                      name={`lines.${index}.credit`}
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Crédito"
-                          variant="outlined"
-                          size="small"
-                          type="number"
-                          fullWidth
-                          onChange={(e) => {
-                            const text = e.target.value;
-
-                            // Mantén siempre string en el campo
-                            field.onChange(text);
-                          }}
-                          onBlur={() => {
-                            const numeric = parseFloat(
-                              field.value ? field.value.toString() : "0"
-                            );
-
-                            // Al salir del input conviertes a number seguro
-                            field.onChange(
-                              isNaN(numeric) ? 0 : Number(numeric.toFixed(2))
-                            );
-                          }}
-                          inputProps={{ inputMode: "decimal" }}
-                        />
-                      )}
-                    />
-                  </TableCell>
-
-                  {/* Centro de costo */}
-                  <TableCell sx={{ width: 220 }}>
-                    <Controller
-                      name={`lines.${index}.costCenterId`}
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          label="Centro de costo"
-                          variant="outlined"
-                          size="small"
-                          fullWidth
-                          value={field.value || ""}
-                          select
-                        >
-                          <MenuItem value="">Ninguno</MenuItem>
-                          {costCenters.map((costCenter) => (
-                            <MenuItem key={costCenter.id} value={costCenter.id}>
-                              {costCenter.code} {costCenter.name}
-                            </MenuItem>
+                {/* Centro de costo */}
+                <TableCell>
+                  <Controller
+                    name={`lines.${index}.costCenterId`}
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        value={field.value ?? "none"}
+                        onValueChange={(v) =>
+                          field.onChange(v === "none" ? null : v)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Centro de costo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Ninguno</SelectItem>
+                          {costCenters.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.code} {c.name}
+                            </SelectItem>
                           ))}
-                        </TextField>
-                      )}
-                    />
-                  </TableCell>
-
-                  {/* Eliminar */}
-                  <TableCell align="center" sx={{ width: 60 }}>
-                    <IconButton
-                      color="error"
-                      onClick={() => remove(index)}
-                      sx={{ p: 0.5 }}
-                    >
-                      <Delete size={18} />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-
-              {/* Totales */}
-              <TableRow>
-                <TableCell align="right">
-                  <strong>Totales:</strong>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </TableCell>
-                <TableCell align="right">
-                  <strong>
-                    {fields
-                      .reduce((sum, entry, idx) => {
-                        const value = parseFloat(
-                          watch(`lines.${idx}.debit`)?.toString() || "0"
-                        );
-                        return sum + (isNaN(value) ? 0 : value);
-                      }, 0)
-                      .toFixed(2)}
-                  </strong>
-                </TableCell>
-                <TableCell align="right">
-                  <strong>
-                    {fields
-                      .reduce((sum, entry, idx) => {
-                        const value = parseFloat(
-                          watch(`lines.${idx}.credit`)?.toString() || "0"
-                        );
-                        return sum + (isNaN(value) ? 0 : value);
-                      }, 0)
-                      .toFixed(2)}
-                  </strong>
-                </TableCell>
-                <TableCell />
-                <TableCell />
-              </TableRow>
 
-              {/* Agregar línea */}
-              <TableRow>
-                <TableCell colSpan={5} align="left" sx={{ py: 2.5 }}>
+                {/* Eliminar */}
+                <TableCell>
                   <Button
-                    variant="outlined"
-                    onClick={() =>
-                      append({
-                        accountId: "",
-                        debit: 0,
-                        credit: 0,
-                        costCenterId: null,
-                      })
-                    }
-                    sx={{ textTransform: "none", px: 3 }}
-                    startIcon={<Plus size={16} />}
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => remove(index)}
                   >
-                    Agregar línea
+                    <Delete className="h-4 w-4 text-destructive" />
                   </Button>
                 </TableCell>
               </TableRow>
-            </TableBody>
-          </Table>
-        </TableContainer>
+            ))}
 
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: 2,
-            mt: 2,
-          }}
-        >
-          <Button
-            variant="contained"
-            type="submit"
-            disabled={isSubmitting}
-            loading={isSubmitting}
-          >
-            {isSubmitting ? "Guardando..." : "Guardar"}
-          </Button>
-        </Box>
-      </Box>
+            {/* Totales */}
+            <TableRow>
+              <TableCell className="text-right font-semibold">
+                Totales
+              </TableCell>
+              <TableCell className="text-right font-semibold">
+                {totalDebit.toFixed(2)}
+              </TableCell>
+              <TableCell className="text-right font-semibold">
+                {totalCredit.toFixed(2)}
+              </TableCell>
+              <TableCell />
+              <TableCell />
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Agregar línea */}
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() =>
+          append({ accountId: "", debit: 0, credit: 0, costCenterId: null })
+        }
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        Agregar línea
+      </Button>
+
+      {/* Guardar */}
+      <div className="flex justify-end">
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Guardando..." : "Guardar"}
+        </Button>
+      </div>
     </form>
   );
-};
+}

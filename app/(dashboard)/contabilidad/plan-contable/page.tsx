@@ -1,76 +1,98 @@
 "use client";
+
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { Controller, useForm } from "react-hook-form";
+
 import {
   createAccount,
   deleteAccount,
   getAccounts,
   updateAccount,
 } from "@/actions/accounting/chart-of-account";
+
 import PageContainer from "@/components/container/PageContainer";
-import { ChartOfAccount, CreateChartOfAccount } from "@/lib/validations";
-import { useSession } from "next-auth/react";
 import { TreeTable } from "./TreeTable";
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  MenuItem,
-  TextField,
-  Typography,
-} from "@mui/material";
-import { Controller, useForm } from "react-hook-form";
-import { AlertService } from "@/lib/alerts";
+import { ChartOfAccount, CreateChartOfAccount } from "@/lib/validations";
+
 import { notifyError, notifyInfo } from "@/lib/notifications";
+
+/* ShadCN */
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export default function PlanContablePage() {
   const { data: session } = useSession();
+
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [open, setOpen] = useState(false);
   const [accountToEdit, setAccountToEdit] = useState<ChartOfAccount | null>(
     null
   );
 
+  /* ---------------------- */
+  /* Form */
+  /* ---------------------- */
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<CreateChartOfAccount>({
+    defaultValues: {
+      code: "",
+      name: "",
+      accountType: "ASSET",
+      parentId: null,
+    },
+  });
+
+  /* ---------------------- */
+  /* Fetch accounts */
+  /* ---------------------- */
   useEffect(() => {
-    fetchAccounts();
+    if (session?.user?.tenantId) {
+      fetchAccounts();
+    }
   }, [session?.user?.tenantId]);
 
   const fetchAccounts = async () => {
-    try {
-      if (!session?.user?.tenantId) return;
+    if (!session?.user?.tenantId) return;
 
-      const response = await getAccounts(session.user.tenantId);
-      if (response.success) {
-        setAccounts(response.data || []);
-      } else {
-        console.error(response.error);
-      }
-    } catch (error) {
-      console.error("Error fetching accounts:", error);
+    const response = await getAccounts(session.user.tenantId);
+    if (response.success) {
+      setAccounts(response.data || []);
     }
   };
 
+  /* ---------------------- */
+  /* Modals */
+  /* ---------------------- */
   const openCreateModal = (parentId: string | null) => {
     setAccountToEdit(null);
-
-    if (parentId) {
-      console.log("Creating as child of:", parentId);
-      reset({
-        code: "",
-        name: "",
-        accountType: "ASSET",
-        parentId: parentId,
-      });
-    } else {
-      reset({
-        code: "",
-        name: "",
-        accountType: "ASSET",
-        parentId: null,
-      });
-    }
-
+    reset({
+      code: "",
+      name: "",
+      accountType: "ASSET",
+      parentId,
+    });
     setOpen(true);
   };
 
@@ -82,35 +104,30 @@ export default function PlanContablePage() {
       accountType: account.accountType,
       parentId: account.parentId,
     });
-
     setOpen(true);
   };
 
+  /* ---------------------- */
+  /* Delete */
+  /* ---------------------- */
   const confirmDelete = async (account: ChartOfAccount) => {
-    // Lógica para confirmar y eliminar la cuenta
-    console.log("Confirm delete for account:", account);
-    const confirmed = await AlertService.showConfirm(
+    const ok = await ConfirmDialog.confirm(
       "Aviso",
-      `¿Está seguro de que desea eliminar la cuenta "${account.name}"? Esta acción no se puede deshacer.`
+      `¿Está seguro de que desea eliminar la cuenta "${account.name}"? Esta acción no se puede deshacer.`,
+      "Eliminar",
+      "Cancelar"
     );
-    if (confirmed) {
-      console.log("ChartOfAccount deleted:", account);
-      await deleteAccount(account.id);
-      notifyInfo("Cuenta eliminada correctamente");
-      fetchAccounts();
-      // Aquí iría la lógica para eliminar la cuenta
-    } else {
-      console.log("ChartOfAccount deletion cancelled");
-    }
+
+    if (!ok) return;
+
+    await deleteAccount(account.id);
+    notifyInfo("Cuenta eliminada correctamente");
+    fetchAccounts();
   };
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<CreateChartOfAccount>();
-
+  /* ---------------------- */
+  /* Submit */
+  /* ---------------------- */
   const onSubmit = async (data: CreateChartOfAccount) => {
     const response = accountToEdit
       ? await updateAccount(accountToEdit.id, data)
@@ -130,125 +147,101 @@ export default function PlanContablePage() {
         ? "Cuenta actualizada correctamente"
         : "Cuenta creada correctamente"
     );
+
     setOpen(false);
     fetchAccounts();
   };
 
+  /* ---------------------- */
+  /* UI */
+  /* ---------------------- */
   return (
     <PageContainer title="Plan Contable">
       <TreeTable
         accounts={accounts}
-        onCreate={(parentId) => openCreateModal(parentId)}
-        onEdit={(acc) => openEditModal(acc)}
-        onDelete={(acc) => confirmDelete(acc)}
+        onCreate={openCreateModal}
+        onEdit={openEditModal}
+        onDelete={confirmDelete}
       />
 
-      {/* Create Modal */}
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogTitle>Crear Cuenta</DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Complete el formulario para crear una nueva cuenta contable.
-            </Typography>
+      {/* Modal */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {accountToEdit ? "Editar cuenta" : "Crear cuenta"}
+            </DialogTitle>
+            <DialogDescription>
+              Complete el formulario para registrar una cuenta contable.
+            </DialogDescription>
+          </DialogHeader>
 
-            <Controller
-              name="parentId"
-              control={control}
-              defaultValue={null}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Cuenta Padre (opcional)"
-                  fullWidth
-                  margin="dense"
-                  size="small"
-                  disabled
-                  value={field.value || "Ninguna (Cuenta raíz)"}
-                  select
-                >
-                  {accounts.map((account) => (
-                    <MenuItem key={account.id} value={account.id}>
-                      {account.code} - {account.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Código */}
+            <div className="space-y-1">
+              <Label>Código</Label>
+              <Controller
+                name="code"
+                control={control}
+                rules={{ required: "El código es obligatorio" }}
+                render={({ field }) => <Input {...field} />}
+              />
+              {errors.code && (
+                <p className="text-xs text-red-500">{errors.code.message}</p>
               )}
-            />
+            </div>
 
-            <Controller
-              name="code"
-              control={control}
-              defaultValue=""
-              rules={{ required: "El código es obligatorio" }}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Código"
-                  fullWidth
-                  margin="dense"
-                  size="small"
-                  error={!!errors.code}
-                  helperText={errors.code ? errors.code.message : ""}
-                />
+            {/* Nombre */}
+            <div className="space-y-1">
+              <Label>Nombre</Label>
+              <Controller
+                name="name"
+                control={control}
+                rules={{ required: "El nombre es obligatorio" }}
+                render={({ field }) => <Input {...field} />}
+              />
+              {errors.name && (
+                <p className="text-xs text-red-500">{errors.name.message}</p>
               )}
-            />
-            <Controller
-              name="name"
-              control={control}
-              defaultValue=""
-              rules={{ required: "El nombre es obligatorio" }}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Nombre"
-                  fullWidth
-                  margin="dense"
-                  size="small"
-                  error={!!errors.name}
-                  helperText={errors.name ? errors.name.message : ""}
-                />
-              )}
-            />
-            <Controller
-              name="accountType"
-              control={control}
-              rules={{ required: "El tipo de cuenta es obligatorio" }}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  select
-                  label="Tipo de Cuenta"
-                  fullWidth
-                  margin="dense"
-                  size="small"
-                  error={!!errors.accountType}
-                  helperText={
-                    errors.accountType ? errors.accountType.message : ""
-                  }
-                  value={field.value || ""}
-                >
-                  <MenuItem value="ASSET">Activo</MenuItem>
-                  <MenuItem value="LIABILITY">Pasivo</MenuItem>
-                  <MenuItem value="EQUITY">Patrimonio</MenuItem>
-                  <MenuItem value="INCOME">Ingreso</MenuItem>
-                  <MenuItem value="EXPENSE">Gasto</MenuItem>
-                </TextField>
-              )}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button type="submit" variant="contained">
-              Crear
-            </Button>
-          </DialogActions>
-        </form>
+            </div>
+
+            {/* Tipo */}
+            <div className="space-y-1">
+              <Label>Tipo de cuenta</Label>
+              <Controller
+                name="accountType"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ASSET">Activo</SelectItem>
+                      <SelectItem value="LIABILITY">Pasivo</SelectItem>
+                      <SelectItem value="EQUITY">Patrimonio</SelectItem>
+                      <SelectItem value="INCOME">Ingreso</SelectItem>
+                      <SelectItem value="EXPENSE">Gasto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit">
+                {accountToEdit ? "Actualizar" : "Crear"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
       </Dialog>
     </PageContainer>
   );

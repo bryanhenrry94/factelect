@@ -26,6 +26,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import {
+  FieldSet,
+  FieldGroup,
+  Field,
+  FieldLabel,
+  FieldDescription,
+  FieldLegend,
+} from "@/components/ui/field";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,10 +69,10 @@ export default function PersonFormDialog({
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
     reset,
     watch,
     control,
+    formState: { errors, isSubmitting },
   } = useForm<CreatePersonInput>({
     resolver: zodResolver(createPersonSchema),
     defaultValues: editingPerson ?? {
@@ -124,242 +133,248 @@ export default function PersonFormDialog({
       await onSuccess();
       onClose();
     } else {
-      setError(action.error || "Error al guardar el cliente");
+      setError(action.error || "Error al guardar la persona");
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {editingPerson ? "Editar Persona" : "Agregar Persona"}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <p className="text-sm text-muted-foreground">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <FieldDescription>
             {editingPerson
               ? "Actualiza la información de la persona."
               : "Agrega una nueva persona a tu base de datos."}
-          </p>
+          </FieldDescription>
 
-          {/* GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Tipo de Persona */}
-            <Controller
-              name="personKind"
-              control={control}
-              render={({ field }) => (
-                <div className="flex flex-col gap-1">
-                  <Label>Tipo de Persona</Label>
-                  <Select
-                    defaultValue={field.value}
-                    onValueChange={field.onChange}
-                    value={field.value || ""}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="NATURAL">NATURAL</SelectItem>
-                      <SelectItem value="LEGAL">JURÍDICA</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.personKind && (
-                    <p className="text-red-500 text-xs">
-                      {errors.personKind.message}
-                    </p>
+          {/* ======================= */}
+          {/*        DATOS BASE       */}
+          {/* ======================= */}
+          <FieldSet>
+            <FieldLegend>Datos Personales</FieldLegend>
+
+            <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Tipo Persona */}
+              <Field>
+                <FieldLabel>Tipo de Persona</FieldLabel>
+                <Controller
+                  name="personKind"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="NATURAL">NATURAL</SelectItem>
+                        <SelectItem value="LEGAL">JURÍDICA</SelectItem>
+                      </SelectContent>
+                    </Select>
                   )}
-                </div>
+                />
+                {errors.personKind && (
+                  <p className="text-red-500 text-xs">
+                    {errors.personKind.message}
+                  </p>
+                )}
+              </Field>
+
+              {/* Tipo Identificación */}
+              <Field>
+                <FieldLabel>Tipo de Identificación</FieldLabel>
+                <Controller
+                  name="identificationType"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || "NATURAL"}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {identificationOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.identificationType && (
+                  <p className="text-red-500 text-xs">
+                    {errors.identificationType.message}
+                  </p>
+                )}
+              </Field>
+
+              {/* Identificación */}
+              <Field>
+                <FieldLabel>Identificación</FieldLabel>
+                <Input {...register("identification")} />
+                {errors.identification && (
+                  <p className="text-red-500 text-xs">
+                    {errors.identification.message}
+                  </p>
+                )}
+              </Field>
+
+              {/* Condicional NATURAL vs LEGAL */}
+              {watch("personKind") === "LEGAL" ? (
+                <>
+                  <Field>
+                    <FieldLabel>Razón Social</FieldLabel>
+                    <Input {...register("businessName")} />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>Nombre Comercial</FieldLabel>
+                    <Input {...register("commercialName")} />
+                  </Field>
+                </>
+              ) : (
+                <>
+                  <Field>
+                    <FieldLabel>Nombres</FieldLabel>
+                    <Input {...register("firstName")} />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>Apellidos</FieldLabel>
+                    <Input {...register("lastName")} />
+                  </Field>
+                </>
               )}
-            />
 
-            <div />
+              {/* Email */}
+              <Field>
+                <FieldLabel>Correo electrónico</FieldLabel>
+                <Input type="email" {...register("email")} />
+              </Field>
 
-            {/* Tipo identificacion */}
-            <Controller
-              name="identificationType"
-              control={control}
-              render={({ field }) => (
-                <div className="flex flex-col">
-                  <Label>Tipo de Identificación</Label>
+              {/* Teléfono */}
+              <Field>
+                <FieldLabel>Teléfono</FieldLabel>
+                <Input {...register("phone")} />
+              </Field>
+            </FieldGroup>
+
+            {/* Dirección */}
+            <Field>
+              <FieldLabel>Dirección</FieldLabel>
+              <Input {...register("address")} />
+            </Field>
+          </FieldSet>
+
+          {/* ======================= */}
+          {/*          ROLES          */}
+          {/* ======================= */}
+          <FieldSet>
+            <FieldLegend>Roles</FieldLegend>
+
+            <Field>
+              <FieldLabel>Rol</FieldLabel>
+              <Controller
+                name="roles"
+                control={control}
+                render={({ field }) => (
                   <Select
-                    defaultValue={field.value}
-                    onValueChange={field.onChange}
-                    value={field.value || ""}
+                    value={field.value[0]}
+                    onValueChange={(val) => field.onChange([val])}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar" />
                     </SelectTrigger>
                     <SelectContent>
-                      {identificationOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
+                      {["CLIENT", "SUPPLIER", "SELLER"].map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {getRoleLabel(r)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.identificationType && (
-                    <p className="text-red-500 text-xs">
-                      {errors.identificationType.message}
-                    </p>
+                )}
+              />
+            </Field>
+          </FieldSet>
+
+          {/* ======================= */}
+          {/*      CONTABILIDAD       */}
+          {/* ======================= */}
+          <FieldSet>
+            <FieldLegend>Contabilidad</FieldLegend>
+
+            <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Cuenta por pagar */}
+              <Field>
+                <FieldLabel>Cuenta por Pagar</FieldLabel>
+                <Controller
+                  name="accountPayableId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value ?? "none"}
+                      onValueChange={(val) =>
+                        field.onChange(val === "none" ? null : val)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Ninguna</SelectItem>
+                        {accounts.map((acc) => (
+                          <SelectItem key={acc.id} value={acc.id}>
+                            {acc.code} — {acc.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
-                </div>
-              )}
-            />
+                />
+              </Field>
 
-            {/* Identificacion */}
-            <div className="flex flex-col">
-              <Label>Identificación</Label>
-              <Input {...register("identification")} />
-              {errors.identification && (
-                <p className="text-red-500 text-xs">
-                  {errors.identification.message}
-                </p>
-              )}
-            </div>
+              {/* Cuenta por cobrar */}
+              <Field>
+                <FieldLabel>Cuenta por Cobrar</FieldLabel>
+                <Controller
+                  name="accountReceivableId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value ?? "none"}
+                      onValueChange={(val) =>
+                        field.onChange(val === "none" ? null : val)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Ninguna</SelectItem>
+                        {accounts.map((acc) => (
+                          <SelectItem key={acc.id} value={acc.id}>
+                            {acc.code} — {acc.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+            </FieldGroup>
+          </FieldSet>
 
-            {/* Si es Jurídica */}
-            {watch("personKind") === "LEGAL" ? (
-              <>
-                <div className="flex flex-col">
-                  <Label>Razón Social</Label>
-                  <Input {...register("businessName")} />
-                </div>
-
-                <div className="flex flex-col">
-                  <Label>Nombre Comercial</Label>
-                  <Input {...register("commercialName")} />
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Nombres */}
-                <div className="flex flex-col">
-                  <Label>Nombres</Label>
-                  <Input {...register("firstName")} />
-                </div>
-
-                {/* Apellidos */}
-                <div className="flex flex-col">
-                  <Label>Apellidos</Label>
-                  <Input {...register("lastName")} />
-                </div>
-              </>
-            )}
-
-            {/* Correo */}
-            <div className="flex flex-col">
-              <Label>Correo electrónico</Label>
-              <Input type="email" {...register("email")} />
-            </div>
-
-            {/* Telefono */}
-            <div className="flex flex-col">
-              <Label>Teléfono</Label>
-              <Input {...register("phone")} />
-            </div>
-          </div>
-
-          {/* Dirección */}
-          <div className="flex flex-col">
-            <Label>Dirección</Label>
-            <Input {...register("address")} />
-          </div>
-
-          {/* Roles */}
-          <Controller
-            name="roles"
-            control={control}
-            defaultValue={[]}
-            render={({ field }) => (
-              <div className="flex flex-col">
-                <Label>Roles</Label>
-                <Select
-                  onValueChange={(val) => field.onChange([val])}
-                  defaultValue={field.value[0]}
-                  value={field.value[0] || ""}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["CLIENT", "SUPPLIER", "SELLER"].map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {getRoleLabel(role)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          />
-
-          <p className="text-sm text-muted-foreground mt-2">Contabilidad</p>
-
-          {/* Cuenta por pagar */}
-          <Controller
-            name="accountPayableId"
-            control={control}
-            render={({ field }) => (
-              <div className="flex flex-col">
-                <Label>Cuenta por Pagar</Label>
-                <Select
-                  defaultValue={field.value || ""}
-                  onValueChange={(val) =>
-                    field.onChange(val === "none" ? null : val)
-                  }
-                  value={field.value ?? "none"}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Ninguna</SelectItem>
-                    {accounts.map((acc) => (
-                      <SelectItem key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          />
-
-          {/* Cuenta por cobrar */}
-          <Controller
-            name="accountReceivableId"
-            control={control}
-            render={({ field }) => (
-              <div className="flex flex-col">
-                <Label>Cuenta por Cobrar</Label>
-                <Select
-                  defaultValue={field.value || ""}
-                  onValueChange={(val) =>
-                    field.onChange(val === "none" ? null : val)
-                  }
-                  value={field.value ?? "none"}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Ninguna</SelectItem>
-                    {accounts.map((acc) => (
-                      <SelectItem key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          />
-
-          {/* Acciones */}
-          <DialogFooter className="mt-4">
+          {/* Botones */}
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>

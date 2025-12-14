@@ -1,42 +1,51 @@
 "use client";
+
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
+
 import PageContainer from "@/components/container/PageContainer";
 import { notifyError, notifyInfo } from "@/lib/notifications";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
-import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Controller, useForm } from "react-hook-form";
-import { AlertService } from "@/lib/alerts";
-import { useSession } from "next-auth/react";
+
 import {
   CostCenter,
   CreateCostCenterInput,
   createCostCenterSchema,
 } from "@/lib/validations/accounting/cost-center";
+
 import {
   createCostCenter,
   deleteCostCenter,
   getCostCenters,
   updateCostCenter,
 } from "@/actions/accounting/cost-center";
+
+/* ShadCN */
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Label } from "@/components/ui/label";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const initialState: CostCenter = {
   id: "",
@@ -48,108 +57,55 @@ const initialState: CostCenter = {
 export default function CentrosCostoPage() {
   const router = useRouter();
   const params = useSearchParams();
-
   const { data: session } = useSession();
 
   const [open, setOpen] = useState(false);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
-  const [costCenterSelected, setCostCenterSelected] =
-    useState<CostCenter | null>(null);
+  const [selected, setSelected] = useState<CostCenter | null>(null);
 
   const [search, setSearch] = useState(params.get("search") ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(search);
 
-  const [page, setPage] = useState(0);
-  const rowsPerPage = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
-  const handleClose = () => {
-    setCostCenterSelected(null);
-    setOpen(false);
-  };
-
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
+  /* ---------------- Debounce ---------------- */
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search); // actualiza el valor definitivo
-    }, 300);
-
-    return () => clearTimeout(handler); // limpia si sigue escribiendo
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
   }, [search]);
 
-  const handleCreate = () => {
-    reset(initialState);
-    setOpen(true);
-  };
+  /* ---------------- URL params ---------------- */
+  useEffect(() => {
+    const query = new URLSearchParams(params.toString());
+    debouncedSearch
+      ? query.set("search", debouncedSearch)
+      : query.delete("search");
+    router.push(`/contabilidad/centros-costo?${query.toString()}`);
+  }, [debouncedSearch]);
 
-  const handleEdit = (costCenter: CostCenter) => {
-    setCostCenterSelected(costCenter);
-    reset({
-      code: costCenter.code,
-      name: costCenter.name,
-    });
-    setOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    const confirm = await AlertService.showConfirm(
-      "Aviso",
-      "¿Deseas eliminar el centro de costo?"
-    );
-    if (!confirm) return;
-
-    try {
-      const result = await deleteCostCenter(id);
-
-      if (result.success) {
-        notifyInfo("Centro de costo eliminado correctamente");
-        fetchCostCenters();
-      } else notifyError("Error al eliminar el centro de costo");
-    } catch (error) {
-      notifyError("Error al eliminar el centro de costo");
-    }
-  };
-
+  /* ---------------- Fetch ---------------- */
   const fetchCostCenters = async () => {
-    try {
-      if (!session?.user?.tenantId) return;
+    if (!session?.user?.tenantId) return;
 
-      const response = await getCostCenters(
-        session.user.tenantId,
-        debouncedSearch
-      );
-      if (!response.success) {
-        notifyError("Error al cargar las categorías");
-        return;
-      }
+    const response = await getCostCenters(
+      session.user.tenantId,
+      debouncedSearch
+    );
 
-      setCostCenters(response.data || []);
-    } catch (error) {
-      notifyError("Error al cargar las categorías");
+    if (!response.success) {
+      notifyError("Error al cargar los centros de costo");
+      return;
     }
+
+    setCostCenters(response.data || []);
   };
 
   useEffect(() => {
     fetchCostCenters();
   }, [session?.user?.tenantId, debouncedSearch]);
 
-  useEffect(() => {
-    updateParam("search", debouncedSearch);
-  }, [debouncedSearch]);
-
-  const updateParam = (key: string, value: string) => {
-    const query = new URLSearchParams(params.toString());
-    query.set(key, value);
-
-    if (query.get("search") === "") {
-      query.delete("search");
-    }
-
-    router.push(`/contabilidad/centros-costo?${query.toString()}`);
-  };
-
+  /* ---------------- Form ---------------- */
   const {
     control,
     handleSubmit,
@@ -160,201 +116,192 @@ export default function CentrosCostoPage() {
     defaultValues: initialState,
   });
 
+  const openCreate = () => {
+    reset(initialState);
+    setSelected(null);
+    setOpen(true);
+  };
+
+  const openEdit = (cc: CostCenter) => {
+    setSelected(cc);
+    reset({ code: cc.code, name: cc.name });
+    setOpen(true);
+  };
+
   const onSubmit = async (data: CreateCostCenterInput) => {
-    try {
-      if (!session?.user?.tenantId) {
-        notifyError("No se encontró el tenantId del usuario");
-        return;
-      }
+    if (!session?.user?.tenantId) return;
 
-      const response = costCenterSelected
-        ? await updateCostCenter(costCenterSelected.id, data)
-        : await createCostCenter(session.user.tenantId, data);
+    const response = selected
+      ? await updateCostCenter(selected.id, data)
+      : await createCostCenter(session.user.tenantId, data);
 
-      if (response.success) {
-        await notifyInfo(
-          `Cuenta ${
-            costCenterSelected ? "actualizada" : "creada"
-          } correctamente`
-        );
-        fetchCostCenters();
-        handleClose();
-        setCostCenterSelected(null);
-      } else {
-        notifyError(
-          `Error al ${
-            costCenterSelected ? "actualizar" : "crear"
-          } el centro de costo`
-        );
-      }
-    } catch (error) {
-      console.log(error);
-      notifyError("Error al guardar el centro de costo");
+    if (!response.success) {
+      notifyError(
+        `Error al ${selected ? "actualizar" : "crear"} el centro de costo`
+      );
+      return;
+    }
+
+    notifyInfo(
+      `Centro de costo ${selected ? "actualizado" : "creado"} correctamente`
+    );
+
+    fetchCostCenters();
+    setOpen(false);
+    setSelected(null);
+  };
+
+  const handleDelete = async (id: string) => {
+    const confirmed = await ConfirmDialog.confirm(
+      "Aviso",
+      "¿Deseas eliminar el centro de costo?"
+    );
+    if (!confirmed) return;
+
+    const response = await deleteCostCenter(id);
+    if (response.success) {
+      notifyInfo("Centro de costo eliminado correctamente");
+      fetchCostCenters();
+    } else {
+      notifyError("Error al eliminar el centro de costo");
     }
   };
 
+  /* ---------------- UI ---------------- */
   return (
     <PageContainer
       title="Centros de Costo"
       description="Gestiona los centros de costo de tu organización"
     >
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
-        }}
-      >
-        <TextField
-          label="Buscar"
-          variant="outlined"
-          size="small"
+      {/* Top bar */}
+      <div className="flex flex-col sm:flex-row gap-2 justify-between mb-4">
+        <Input
+          placeholder="Buscar..."
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            updateParam("search", e.target.value);
-          }}
+          onChange={(e) => setSearch(e.target.value)}
+          className="sm:max-w-xs"
         />
-        <Button
-          variant="contained"
-          startIcon={<Plus />}
-          onClick={handleCreate}
-          sx={{ width: { xs: "100%", sm: "auto" } }}
-        >
+
+        <Button onClick={openCreate}>
+          <Plus className="mr-2 h-4 w-4" />
           Nuevo
         </Button>
-      </Box>
+      </div>
 
-      <Card sx={{ mt: 3 }}>
+      <Card>
         <CardContent>
           {costCenters.length === 0 ? (
-            <Box textAlign="center" py={6}>
-              <ShoppingBag />
-              <Typography variant="h6" mt={2}>
-                No hay centros de costo aún
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Agrega el primer centro de costo para comenzar a organizar tus
-                finanzas.
-              </Typography>
-            </Box>
+            <div className="flex flex-col items-center py-10 text-center">
+              <ShoppingBag className="h-10 w-10 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">
+                No hay centros de costo
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Agrega el primero para comenzar
+              </p>
+            </div>
           ) : (
-            <Box>
+            <>
               <Table>
-                <TableHead>
+                <TableHeader>
                   <TableRow>
-                    <TableCell>
-                      <strong>Codigo</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Nombre</strong>
-                    </TableCell>
-                    <TableCell align="right">
-                      <strong>Acciones</strong>
-                    </TableCell>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
                 <TableBody>
                   {costCenters
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((costCenter) => (
-                      <TableRow key={costCenter.id} hover>
-                        <TableCell>{costCenter.code}</TableCell>
-                        <TableCell>{costCenter.name}</TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            color="primary"
-                            onClick={() => handleEdit(costCenter)}
+                    .slice(
+                      (currentPage - 1) * itemsPerPage,
+                      (currentPage - 1) * itemsPerPage + itemsPerPage
+                    )
+                    .map((cc) => (
+                      <TableRow key={cc.id}>
+                        <TableCell>{cc.code}</TableCell>
+                        <TableCell>{cc.name}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <button
+                            className="p-1 hover:bg-muted rounded"
+                            onClick={() => openEdit(cc)}
                           >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            color="error"
-                            onClick={() => handleDelete(costCenter.id)}
+                            <Edit size={18} />
+                          </button>
+
+                          <button
+                            className="p-1 hover:bg-destructive/20 rounded"
+                            onClick={() => handleDelete(cc.id)}
                           >
-                            <Delete />
-                          </IconButton>
+                            <Delete size={18} />
+                          </button>
                         </TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
               </Table>
 
-              <TablePagination
-                component="div"
-                color="primary"
-                count={costCenters.length}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                rowsPerPageOptions={[5]}
+              <PaginationControls
+                currentPage={currentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={costCenters.length}
+                onPageChange={(page) => setCurrentPage(page)}
               />
-            </Box>
+            </>
           )}
         </CardContent>
       </Card>
 
-      <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogTitle>
-            {costCenterSelected ? "Editar Cuenta" : "Agregar Cuenta"}
-          </DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {costCenterSelected
-                ? "Actualizar información de la cuenta"
-                : "Agregar una nueva cuenta a tu catálogo"}
-            </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column" }}>
+      {/* Modal */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {selected ? "Editar Centro de Costo" : "Nuevo Centro de Costo"}
+            </DialogTitle>
+            <DialogDescription>
+              Complete los datos del centro de costo.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div>
+              <Label>Código</Label>
               <Controller
                 name="code"
                 control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Código"
-                    variant="outlined"
-                    fullWidth
-                    margin="dense"
-                    error={errors.code ? true : false}
-                    helperText={errors.code?.message}
-                  />
-                )}
+                render={({ field }) => <Input {...field} />}
               />
+              {errors.code && (
+                <p className="text-xs text-red-500">{errors.code.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label>Nombre</Label>
               <Controller
                 name="name"
                 control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Nombre"
-                    variant="outlined"
-                    fullWidth
-                    margin="dense"
-                    error={errors.name ? true : false}
-                    helperText={errors.name?.message}
-                  />
-                )}
+                render={({ field }) => <Input {...field} />}
               />
+              {errors.name && (
+                <p className="text-xs text-red-500">{errors.name.message}</p>
+              )}
+            </div>
 
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 2,
-                  mt: 2,
-                }}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
               >
-                <Button onClick={handleClose}>Cancelar</Button>
-                <Button variant="contained" type="submit">
-                  Guardar
-                </Button>
-              </Box>
-            </Box>
-          </DialogContent>
-        </form>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                Guardar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
       </Dialog>
     </PageContainer>
   );
