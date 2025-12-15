@@ -1,237 +1,223 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { Controller, useFormContext } from "react-hook-form";
+
 import { getEmissionPointsByEstablishment, getEstablishments } from "@/actions";
 import { getNextSequenceDocumentNumber } from "@/actions/sequence_control";
+
 import {
   CreateDocument,
   EmissionPointWithEstablishmentSchema,
 } from "@/lib/validations";
 import { $Enums } from "@/prisma/generated/prisma";
-import { Box, MenuItem, Stack, TextField, Typography } from "@mui/material";
-import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
-import { Controller, useFormContext } from "react-hook-form";
+
+import {
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 interface DocumentFiscalInfoProps {
   modeEdit?: boolean;
   documentType: $Enums.DocumentType;
 }
 
-export const DocumentFiscalInfo: React.FC<DocumentFiscalInfoProps> = ({
+export const DocumentFiscalInfo = ({
   modeEdit,
   documentType,
-}) => {
+}: DocumentFiscalInfoProps) => {
+  const { data: session } = useSession();
+
   const [establishments, setEstablishments] = useState<any[]>([]);
   const [emissionPoints, setEmissionPoints] = useState<
     EmissionPointWithEstablishmentSchema[]
   >([]);
 
-  const { data: session } = useSession();
-
-  const {
-    control,
-    formState: { errors },
-    setValue,
-    getValues,
-  } = useFormContext<CreateDocument>();
+  const { control, setValue, getValues } = useFormContext<CreateDocument>();
 
   // ---------------------------
   // 1. FETCH ESTABLISHMENTS
   // ---------------------------
   useEffect(() => {
+    if (!session?.user.tenantId) return;
+
     const fetchEstablishments = async () => {
-      if (!session?.user.tenantId) return;
-
-      const response = await getEstablishments(session.user.tenantId);
-
-      if (response.success) {
-        setEstablishments(response.data || []);
-      } else {
-        setEstablishments([]);
-      }
+      const res = await getEstablishments(session.user.tenantId);
+      setEstablishments(res.success ? res.data || [] : []);
     };
 
     fetchEstablishments();
   }, [session?.user.tenantId]);
 
   // ---------------------------
-  // 2. HANDLE ESTABLISHMENT CHANGE
+  // 2. LOAD EMISSION POINTS
   // ---------------------------
   const loadEmissionPoints = async (estId: string) => {
-    const response = await getEmissionPointsByEstablishment(estId);
-
-    if (response.success) {
-      setEmissionPoints(response.data || []);
-      return response.data || [];
-    }
-
-    setEmissionPoints([]);
-    return [];
+    const res = await getEmissionPointsByEstablishment(estId);
+    const eps = res.success ? res.data || [] : [];
+    setEmissionPoints(eps);
+    return eps;
   };
 
   // ---------------------------
-  // 3. HANDLE EMISSION POINT CHANGE
+  // 3. LOAD NEXT SEQUENCE
   // ---------------------------
   const loadNextSequence = async (
     tenantId: string,
-    esId: string,
-    epId: string,
-    documentType: $Enums.DocumentType
+    estId: string,
+    epId: string
   ) => {
-    const result = await getNextSequenceDocumentNumber(
+    const res = await getNextSequenceDocumentNumber(
       tenantId,
-      esId,
+      estId,
       epId,
       documentType
     );
 
-    if (result.success && result.nextSequence !== undefined) {
-      setValue("fiscalInfo.sequence", result.nextSequence);
-    } else {
-      setValue("fiscalInfo.sequence", 0);
-    }
+    setValue(
+      "fiscalInfo.sequence",
+      res.success && res.nextSequence !== undefined ? res.nextSequence : 0
+    );
   };
 
   // ---------------------------
-  // 4. AUTO SET DEFAULT VALUES
+  // 4. APPLY DEFAULTS
   // ---------------------------
   useEffect(() => {
     const applyDefaults = async () => {
-      if (establishments.length === 0) return;
+      if (!session?.user.tenantId || establishments.length === 0) return;
 
-      // 1) Establecimiento por defecto
-      const defaultEstId = establishments[0].id;
-      setValue("fiscalInfo.establishmentId", defaultEstId);
+      const estId = establishments[0].id;
+      setValue("fiscalInfo.establishmentId", estId);
 
-      // 2) Cargar puntos de emisión del establecimiento
-      const eps = await loadEmissionPoints(defaultEstId);
-
+      const eps = await loadEmissionPoints(estId);
       if (eps.length === 0) return;
 
-      // 3) Punto de emisión por defecto
-      const defaultEpId = eps[0].id;
-      setValue("fiscalInfo.emissionPointId", defaultEpId);
+      const epId = eps[0].id;
+      setValue("fiscalInfo.emissionPointId", epId);
 
-      if (!defaultEpId) return;
-
-      // 4) Cargar secuencia según el documentType
-      await loadNextSequence(
-        session?.user.tenantId || "",
-        defaultEstId,
-        defaultEpId,
-        documentType
-      );
+      await loadNextSequence(session.user.tenantId, estId, epId || "");
     };
 
     applyDefaults();
-  }, [establishments, documentType]); // <- recalcular siempre cuando cambia el tipo de documento
+  }, [establishments, documentType]);
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      {/* ESTABLISHMENT */}
-      <Controller
-        name="fiscalInfo.establishmentId"
+    <div className="flex flex-col gap-4">
+      {/* ESTABLECIMIENTO */}
+      <FormField
         control={control}
+        name="fiscalInfo.establishmentId"
         render={({ field }) => (
-          <TextField
-            {...field}
-            select
-            label="Establecimiento"
-            size="small"
-            fullWidth
-            onChange={async (e) => {
-              const val = e.target.value;
-              field.onChange(val);
+          <FormItem>
+            <FormLabel>Establecimiento</FormLabel>
+            <Select
+              disabled={modeEdit}
+              value={field.value || ""}
+              onValueChange={async (val) => {
+                field.onChange(val);
 
-              // Carga puntos de emisión cuando cambia
-              const eps = await loadEmissionPoints(val);
+                const eps = await loadEmissionPoints(val);
+                if (eps.length > 0) {
+                  setValue("fiscalInfo.emissionPointId", eps[0].id);
+                  await loadNextSequence(
+                    session?.user.tenantId || "",
+                    val,
+                    eps[0].id || ""
+                  );
+                } else {
+                  setValue("fiscalInfo.emissionPointId", "");
+                  setValue("fiscalInfo.sequence", 0);
+                }
+              }}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona establecimiento" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {establishments.map((est) => (
+                  <SelectItem key={est.id} value={est.id}>
+                    {est.code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
-              if (eps.length > 0) {
-                setValue("fiscalInfo.emissionPointId", eps[0].id);
+      {/* PUNTO DE EMISIÓN */}
+      <FormField
+        control={control}
+        name="fiscalInfo.emissionPointId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Punto de Emisión</FormLabel>
+            <Select
+              disabled={modeEdit}
+              value={field.value || ""}
+              onValueChange={async (val) => {
+                field.onChange(val);
                 await loadNextSequence(
                   session?.user.tenantId || "",
-                  val,
-                  eps[0].id || "",
-                  documentType
+                  getValues("fiscalInfo.establishmentId") || "",
+                  val
                 );
-              } else {
-                setValue("fiscalInfo.emissionPointId", "");
-                setValue("fiscalInfo.sequence", 0);
-              }
-            }}
-            value={field.value || ""}
-            error={!!errors.fiscalInfo?.establishmentId}
-            helperText={
-              errors.fiscalInfo?.establishmentId?.message?.toString() || ""
-            }
-            disabled={modeEdit}
-          >
-            {establishments.map((est: any) => (
-              <MenuItem key={est.id} value={est.id}>
-                {est.code}
-              </MenuItem>
-            ))}
-          </TextField>
+              }}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona punto" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {emissionPoints.map((ep) => (
+                  <SelectItem key={ep.id} value={ep.id || ""}>
+                    {ep.code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
         )}
       />
 
-      {/* EMISSION POINT */}
-      <Controller
-        name="fiscalInfo.emissionPointId"
+      {/* SECUENCIA */}
+      <FormField
         control={control}
-        render={({ field }) => (
-          <TextField
-            {...field}
-            select
-            label="Punto de Emisión"
-            size="small"
-            fullWidth
-            onChange={async (e) => {
-              const val = e.target.value;
-              field.onChange(val);
-              await loadNextSequence(
-                session?.user.tenantId || "",
-                getValues("fiscalInfo.establishmentId") || "",
-                val || "",
-                documentType
-              );
-            }}
-            value={field.value || ""}
-            error={!!errors.fiscalInfo?.emissionPointId}
-            helperText={
-              errors.fiscalInfo?.emissionPointId?.message?.toString() || ""
-            }
-            disabled={modeEdit}
-          >
-            {emissionPoints.map((ep: any) => (
-              <MenuItem key={ep.id} value={ep.id}>
-                {ep.code}
-              </MenuItem>
-            ))}
-          </TextField>
-        )}
-      />
-
-      {/* DOCUMENT SEQUENCE */}
-      <Controller
         name="fiscalInfo.sequence"
-        control={control}
         render={({ field }) => (
-          <TextField
-            {...field}
-            label="Número de Documento"
-            size="small"
-            fullWidth
-            value={field.value ? field.value.toString().padStart(9, "0") : ""}
-            slotProps={{
-              input: {
-                readOnly: true,
-              },
-            }}
-            error={!!errors.fiscalInfo?.sequence}
-            helperText={errors.fiscalInfo?.sequence?.message?.toString() || ""}
-            disabled={modeEdit}
-          />
+          <FormItem>
+            <FormLabel>Número de Documento</FormLabel>
+            <FormControl>
+              <Input
+                readOnly
+                disabled={modeEdit}
+                value={
+                  field.value ? field.value.toString().padStart(9, "0") : ""
+                }
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
         )}
       />
-    </Box>
+    </div>
   );
 };

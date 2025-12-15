@@ -1,6 +1,11 @@
 "use client";
-import { BankMovementForm } from "@/components/bank/BankMovementForm";
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+
 import PageContainer from "@/components/container/PageContainer";
+import { BankMovementForm } from "@/components/bank/BankMovementForm";
+
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,19 +14,14 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-
-/* shadcn */
-import { Card, CardContent } from "@/components/ui/card";
-import { SlashIcon } from "lucide-react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function EditarMovimientoBancarioPage() {
-  const params = useParams();
-  const { id } = params;
+  const params = useParams<{ id: string }>();
 
   return (
     <PageContainer title="Editar Movimiento Bancario">
+      {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -29,26 +29,31 @@ export default function EditarMovimientoBancarioPage() {
               <Link href="/">Inicio</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
-          <BreadcrumbSeparator>
-            <SlashIcon />
-          </BreadcrumbSeparator>
+
+          <BreadcrumbSeparator />
+
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link href="/bancos/movimientos">Movimientos Bancarios</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
-          <BreadcrumbSeparator>
-            <SlashIcon />
-          </BreadcrumbSeparator>
+
+          <BreadcrumbSeparator />
+
           <BreadcrumbItem>
             <BreadcrumbPage>Editar</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
+      {/* Content */}
       <Card className="mt-4">
-        <CardContent className="p-6">
-          <BankMovementForm bankMovementId={id as string} />
+        <CardHeader>
+          <CardTitle>Datos del movimiento</CardTitle>
+        </CardHeader>
+
+        <CardContent className="pt-0">
+          <BankMovementForm bankMovementId={params.id} />
         </CardContent>
       </Card>
     </PageContainer>

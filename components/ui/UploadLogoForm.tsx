@@ -1,42 +1,35 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { uploadLogoAction } from "@/actions/supabase";
-import { updateLogoUrl } from "@/actions/tenant";
-import {
-  Box,
-  Button,
-  CircularProgress,
-  Paper,
-  Typography,
-} from "@mui/material";
-import { CloudUpload, File } from "lucide-react";
-import { styled } from "@mui/material/styles";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
+import { CloudUpload, File } from "lucide-react";
+
+import { uploadLogoAction } from "@/actions/supabase";
+import { updateLogoUrl } from "@/actions/tenant";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
-const VisuallyHiddenInput = styled("input")({
-  clip: "rect(0 0 0 0)",
-  clipPath: "inset(50%)",
-  height: 1,
-  overflow: "hidden",
-  position: "absolute",
-  bottom: 0,
-  left: 0,
-  whiteSpace: "nowrap",
-  width: 1,
-});
+/* shadcn */
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
 interface UploadLogoFormProps {
   logoUrl?: string;
-  accept?: string; // Por defecto .jpg, .jpeg, .png
+  accept?: string;
 }
 
-const UploadLogoForm: React.FC<UploadLogoFormProps> = ({
+export default function UploadLogoForm({
   logoUrl,
   accept = ".jpg,.jpeg,.png",
-}) => {
+}: UploadLogoFormProps) {
   const { data: session } = useSession();
 
   const [isPending, startTransition] = useTransition();
@@ -46,21 +39,19 @@ const UploadLogoForm: React.FC<UploadLogoFormProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Mostrar vista previa si es imagen
+    // Preview
     if (file.type.startsWith("image/")) {
-      const previewUrl = URL.createObjectURL(file);
-      setPreview(previewUrl);
+      setPreview(URL.createObjectURL(file));
     } else {
       setPreview(null);
     }
 
-    // Subir archivo al servidor
     startTransition(async () => {
       try {
-        const tenantId = session?.user?.tenantId ?? "";
+        const tenantId = session?.user?.tenantId;
 
         if (!tenantId) {
-          notifyError("No se pudo obtener el ID del inquilino.");
+          notifyError("No se pudo obtener el ID de la empresa.");
           return;
         }
 
@@ -77,9 +68,9 @@ const UploadLogoForm: React.FC<UploadLogoFormProps> = ({
         } else {
           notifyError(result.error || "Error al subir el logo.");
         }
-      } catch (err) {
-        console.error("Upload error:", err);
-        notifyError("Ocurrió un error inesperado al subir el logo.");
+      } catch (error) {
+        console.error(error);
+        notifyError("Ocurrió un error inesperado.");
       }
     });
   };
@@ -87,99 +78,65 @@ const UploadLogoForm: React.FC<UploadLogoFormProps> = ({
   const isImage = preview && /\.(png|jpg|jpeg|gif)$/i.test(preview);
 
   return (
-    <Paper elevation={3} sx={{ p: 2, mt: 2, textAlign: "center" }}>
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          mb: 2,
-        }}
-      >
-        <Typography variant="h6" gutterBottom>
-          Subir logo
-        </Typography>
+    <Card className="border-dashed">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Logo de la empresa</CardTitle>
+        <CardDescription>Sube una imagen (.png, .jpg, .jpeg).</CardDescription>
+      </CardHeader>
 
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Puedes subir una imagen (.png, .jpg, .jpeg).
-        </Typography>
-
-        {/* Vista previa del logo */}
-        {preview ? (
-          isImage ? (
-            <Image
-              src={preview}
-              alt="Vista previa"
-              width={220}
-              height={180}
-              style={{
-                borderRadius: "12px",
-                marginBottom: "16px",
-                objectFit: "cover",
-                border: "1px solid #ddd",
-                transition: "all 0.3s ease",
-              }}
-            />
-          ) : (
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              flexDirection="column"
-              mb={2}
-            >
-              <File size={48} />
-              <Typography variant="caption" color="text.secondary">
-                Archivo subido
-              </Typography>
-            </Box>
-          )
-        ) : (
-          <Box
-            sx={{
-              height: 120,
-              border: "1px dashed #ccc",
-              borderRadius: 2,
-              mb: 2,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "text.secondary",
-              fontSize: 14,
-            }}
-          >
-            No hay logo seleccionado
-          </Box>
-        )}
-
-        <Button
-          component="label"
-          variant="contained"
-          startIcon={
-            isPending ? (
-              <CircularProgress size={20} color="inherit" />
+      <CardContent className="space-y-4">
+        {/* Preview */}
+        <div className="flex justify-center">
+          {preview ? (
+            isImage ? (
+              <div className="relative h-36 w-56 rounded-lg border overflow-hidden">
+                <Image
+                  src={preview}
+                  alt="Vista previa del logo"
+                  fill
+                  className="object-contain"
+                />
+              </div>
             ) : (
-              <CloudUpload />
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <File size={40} />
+                <span className="text-sm">Archivo subido</span>
+              </div>
             )
-          }
-          disabled={isPending}
-          sx={{
-            borderRadius: 2,
-            textTransform: "none",
-            px: 3,
-          }}
-        >
-          {isPending ? "Subiendo..." : "Seleccionar logo"}
-          <VisuallyHiddenInput
-            type="file"
-            name="file"
-            accept={accept}
-            onChange={handleFileChange}
-          />
-        </Button>
-      </Box>
-    </Paper>
-  );
-};
+          ) : (
+            <div className="flex h-32 w-full items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+              No hay logo seleccionado
+            </div>
+          )}
+        </div>
 
-export default UploadLogoForm;
+        <Separator />
+
+        {/* Upload */}
+        <div className="flex flex-col items-center gap-3">
+          <Label htmlFor="logo-upload" className="sr-only">
+            Subir logo
+          </Label>
+
+          <Button asChild disabled={isPending} className="w-full">
+            <label className="flex cursor-pointer items-center justify-center gap-2">
+              <CloudUpload className="h-4 w-4" />
+              {isPending ? "Subiendo..." : "Seleccionar logo"}
+              <input
+                id="logo-upload"
+                type="file"
+                accept={accept}
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </label>
+          </Button>
+
+          <p className="text-xs text-muted-foreground text-center">
+            Tamaño recomendado: 300x200 px
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

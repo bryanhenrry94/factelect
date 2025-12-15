@@ -1,16 +1,30 @@
 "use client";
-import { useSession } from "next-auth/react";
+
 import { useEffect, useState } from "react";
-import { Paper } from "@mui/material";
+import { useSession } from "next-auth/react";
 
 import PageContainer from "@/components/container/PageContainer";
+import DocumentForm from "@/components/document/DocumentForm";
+
+import { Card, CardContent } from "@/components/ui/card";
+
 import { getPersonsByTenant, getAllProducts } from "@/actions";
+import { getWarehouses } from "@/actions/inventory/warehouse";
+
 import { PersonFilter } from "@/types";
 import { PersonInput } from "@/lib/validations/person";
 import { Product } from "@/lib/validations";
-import DocumentForm from "@/components/document/DocumentForm";
 import { Warehouse } from "@/lib/validations/inventory/warehouse";
-import { getWarehouses } from "@/actions/inventory/warehouse";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
+import { SlashIcon } from "lucide-react";
 
 export default function SaleNewPage() {
   const { data: session } = useSession();
@@ -21,21 +35,24 @@ export default function SaleNewPage() {
 
   useEffect(() => {
     if (!session?.user?.tenantId) return;
+
     const fetchData = async () => {
       const filter: PersonFilter = {
         tenantId: session.user.tenantId,
         role: "CLIENT",
       };
 
-      const [c, p, w] = await Promise.all([
+      const [clients, productsRes, warehousesRes] = await Promise.all([
         getPersonsByTenant(filter),
         getAllProducts(session.user.tenantId),
         getWarehouses(session.user.tenantId),
       ]);
-      if (c.success) setPersons(c.data);
-      if (p.success) setProducts(p.data);
-      if (w.success) setWarehouses(w.data);
+
+      if (clients.success) setPersons(clients.data);
+      if (productsRes.success) setProducts(productsRes.data);
+      if (warehousesRes.success) setWarehouses(warehousesRes.data);
     };
+
     fetchData();
   }, [session?.user?.tenantId]);
 
@@ -44,13 +61,37 @@ export default function SaleNewPage() {
       title="Nuevo Documento"
       description="Crear un nuevo documento"
     >
-      <Paper sx={{ p: 3, mb: 4 }}>
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/">Inicio</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator>
+            <SlashIcon />
+          </BreadcrumbSeparator>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/documentos">Documentos</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator>
+            <SlashIcon />
+          </BreadcrumbSeparator>
+          <BreadcrumbItem>
+            <BreadcrumbPage>Nuevo</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="mt-4">
         <DocumentForm
           persons={persons}
           warehouses={warehouses}
           products={products}
         />
-      </Paper>
+      </div>
     </PageContainer>
   );
 }

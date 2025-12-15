@@ -1,26 +1,31 @@
 "use client";
 
+import { useEffect } from "react";
+import { Controller, useFieldArray, useFormContext } from "react-hook-form";
+import { Plus, Trash, PlusCircle } from "lucide-react";
+
 import { Product } from "@/lib/validations/inventory/product";
+import { Warehouse } from "@/lib/validations/inventory/warehouse";
+import { getProductById } from "@/actions";
+import { taxOptions } from "@/constants/tax";
+
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
+  TableHeader,
   TableRow,
-  Box,
-  Button,
-  TableContainer,
-  TextField,
-  MenuItem,
-  Stack,
-  IconButton,
-} from "@mui/material";
-import { Delete, Plus, PlusCircle } from "lucide-react";
-import { Controller, useFieldArray, useFormContext } from "react-hook-form";
-import { Warehouse } from "@/lib/validations/inventory/warehouse";
-import { getProductById } from "@/actions";
-import { taxOptions } from "@/constants/tax";
-import { useEffect } from "react";
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function InvoiceItemsTable({
   warehouses,
@@ -30,16 +35,17 @@ export default function InvoiceItemsTable({
   products: Product[];
 }) {
   const { control, watch, setValue } = useFormContext();
+
   const { fields, append, remove } = useFieldArray({
     control,
     name: "items",
   });
 
   const handleChangeProduct = async (productId: string, index: number) => {
+    if (!productId) return;
     const productResponse = await getProductById(productId);
     if (productResponse.success && productResponse.data) {
       const product = productResponse.data;
-
       setValue(`items.${index}.unitPrice`, product.price);
       setValue(`items.${index}.tax`, product.tax);
       setValue(`items.${index}.quantity`, 1);
@@ -47,39 +53,24 @@ export default function InvoiceItemsTable({
   };
 
   return (
-    <Box>
-      <TableContainer
-        sx={{
-          mt: 2,
-          borderRadius: 2,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-          bgcolor: "background.paper",
-        }}
-      >
-        <Table size="small">
-          <TableHead>
-            <TableRow
-              sx={{
-                bgcolor: "grey.100",
-                "& th": {
-                  fontWeight: 600,
-                  py: 1.5,
-                  fontSize: "0.85rem",
-                  color: "grey.700",
-                },
-              }}
-            >
-              <TableCell>Bodega</TableCell>
-              <TableCell align="center">Item</TableCell>
-              <TableCell align="center">Cantidad</TableCell>
-              <TableCell align="center">Precio</TableCell>
-              <TableCell align="center">Impuesto</TableCell>
-              <TableCell align="center">% Desc.</TableCell>
-              <TableCell align="center">Descuento</TableCell>
-              <TableCell align="center">Subtotal</TableCell>
-              <TableCell align="center" />
+    <div className="space-y-4">
+      {/* {JSON.stringify(watch("items"))} */}
+      <div className="rounded-lg border bg-background">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead className="w-[160px]">Bodega</TableHead>
+              <TableHead className="w-[260px]">Item</TableHead>
+              <TableHead className="w-[90px] text-center">Cantidad</TableHead>
+              <TableHead className="w-[110px] text-center">Precio</TableHead>
+              <TableHead className="w-[120px] text-center">Impuesto</TableHead>
+              <TableHead className="w-[110px] text-center">% Desc.</TableHead>
+              <TableHead className="w-[120px] text-right">Descuento</TableHead>
+              <TableHead className="w-[120px] text-right">Total</TableHead>
+              <TableHead className="w-[60px]" />
             </TableRow>
-          </TableHead>
+          </TableHeader>
+
           <TableBody>
             {fields.map((field, index) => {
               const quantity = watch(`items.${index}.quantity`) ?? 0;
@@ -88,15 +79,14 @@ export default function InvoiceItemsTable({
               const tax = watch(`items.${index}.tax`) || "IVA_0";
 
               const taxRate =
-                taxOptions.find((option) => option.value === tax)?.rate ?? 0;
+                taxOptions.find((o) => o.value === tax)?.rate ?? 0;
 
               const subtotal = quantity * unitPrice;
               const discountAmount = (subtotal * discountRate) / 100;
               const subtotalAfterDiscount = subtotal - discountAmount;
-              const totalWithTax =
-                subtotalAfterDiscount + subtotalAfterDiscount * taxRate;
+              const taxAmount = (subtotalAfterDiscount * taxRate) / 100;
+              const totalWithTax = subtotalAfterDiscount + taxAmount;
 
-              // 👇 actualiza valores computados al cambiar dependencias
               useEffect(() => {
                 setValue(
                   `items.${index}.taxAmount`,
@@ -119,189 +109,191 @@ export default function InvoiceItemsTable({
               ]);
 
               return (
-                <TableRow
-                  hover
-                  sx={{
-                    "& td": { py: 1 },
-                  }}
-                  key={index}
-                >
-                  <TableCell sx={{ minWidth: 160, width: "12%" }}>
+                <TableRow key={field.id} className="hover:bg-muted/30">
+                  {/* Bodega */}
+                  <TableCell>
                     <Controller
                       control={control}
                       name={`items.${index}.warehouseId`}
                       render={({ field }) => (
-                        <TextField
-                          fullWidth
-                          size="small"
-                          select
+                        <Select
                           value={field.value || ""}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            handleChangeProduct(e.target.value, index);
-                          }}
+                          onValueChange={field.onChange}
                         >
-                          {warehouses?.map((warehouse) => (
-                            <MenuItem key={warehouse.id} value={warehouse.id}>
-                              {warehouse.name}
-                            </MenuItem>
-                          ))}
-                        </TextField>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Bodega" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {warehouses.map((w) => (
+                              <SelectItem key={w.id} value={w.id}>
+                                {w.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
                     />
                   </TableCell>
-                  <TableCell sx={{ minWidth: 230, width: "22%" }}>
-                    <Stack direction="row" gap={2}>
+
+                  {/* Producto */}
+                  <TableCell>
+                    <div className="flex items-center gap-2">
                       <Controller
                         control={control}
                         name={`items.${index}.productId`}
                         render={({ field }) => (
-                          <TextField
-                            fullWidth
-                            size="small"
-                            select
+                          <Select
                             value={field.value || ""}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              handleChangeProduct(e.target.value, index);
+                            onValueChange={(v) => {
+                              field.onChange(v);
+                              handleChangeProduct(v, index);
                             }}
                           >
-                            {products.map((product) => (
-                              <MenuItem key={product.id} value={product.id}>
-                                {product.description}
-                              </MenuItem>
-                            ))}
-                          </TextField>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Producto" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {products.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.description}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         )}
                       />
-
-                      <IconButton onClick={() => {}} color="primary">
-                        <PlusCircle />
-                      </IconButton>
-                    </Stack>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-primary"
+                      >
+                        <PlusCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
-                  <TableCell sx={{ minWidth: 80, width: "7%" }}>
+
+                  {/* Cantidad */}
+                  <TableCell className="text-center">
                     <Controller
                       control={control}
                       name={`items.${index}.quantity`}
                       render={({ field }) => (
-                        <TextField
+                        <Input
                           type="number"
-                          fullWidth
-                          size="small"
+                          className="text-center"
+                          min={0}
+                          step="0.01"
                           value={field.value ?? 1}
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value);
-                            field.onChange(isNaN(value) ? 0 : value);
-                          }}
-                          slotProps={{
-                            htmlInput: {
-                              min: 0,
-                              step: "0.01", // permite decimales
-                            },
-                          }}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value) || 0)
+                          }
                         />
                       )}
                     />
                   </TableCell>
-                  <TableCell sx={{ minWidth: 100, width: "9%" }}>
+
+                  {/* Precio */}
+                  <TableCell className="text-center">
                     <Controller
                       control={control}
                       name={`items.${index}.unitPrice`}
                       render={({ field }) => (
-                        <TextField
+                        <Input
                           type="number"
-                          fullWidth
-                          size="small"
+                          className="text-center"
+                          min={0}
+                          step="0.01"
                           value={field.value ?? 0}
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value);
-                            field.onChange(isNaN(value) ? 0 : value);
-                          }}
-                          slotProps={{
-                            htmlInput: {
-                              min: 0,
-                              step: "0.01", // permite decimales
-                            },
-                          }}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value) || 0)
+                          }
                         />
                       )}
                     />
                   </TableCell>
-                  <TableCell sx={{ minWidth: 95, width: "8%" }}>
+
+                  {/* Impuesto */}
+                  <TableCell className="text-center">
                     <Controller
                       control={control}
                       name={`items.${index}.tax`}
                       render={({ field }) => (
-                        <TextField
-                          fullWidth
-                          size="small"
-                          select
+                        <Select
                           value={field.value || ""}
-                          onChange={field.onChange}
+                          onValueChange={field.onChange}
                         >
-                          {taxOptions.map(({ label, value, code }) => (
-                            <MenuItem key={code} value={value}>
-                              {label}
-                            </MenuItem>
-                          ))}
-                        </TextField>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Impuesto" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {taxOptions.map(({ label, value, code }) => (
+                              <SelectItem key={code} value={value}>
+                                {label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
                     />
                   </TableCell>
-                  <TableCell sx={{ minWidth: 95, width: "8%" }}>
+
+                  {/* % Descuento */}
+                  <TableCell className="text-center">
                     <Controller
                       control={control}
                       name={`items.${index}.discountRate`}
                       render={({ field }) => (
-                        <TextField
+                        <Input
                           type="number"
-                          fullWidth
-                          size="small"
+                          className="text-center"
+                          min={0}
+                          max={100}
+                          step="0.01"
                           value={field.value ?? 0}
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value);
-                            field.onChange(isNaN(value) ? 0 : value);
-                          }}
-                          slotProps={{
-                            htmlInput: {
-                              min: 0,
-                              max: 100,
-                              step: "0.01",
-                            },
-                          }}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value) || 0)
+                          }
                         />
                       )}
                     />
                   </TableCell>
-                  <TableCell
-                    align="right"
-                    sx={{ minWidth: 100, width: "10%", fontWeight: 600 }}
-                  >{`$${(discountAmount ?? 0).toFixed(2)}`}</TableCell>
-                  <TableCell>{`$${totalWithTax.toFixed(2)}`}</TableCell>
-                  <TableCell
-                    sx={{
-                      minWidth: 60,
-                      width: "6%",
-                      textAlign: "center",
-                    }}
-                  >
-                    <IconButton color="error" onClick={() => remove(index)}>
-                      <Delete />
-                    </IconButton>
+
+                  {/* Descuento */}
+                  <TableCell className="text-right font-medium">
+                    ${discountAmount.toFixed(2)}
+                  </TableCell>
+
+                  {/* Total */}
+                  <TableCell className="text-right font-semibold">
+                    ${totalWithTax.toFixed(2)}
+                  </TableCell>
+
+                  {/* Acciones */}
+                  <TableCell className="text-center">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive"
+                      onClick={() => remove(index)}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
-      </TableContainer>
+      </div>
+
       <Button
-        color="primary"
-        variant="outlined"
-        sx={{ mt: 2 }}
+        type="button"
+        variant="outline"
         onClick={() =>
           append({
+            warehouseId: "",
             productId: "",
             quantity: 1,
             unitPrice: 0,
@@ -310,12 +302,12 @@ export default function InvoiceItemsTable({
             discountRate: 0,
             discountAmount: 0,
             subtotal: 0,
+            total: 0,
           })
         }
-        startIcon={<Plus size={16} />}
       >
-        Agregar detalle
+        <Plus className="mr-2 h-4 w-4" /> Agregar detalle
       </Button>
-    </Box>
+    </div>
   );
 }

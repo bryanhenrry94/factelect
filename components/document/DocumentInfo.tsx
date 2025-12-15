@@ -1,17 +1,39 @@
 "use client";
-import { useState } from "react";
-import {
-  Box,
-  TextField,
-  Stack,
-  IconButton,
-  Autocomplete,
-  MenuItem,
-  Typography,
-} from "@mui/material";
-import { Controller } from "react-hook-form";
-import { UserPlus } from "lucide-react";
+
+import { useMemo } from "react";
 import { useFormContext } from "react-hook-form";
+import { UserPlus, Check, ChevronsUpDown } from "lucide-react";
+
+import {
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+
+import { cn } from "@/lib/utils";
 import { PersonInput } from "@/lib/validations/person";
 import { DocumentFiscalInfo } from "./DocumentFiscalInfo";
 
@@ -21,121 +43,164 @@ interface DocumentInfoProps {
 }
 
 export default function DocumentInfo({ persons, modeEdit }: DocumentInfoProps) {
-  const {
-    control,
-    formState: { errors },
-  } = useFormContext(); // <- accedemos al contexto del formulario
+  const { control, watch } = useFormContext();
+
+  const selectedPersonId = watch("personId");
+
+  const selectedPerson = useMemo(
+    () => persons.find((p) => p.id === selectedPersonId),
+    [persons, selectedPersonId]
+  );
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <Controller
+    <div className="flex flex-col gap-4">
+      {/* Fecha */}
+      <FormField
+        control={control}
         name="issueDate"
-        control={control}
         render={({ field }) => (
-          <TextField
-            {...field}
-            label="Fecha de Emisión"
-            type="date"
-            size="small"
-            fullWidth
-            value={
-              field.value
-                ? new Date(field.value).toISOString().substring(0, 10)
-                : ""
-            }
-            onChange={(e) => {
-              field.onChange(new Date(e.target.value));
-            }}
-            error={!!errors.issueDate}
-            helperText={errors.issueDate?.message?.toString() || ""}
-            disabled={modeEdit}
-          />
+          <FormItem>
+            <FormLabel>Fecha de Emisión</FormLabel>
+            <FormControl>
+              <Input
+                type="date"
+                disabled={modeEdit}
+                value={
+                  field.value
+                    ? new Date(field.value).toISOString().substring(0, 10)
+                    : ""
+                }
+                onChange={(e) => field.onChange(new Date(e.target.value))}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
         )}
       />
-      <Controller
+
+      {/* Tipo Entidad */}
+      <FormField
+        control={control}
         name="entityType"
-        control={control}
         render={({ field }) => (
-          <TextField
-            {...field}
-            label="Tipo"
-            size="small"
-            fullWidth
-            error={!!errors.entityType}
-            helperText={errors.entityType?.message?.toString() || ""}
-            disabled={modeEdit}
-            value={field.value || ""}
-            onChange={field.onChange}
-            select
-          >
-            <MenuItem value="CUSTOMER">Cliente</MenuItem>
-            <MenuItem value="SUPPLIER">Proveedor</MenuItem>
-          </TextField>
+          <FormItem>
+            <FormLabel>Tipo</FormLabel>
+            <Select
+              disabled={modeEdit}
+              value={field.value}
+              onValueChange={field.onChange}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona tipo" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="CUSTOMER">Cliente</SelectItem>
+                <SelectItem value="SUPPLIER">Proveedor</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
         )}
       />
-      <Controller
+
+      {/* Tipo Documento */}
+      <FormField
+        control={control}
         name="documentType"
-        control={control}
         render={({ field }) => (
-          <TextField
-            {...field}
-            label="Tipo de Documento"
-            size="small"
-            fullWidth
-            error={!!errors.documentType}
-            helperText={errors.documentType?.message?.toString() || ""}
-            disabled={modeEdit}
-            value={field.value || ""}
-            onChange={(e) => {
-              field.onChange(e.target.value);
-            }}
-            select
-          >
-            <MenuItem value="INVOICE">Factura</MenuItem>
-            <MenuItem value="CREDIT_NOTE">Nota de Crédito</MenuItem>
-            <MenuItem value="DEBIT_NOTE">Nota de Débito</MenuItem>
-          </TextField>
+          <FormItem>
+            <FormLabel>Tipo de Documento</FormLabel>
+            <Select
+              disabled={modeEdit}
+              value={field.value}
+              onValueChange={field.onChange}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona documento" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="INVOICE">Factura</SelectItem>
+                <SelectItem value="CREDIT_NOTE">Nota de Crédito</SelectItem>
+                <SelectItem value="DEBIT_NOTE">Nota de Débito</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
         )}
       />
-      <Stack direction="row" spacing={1} alignItems="center">
-        <Controller
-          name="personId"
-          control={control}
-          render={({ field: { onChange, value } }) => (
-            <Autocomplete
-              options={persons}
-              getOptionLabel={(option) =>
-                `[${option.identification}] - ${option.firstName} ${option.lastName}`
-              }
-              value={persons.find((c: any) => c.id === value) || null}
-              onChange={(_, newValue) => {
-                onChange(newValue?.id || "");
-              }}
-              fullWidth
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Persona"
-                  size="small"
-                  fullWidth
-                  error={!!errors.personId}
-                  helperText={errors.personId?.message?.toString() || ""}
-                />
-              )}
-            />
-          )}
-        />
 
-        <IconButton color="primary">
-          <UserPlus size={20} />
-        </IconButton>
-      </Stack>
+      {/* Persona (Buscable) */}
+      <FormField
+        control={control}
+        name="personId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Persona</FormLabel>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "justify-between w-full",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {selectedPerson
+                        ? `[${selectedPerson.identification}] ${selectedPerson.firstName} ${selectedPerson.lastName}`
+                        : "Selecciona una persona"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Buscar persona..." />
+                    <CommandEmpty>No se encontraron resultados</CommandEmpty>
+                    <CommandGroup>
+                      {persons.map((person) => (
+                        <CommandItem
+                          key={person.id}
+                          value={person.id}
+                          onSelect={() => field.onChange(person.id)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              person.id === field.value
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          [{person.identification}] {person.firstName}{" "}
+                          {person.lastName}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
 
+              <Button type="button" variant="ghost" size="icon">
+                <UserPlus className="h-5 w-5" />
+              </Button>
+            </div>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Info Fiscal */}
       <DocumentFiscalInfo
         modeEdit={modeEdit}
-        // documentType={watch("documentType") || "INVOICE"}
-        documentType={"INVOICE"}
+        documentType={watch("documentType") || "INVOICE"}
       />
-    </Box>
+    </div>
   );
 }
