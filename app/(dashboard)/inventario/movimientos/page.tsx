@@ -1,59 +1,65 @@
 "use client";
+
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
+
 import PageContainer from "@/components/container/PageContainer";
 import { notifyError, notifyInfo } from "@/lib/notifications";
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  IconButton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
-import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
 import { AlertService } from "@/lib/alerts";
-import { useSession } from "next-auth/react";
 import { useSearchFilter } from "@/hooks/useSearchFilter";
-import { useRouter } from "next/navigation";
-import { InventoryMovement } from "@/lib/validations/inventory/inventory-movement";
+
 import {
   deleteInventoryMovement,
   getInventoryMovements,
 } from "@/actions/inventory/inventory-movement";
-import { formatDate } from "@/utils/formatters";
-import { Warehouse } from "@/lib/validations/inventory/warehouse";
 import { getWarehouses } from "@/actions/inventory/warehouse";
+
+import { InventoryMovement } from "@/lib/validations/inventory/inventory-movement";
+import { Warehouse } from "@/lib/validations/inventory/warehouse";
+import { formatDate } from "@/utils/formatters";
+
+/* shadcn */
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+
+const ROWS_PER_PAGE = 5;
 
 export default function MovimientosInventarioPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const { search, setSearch } = useSearchFilter();
 
-  const [invenMovements, setInvenMovements] = useState<InventoryMovement[]>([]);
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
-  const [page, setPage] = useState(0);
-  const rowsPerPage = 5;
-
+  /* =========================
+     NAVIGATION
+  ========================= */
   const handleCreate = () => {
     router.push("/inventario/movimientos/crear");
   };
 
-  const handleEdit = (account: InventoryMovement) => {
-    router.push(`/inventario/movimientos/${account.id}/editar`);
+  const handleEdit = (movement: InventoryMovement) => {
+    router.push(`/inventario/movimientos/${movement.id}/editar`);
   };
 
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
+  /* =========================
+     DELETE
+  ========================= */
   const handleDelete = async (id: string) => {
     const confirm = await AlertService.showConfirm(
       "Aviso",
@@ -61,22 +67,23 @@ export default function MovimientosInventarioPage() {
     );
     if (!confirm) return;
 
-    try {
-      const result = await deleteInventoryMovement(id);
+    const result = await deleteInventoryMovement(id);
 
-      if (result.success) {
-        notifyInfo("Movimiento de inventario eliminado correctamente");
-        fetchInventoryMovement();
-      } else notifyError("Error al eliminar el movimiento de inventario");
-    } catch (error) {
+    if (result.success) {
+      notifyInfo("Movimiento de inventario eliminado correctamente");
+      fetchInventoryMovements();
+    } else {
       notifyError("Error al eliminar el movimiento de inventario");
     }
   };
 
-  const fetchInventoryMovement = async () => {
-    try {
-      if (!session?.user?.tenantId) return;
+  /* =========================
+     FETCH DATA
+  ========================= */
+  const fetchInventoryMovements = async () => {
+    if (!session?.user?.tenantId) return;
 
+    try {
       const response = await getInventoryMovements(
         session.user.tenantId,
         search
@@ -85,30 +92,28 @@ export default function MovimientosInventarioPage() {
         notifyError("Error al cargar los movimientos de inventario");
         return;
       }
-
-      setInvenMovements(response.data || []);
-    } catch (error) {
+      setMovements(response.data || []);
+    } catch {
       notifyError("Error al cargar los movimientos de inventario");
     }
   };
 
   useEffect(() => {
-    fetchInventoryMovement();
+    fetchInventoryMovements();
   }, [session?.user?.tenantId, search]);
 
   useEffect(() => {
     const fetchWarehouses = async () => {
-      try {
-        if (!session?.user?.tenantId) return;
+      if (!session?.user?.tenantId) return;
 
+      try {
         const response = await getWarehouses(session.user.tenantId);
         if (!response.success) {
           notifyError("Error al cargar las bodegas");
           return;
         }
-
         setWarehouses(response.data || []);
-      } catch (error) {
+      } catch {
         notifyError("Error al cargar las bodegas");
       }
     };
@@ -116,6 +121,9 @@ export default function MovimientosInventarioPage() {
     fetchWarehouses();
   }, [session?.user?.tenantId]);
 
+  /* =========================
+     HELPERS
+  ========================= */
   const getLabelForType = (type: string) => {
     switch (type) {
       case "IN":
@@ -131,114 +139,100 @@ export default function MovimientosInventarioPage() {
     }
   };
 
+  /* =========================
+     RENDER
+  ========================= */
   return (
     <PageContainer
       title="Movimientos de Inventario"
       description="Gestiona los movimientos de inventario de tu organización"
     >
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
-        }}
-      >
-        <TextField
-          label="Buscar"
-          variant="outlined"
-          size="small"
+      {/* Header */}
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Input
+          placeholder="Buscar movimiento..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          className="sm:max-w-xs"
         />
-        <Button
-          variant="contained"
-          startIcon={<Plus />}
-          onClick={handleCreate}
-          sx={{ width: { xs: "100%", sm: "auto" } }}
-        >
+
+        <Button onClick={handleCreate}>
+          <Plus className="mr-2 h-4 w-4" />
           Nuevo
         </Button>
-      </Box>
+      </div>
 
-      <Card sx={{ mt: 3 }}>
-        <CardContent>
-          {invenMovements.length === 0 ? (
-            <Box textAlign="center" py={6}>
-              <ShoppingBag />
-              <Typography variant="h6" mt={2}>
+      {/* Table */}
+      <Card>
+        <CardContent className="pt-6">
+          {movements.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+              <ShoppingBag className="h-10 w-10" />
+              <p className="text-lg font-medium">
                 No hay movimientos de inventario aún
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Agrega el primer movimiento de inventario.
-              </Typography>
-            </Box>
+              </p>
+              <p className="text-sm text-center">
+                Agrega el primer movimiento de inventario
+              </p>
+            </div>
           ) : (
-            <Box>
+            <>
               <Table>
-                <TableHead>
+                <TableHeader>
                   <TableRow>
-                    <TableCell>
-                      <strong>Fecha</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Bodega</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Descripción</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Tipo</strong>
-                    </TableCell>
-                    <TableCell align="right">
-                      <strong>Acciones</strong>
-                    </TableCell>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Bodega</TableHead>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
                 <TableBody>
-                  {invenMovements
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((inven) => (
-                      <TableRow key={inven.id} hover>
+                  {movements
+                    .slice(
+                      (currentPage - 1) * itemsPerPage,
+                      (currentPage - 1) * itemsPerPage + itemsPerPage
+                    )
+                    .map((movement) => (
+                      <TableRow key={movement.id}>
                         <TableCell>
-                          {formatDate(inven.date.toString())}
+                          {formatDate(movement.date.toString())}
                         </TableCell>
                         <TableCell>
-                          {warehouses.find((wh) => wh.id === inven.warehouseId)
-                            ?.name || ""}
+                          {warehouses.find(
+                            (wh) => wh.id === movement.warehouseId
+                          )?.name || "—"}
                         </TableCell>
-                        <TableCell>{inven.description}</TableCell>
-                        <TableCell>{getLabelForType(inven.type)}</TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            color="primary"
-                            onClick={() => handleEdit(inven)}
+                        <TableCell>{movement.description}</TableCell>
+                        <TableCell>{getLabelForType(movement.type)}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            onClick={() => handleEdit(movement)}
                           >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            color="error"
-                            onClick={() => handleDelete(inven.id)}
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="destructive"
+                            onClick={() => handleDelete(movement.id)}
                           >
-                            <Delete />
-                          </IconButton>
+                            <Delete className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
               </Table>
 
-              <TablePagination
-                component="div"
-                color="primary"
-                count={invenMovements.length}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                rowsPerPageOptions={[5]}
+              <PaginationControls
+                currentPage={currentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={warehouses.length}
+                onPageChange={(page) => setCurrentPage(page)}
               />
-            </Box>
+            </>
           )}
         </CardContent>
       </Card>

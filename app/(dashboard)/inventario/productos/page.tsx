@@ -1,165 +1,84 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Plus, Edit, Trash2, PackageSearch } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+
+import PageContainer from "@/components/container/PageContainer";
+import { notifyError, notifyInfo } from "@/lib/notifications";
+
+import { deleteProduct, getAllProducts } from "@/actions/inventory/product";
+import { Product } from "@/lib/validations/inventory/product";
+
+/* shadcn */
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
-  Button,
-  Card,
-  CardContent,
   Table,
   TableBody,
   TableCell,
   TableHead,
+  TableHeader,
   TableRow,
-  Typography,
-  Box,
-  IconButton,
-  TextField,
-  TablePagination,
-} from "@mui/material";
-import { Plus, Edit, Delete, Files } from "lucide-react";
-import { ProductFormDialog } from "@/components/product/product-form-dialog";
-import { CreateProduct, Product } from "@/lib/validations/inventory/product";
-import {
-  createProduct,
-  deleteProduct,
-  getAllProducts,
-  updateProduct,
-} from "@/actions/inventory/product";
-import { useSession } from "next-auth/react";
-import { AlertService } from "@/lib/alerts";
-import PageContainer from "@/components/container/PageContainer";
-import { notifyError, notifyInfo } from "@/lib/notifications";
-import { useRouter, useSearchParams } from "next/navigation";
+} from "@/components/ui/table";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useSearchFilter } from "@/hooks/useSearchFilter";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 export default function ProductsPage() {
   const router = useRouter();
-  const params = useSearchParams();
   const { data: session } = useSession();
-
   const tenantId = session?.user?.tenantId || "";
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const searchParam = params.get("search") ?? "";
-  const [search, setSearch] = useState(searchParam);
-  const [debouncedSearch, setDebouncedSearch] = useState(searchParam);
+  const { search, setSearch } = useSearchFilter();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
-  const [page, setPage] = useState(0);
-  const rowsPerPage = 5;
-
-  /** 🔄 Cargar productos */
+  /* 🔄 Load */
   const loadProducts = useCallback(async () => {
     if (!tenantId) return;
 
     setLoading(true);
     try {
-      const result = await getAllProducts(tenantId, debouncedSearch);
-      if (result.success) {
-        setProducts(result.data || []);
-      } else {
-        notifyError(result.error || "Error cargando productos");
-      }
-    } catch (err) {
-      console.error(err);
-      notifyError("Error inesperado al cargar productos");
+      const res = await getAllProducts(tenantId, search);
+      if (res.success) setProducts(res.data || []);
+      else notifyError(res.error || "Error cargando productos");
     } finally {
       setLoading(false);
     }
-  }, [tenantId, debouncedSearch]);
+  }, [tenantId, search]);
 
-  /** Cargar productos cuando cambie tenant o el search final */
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
 
-  /** Debounce */
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [search]);
+  /* ❌ Delete */
+  const handleDelete = async (id: string) => {
+    const confirmed = await ConfirmDialog.confirm(
+      "Eliminar producto",
+      "Esta acción no se puede deshacer"
+    );
 
-  /** Actualizar query param solo cuando cambie el debounced search */
-  useEffect(() => {
-    const query = new URLSearchParams(params.toString());
+    if (!confirmed) return;
 
-    if (!debouncedSearch) query.delete("search");
-    else query.set("search", debouncedSearch);
+    const res = await deleteProduct(id);
+    if (!res.success) return notifyError(res.error || "Error al eliminar");
 
-    router.push(`/inventario/productos?${query.toString()}`);
-  }, [debouncedSearch]);
-
-  /** Crear / actualizar producto */
-  const onSubmit = async (data: CreateProduct) => {
-    try {
-      const action = editingProduct
-        ? updateProduct(editingProduct.id, data)
-        : createProduct(data, tenantId);
-
-      const response = await action;
-
-      if (!response.success) {
-        notifyError(response.error || "Error en la operación");
-        return;
-      }
-
-      notifyInfo(
-        editingProduct
-          ? "Producto actualizado exitosamente"
-          : "Producto creado exitosamente"
-      );
-
-      await loadProducts();
-    } catch (error) {
-      console.error(error);
-      notifyError("Error inesperado al guardar el producto");
-    } finally {
-      handleCloseDialog();
-    }
-  };
-
-  const handleEdit = (product: Product) => {
-    setEditingProduct(product);
-    setIsDialogOpen(true);
+    notifyInfo("Producto eliminado");
+    loadProducts();
   };
 
   const handleNew = () => {
-    setEditingProduct(null);
-    setIsDialogOpen(true);
+    router.push("/inventario/productos/nuevo");
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      const confirmed = await AlertService.showConfirm(
-        "¿Eliminar Producto?",
-        "¿Seguro que deseas eliminar este producto? Esta acción no se puede deshacer.",
-        "Eliminar",
-        "Cancelar"
-      );
-
-      if (!confirmed) return;
-
-      const response = await deleteProduct(id);
-      if (!response.success) {
-        notifyError(response.error || "Error al eliminar el producto");
-        return;
-      }
-
-      notifyInfo("Producto eliminado exitosamente");
-      await loadProducts();
-    } catch (error) {
-      console.error(error);
-      notifyError("Error inesperado al eliminar el producto");
-    }
-  };
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    setEditingProduct(null);
+  const handleEdit = (product: Product) => {
+    router.push(`/inventario/productos/${product.id}/editar`);
   };
 
   return (
@@ -167,113 +86,90 @@ export default function ProductsPage() {
       title="Productos"
       description="Gestiona tus productos y servicios"
     >
-      {/* Filtros */}
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
-        }}
-      >
-        <TextField
-          label="Buscar productos"
-          variant="outlined"
-          size="small"
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+        <Input
+          placeholder="Buscar producto..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          className="sm:max-w-xs"
         />
 
-        <Button
-          variant="contained"
-          startIcon={<Plus />}
-          onClick={handleNew}
-          sx={{ width: { xs: "100%", sm: "auto" } }}
-        >
-          Nuevo
+        <Button onClick={handleNew} className="gap-2">
+          <Plus size={16} /> Nuevo
         </Button>
-      </Box>
+      </div>
 
-      <ProductFormDialog
-        isDialogOpen={isDialogOpen}
-        handleCloseDialog={handleCloseDialog}
-        editingProduct={editingProduct}
-        onSubmit={onSubmit}
-      />
-
-      {/* Tabla */}
       <Card>
-        <CardContent>
+        <CardHeader>
+          <CardTitle>Productos</CardTitle>
+        </CardHeader>
+        <CardContent className="p-2">
           {loading ? (
-            <Typography align="center" sx={{ py: 6 }}>
+            <div className="py-10 text-center text-muted-foreground">
               Cargando productos...
-            </Typography>
+            </div>
           ) : products.length === 0 ? (
-            <Box
-              sx={{
-                textAlign: "center",
-                py: 6,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <Files size={40} />
-              <Typography variant="h6">No hay productos aún</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Agrega tu primer producto o servicio
-              </Typography>
-            </Box>
+            <div className="py-12 flex flex-col items-center gap-2 text-muted-foreground">
+              <PackageSearch size={40} />
+              <p className="font-medium">No hay productos</p>
+              <p className="text-sm">
+                Empieza creando tu primer producto o servicio
+              </p>
+            </div>
           ) : (
             <>
               <Table>
-                <TableHead>
+                <TableHeader>
                   <TableRow>
-                    <TableCell>Código</TableCell>
-                    <TableCell>Descripción</TableCell>
-                    <TableCell>Precio</TableCell>
-                    <TableCell align="right">Acciones</TableCell>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead className="text-right">Precio</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
 
                 <TableBody>
                   {products
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((product) => (
-                      <TableRow key={product.id} hover>
-                        <TableCell sx={{ fontWeight: 500 }}>
-                          {product.code}
+                    .slice(
+                      (currentPage - 1) * itemsPerPage,
+                      (currentPage - 1) * itemsPerPage + itemsPerPage
+                    )
+                    .map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell className="font-medium">{p.code}</TableCell>
+                        <TableCell>{p.description}</TableCell>
+                        <TableCell className="text-right">
+                          ${p.price.toFixed(2)}
                         </TableCell>
-                        <TableCell>{product.description}</TableCell>
-                        <TableCell>${product.price.toFixed(2)}</TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            color="primary"
-                            onClick={() => handleEdit(product)}
+                        <TableCell className="text-right space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              handleEdit(p);
+                            }}
                           >
-                            <Edit />
-                          </IconButton>
-
-                          <IconButton
-                            color="error"
-                            onClick={() => handleDelete(product.id)}
+                            <Edit size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                            onClick={() => handleDelete(p.id)}
                           >
-                            <Delete />
-                          </IconButton>
+                            <Trash2 size={16} />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
               </Table>
-
-              <TablePagination
-                component="div"
-                count={products.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={(_, newPage) => setPage(newPage)}
-                rowsPerPageOptions={[5]}
+              <PaginationControls
+                currentPage={currentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={products.length}
+                onPageChange={(page) => setCurrentPage(page)}
               />
             </>
           )}

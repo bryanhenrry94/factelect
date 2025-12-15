@@ -1,31 +1,13 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
-import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
-import { AlertService } from "@/lib/alerts";
 import { useSession } from "next-auth/react";
+import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
+
 import {
   CreateWarehouse,
   createWarehouseSchema,
@@ -40,6 +22,36 @@ import {
 import { CostCenter } from "@/lib/validations/accounting/cost-center";
 import { useSearchFilter } from "@/hooks/useSearchFilter";
 import { getCostCenters } from "@/actions/accounting/cost-center";
+
+/* shadcn */
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+
+const ROWS_PER_PAGE = 5;
 
 const initialState: Warehouse = {
   id: "",
@@ -58,64 +70,37 @@ export default function BodegasPage() {
     null
   );
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
-  const [page, setPage] = useState(0);
-  const rowsPerPage = 5;
+  /* =======================
+     FORM
+  ======================= */
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<CreateWarehouse>({
+    resolver: zodResolver(createWarehouseSchema),
+    defaultValues: initialState,
+  });
 
-  const handleCreate = () => {
-    reset(initialState);
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
-
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleEdit = (account: Warehouse) => {
-    setWarehouseToEdit(account);
-    reset({
-      name: account.name,
-      costCenterId: account.costCenterId,
-    });
-    setOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    const confirm = await AlertService.showConfirm(
-      "Aviso",
-      "¿Deseas eliminar la bodega?"
-    );
-    if (!confirm) return;
-
-    try {
-      const result = await deleteWarehouse(id);
-
-      if (result.success) {
-        notifyInfo("Cuenta eliminada correctamente");
-        fetchWarehouses();
-      } else notifyError("Error al eliminar la bodega");
-    } catch (error) {
-      notifyError("Error al eliminar la bodega");
-    }
-  };
-
+  /* =======================
+     FETCH WAREHOUSES
+  ======================= */
   const fetchWarehouses = async () => {
-    try {
-      if (!session?.user?.tenantId) return;
+    if (!session?.user?.tenantId) return;
 
+    try {
       const response = await getWarehouses(session.user.tenantId, search);
       if (!response.success) {
-        notifyError("Error al cargar las categorías");
+        notifyError("Error al cargar las bodegas");
         return;
       }
-
       setWarehouses(response.data || []);
-    } catch (error) {
-      notifyError("Error al cargar las categorías");
+    } catch {
+      notifyError("Error al cargar las bodegas");
     }
   };
 
@@ -123,20 +108,21 @@ export default function BodegasPage() {
     fetchWarehouses();
   }, [session?.user?.tenantId, search]);
 
+  /* =======================
+     FETCH COST CENTERS
+  ======================= */
   useEffect(() => {
     const fetchCostCenters = async () => {
+      if (!session?.user?.tenantId) return;
+
       try {
-        if (!session?.user?.tenantId) return;
-
         const response = await getCostCenters(session.user.tenantId);
-
         if (!response.success) {
           notifyError("Error al cargar los centros de costo");
           return;
         }
-
         setCostCenters(response.data || []);
-      } catch (error) {
+      } catch {
         notifyError("Error al cargar los centros de costo");
       }
     };
@@ -144,223 +130,212 @@ export default function BodegasPage() {
     fetchCostCenters();
   }, [session?.user?.tenantId]);
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<CreateWarehouse>({
-    resolver: zodResolver(createWarehouseSchema),
-    defaultValues: initialState,
-  });
+  /* =======================
+     ACTIONS
+  ======================= */
+  const handleCreate = () => {
+    reset(initialState);
+    setWarehouseToEdit(null);
+    setOpen(true);
+  };
 
-  const onSubmit = async (data: CreateWarehouse) => {
-    try {
-      console.log("Submitting data:", data);
-      if (!session?.user?.tenantId) {
-        notifyError("No se encontró el tenantId del usuario");
-        return;
-      }
+  const handleEdit = (warehouse: Warehouse) => {
+    setWarehouseToEdit(warehouse);
+    reset({
+      name: warehouse.name,
+      costCenterId: warehouse.costCenterId,
+    });
+    setOpen(true);
+  };
 
-      const response = warehouseToEdit
-        ? await updateWarehouse(warehouseToEdit.id, data)
-        : await createWarehouse(session.user.tenantId, data);
+  const handleClose = () => {
+    setOpen(false);
+  };
 
-      if (response.success) {
-        await notifyInfo(
-          `Bodega ${warehouseToEdit ? "actualizada" : "creada"} correctamente`
-        );
-        fetchWarehouses();
-        handleClose();
-        setWarehouseToEdit(null);
-      } else {
-        notifyError(
-          `Error al ${warehouseToEdit ? "actualizar" : "crear"} la bodega`
-        );
-      }
-    } catch (error) {
-      console.log(error);
-      notifyError("Error al guardar la bodega");
+  const handleDelete = async (id: string) => {
+    const confirm = await ConfirmDialog.confirm(
+      "Aviso",
+      "¿Deseas eliminar la bodega?"
+    );
+    if (!confirm) return;
+
+    const result = await deleteWarehouse(id);
+    if (result.success) {
+      notifyInfo("Bodega eliminada correctamente");
+      fetchWarehouses();
+    } else {
+      notifyError("Error al eliminar la bodega");
     }
   };
 
+  const onSubmit = async (data: CreateWarehouse) => {
+    if (!session?.user?.tenantId) {
+      notifyError("No se encontró el tenantId del usuario");
+      return;
+    }
+
+    const response = warehouseToEdit
+      ? await updateWarehouse(warehouseToEdit.id, data)
+      : await createWarehouse(session.user.tenantId, data);
+
+    if (response.success) {
+      notifyInfo(
+        `Bodega ${warehouseToEdit ? "actualizada" : "creada"} correctamente`
+      );
+      fetchWarehouses();
+      setOpen(false);
+      setWarehouseToEdit(null);
+    } else {
+      notifyError(
+        `Error al ${warehouseToEdit ? "actualizar" : "crear"} la bodega`
+      );
+    }
+  };
+
+  /* =======================
+     RENDER
+  ======================= */
   return (
     <PageContainer
       title="Bodegas"
       description="Gestiona las bodegas de tu organización"
     >
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
-        }}
-      >
-        <TextField
-          label="Buscar"
-          variant="outlined"
-          size="small"
+      {/* Header */}
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Input
+          placeholder="Buscar bodega..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          className="sm:max-w-xs"
         />
-        <Button
-          variant="contained"
-          startIcon={<Plus />}
-          onClick={handleCreate}
-          sx={{ width: { xs: "100%", sm: "auto" } }}
-        >
+
+        <Button onClick={handleCreate}>
+          <Plus className="mr-2 h-4 w-4" />
           Agregar
         </Button>
-      </Box>
+      </div>
 
-      <Card sx={{ mt: 3 }}>
-        <CardContent>
+      {/* Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Bodegas</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
           {warehouses.length === 0 ? (
-            <Box textAlign="center" py={6}>
-              <ShoppingBag />
-              <Typography variant="h6" mt={2}>
-                No hay bodegas aún
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Agrega la primera bodega para comenzar a gestionar tu
-                inventario.
-              </Typography>
-            </Box>
+            <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+              <ShoppingBag className="h-10 w-10" />
+              <p className="text-lg font-medium">No hay bodegas aún</p>
+              <p className="text-sm text-center">
+                Agrega la primera bodega para comenzar a gestionar tu inventario
+              </p>
+            </div>
           ) : (
-            <Box>
+            <>
               <Table>
-                <TableHead>
+                <TableHeader>
                   <TableRow>
-                    <TableCell>
-                      <strong>Nombre</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Centro de Costo</strong>
-                    </TableCell>
-                    <TableCell align="right">
-                      <strong>Acciones</strong>
-                    </TableCell>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Centro de Costo</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
                 <TableBody>
                   {warehouses
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .slice(
+                      (currentPage - 1) * itemsPerPage,
+                      (currentPage - 1) * itemsPerPage + itemsPerPage
+                    )
                     .map((warehouse) => (
-                      <TableRow key={warehouse.id} hover>
+                      <TableRow key={warehouse.id}>
                         <TableCell>{warehouse.name}</TableCell>
                         <TableCell>
                           {costCenters.find(
                             (cc) => cc.id === warehouse.costCenterId
-                          )?.name || ""}
+                          )?.name || "—"}
                         </TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            color="primary"
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            size="icon"
+                            variant="outline"
                             onClick={() => handleEdit(warehouse)}
                           >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            color="error"
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="destructive"
                             onClick={() => handleDelete(warehouse.id)}
                           >
-                            <Delete />
-                          </IconButton>
+                            <Delete className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
               </Table>
 
-              <TablePagination
-                component="div"
-                color="primary"
-                count={warehouses.length}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                rowsPerPageOptions={[5]}
+              <PaginationControls
+                currentPage={currentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={warehouses.length}
+                onPageChange={(page) => setCurrentPage(page)}
               />
-            </Box>
+            </>
           )}
         </CardContent>
       </Card>
 
-      <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogTitle>
-            {warehouseToEdit ? "Editar Cuenta" : "Agregar Cuenta"}
-          </DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {warehouseToEdit
-                ? "Actualizar información de la bodega"
-                : "Agregar una nueva bodega a tu catálogo"}
-            </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column" }}>
-              <Controller
-                name="name"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Nombre de la bodega"
-                    variant="outlined"
-                    fullWidth
-                    margin="dense"
-                    error={errors.name ? true : false}
-                    helperText={errors.name?.message}
-                  />
-                )}
-              />
-              <Controller
-                name="costCenterId"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Centro de Costo"
-                    variant="outlined"
-                    fullWidth
-                    margin="dense"
-                    error={errors.costCenterId ? true : false}
-                    helperText={errors.costCenterId?.message}
-                    select
-                    value={field.value || ""}
-                  >
-                    <MenuItem value="">Sin centro de costo</MenuItem>
-                    {costCenters.map((cc) => (
-                      <MenuItem key={cc.id} value={cc.id}>
-                        {cc.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                )}
-              />
+      {/* Dialog */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {warehouseToEdit ? "Editar Bodega" : "Agregar Bodega"}
+            </DialogTitle>
+          </DialogHeader>
 
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 2,
-                  mt: 2,
-                }}
-              >
-                <Button onClick={handleClose}>Cancelar</Button>
-                <Button
-                  variant="contained"
-                  type="submit"
-                  disabled={isSubmitting}
-                  loading={isSubmitting}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <Controller
+              name="name"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} placeholder="Nombre de la bodega" required />
+              )}
+            />
+
+            <Controller
+              name="costCenterId"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v === "none" ? null : v)}
                 >
-                  {isSubmitting ? "Guardando..." : "Guardar"}
-                </Button>
-              </Box>
-            </Box>
-          </DialogContent>
-        </form>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Centro de costo (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin centro de costo</SelectItem>
+                    {costCenters.map((cc) => (
+                      <SelectItem key={cc.id} value={cc.id}>
+                        {cc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={handleClose}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
       </Dialog>
     </PageContainer>
   );

@@ -1,29 +1,42 @@
-import React, { useEffect } from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
 import { getAccounts } from "@/actions/accounting/chart-of-account";
 import { createCashBox, updateCashBox } from "@/actions/cash/cash-box";
 import { notifyError, notifyInfo } from "@/lib/notifications";
+
 import { ChartOfAccount } from "@/lib/validations";
 import {
   CashBox,
   CreateCashBox,
   createCashBoxSchema,
 } from "@/lib/validations/cash/cash_box";
-import { zodResolver } from "@hookform/resolvers/zod";
+
+/* shadcn */
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-  Box,
-  Button,
-  DialogContent,
+  DialogHeader,
   DialogTitle,
-  MenuItem,
-  TextField,
-  Typography,
-} from "@mui/material";
-import { Controller, useForm } from "react-hook-form";
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const initialState: CreateCashBox = {
   name: "",
   location: "",
+  accountId: undefined,
 };
 
 interface CashBoxFormProps {
@@ -38,7 +51,7 @@ export const CashBoxForm: React.FC<CashBoxFormProps> = ({
   onCancel,
 }) => {
   const { data: session } = useSession();
-  const [accounts, setAccounts] = React.useState<ChartOfAccount[]>([]);
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
 
   const {
     control,
@@ -50,13 +63,13 @@ export const CashBoxForm: React.FC<CashBoxFormProps> = ({
     defaultValues: initialState,
   });
 
+  /* Cargar cuentas */
   useEffect(() => {
     const fetchAccounts = async () => {
       if (!session?.user?.tenantId) return;
 
       try {
         const response = await getAccounts(session.user.tenantId);
-
         if (response.success && response.data) {
           setAccounts(response.data);
         }
@@ -68,24 +81,27 @@ export const CashBoxForm: React.FC<CashBoxFormProps> = ({
     fetchAccounts();
   }, [session?.user?.tenantId]);
 
+  /* Reset al editar */
   useEffect(() => {
+    console.log("cashBoxSelected: ", cashBoxSelected);
+
     reset(cashBoxSelected || initialState);
   }, [cashBoxSelected, reset]);
 
   const onSubmit = async (data: CreateCashBox) => {
-    try {
-      if (!session?.user?.tenantId) {
-        notifyError("No se encontró el tenantId del usuario");
-        return;
-      }
+    if (!session?.user?.tenantId) {
+      notifyError("No se encontró el tenantId del usuario");
+      return;
+    }
 
+    try {
       const response = cashBoxSelected
         ? await updateCashBox(cashBoxSelected.id, data)
         : await createCashBox(session.user.tenantId, data);
 
       if (response.success) {
         notifyInfo(
-          `Caja ${cashBoxSelected ? "actualizado" : "registrado"} correctamente`
+          `Caja ${cashBoxSelected ? "actualizada" : "registrada"} correctamente`
         );
         onSave?.();
       } else {
@@ -98,91 +114,88 @@ export const CashBoxForm: React.FC<CashBoxFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <DialogTitle>
-        {cashBoxSelected ? "Editar Caja" : "Registrar Caja"}
-      </DialogTitle>
-
-      <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <DialogHeader>
+        <DialogTitle>
+          {cashBoxSelected ? "Editar Caja" : "Registrar Caja"}
+        </DialogTitle>
+        <DialogDescription>
           {cashBoxSelected
             ? "Actualiza los datos de la caja."
             : "Registra una nueva caja."}
-        </Typography>
+        </DialogDescription>
+      </DialogHeader>
 
-        <Box sx={{ display: "flex", flexDirection: "column" }}>
-          {/* Nombre */}
-          <Controller
-            name="name"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Nombre"
-                fullWidth
-                margin="dense"
-                error={!!errors.name}
-                helperText={errors.name?.message}
-              />
-            )}
-          />
+      {/* Nombre */}
+      <div className="space-y-1">
+        <Label>Nombre</Label>
+        <Controller
+          name="name"
+          control={control}
+          render={({ field }) => (
+            <Input {...field} placeholder="Nombre de la caja" />
+          )}
+        />
+        {errors.name && (
+          <p className="text-sm text-destructive">{errors.name.message}</p>
+        )}
+      </div>
 
-          {/* Ubicación */}
-          <Controller
-            name="location"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Ubicación"
-                fullWidth
-                margin="dense"
-                error={!!errors.location}
-                helperText={errors.location?.message}
-              />
-            )}
-          />
+      {/* Ubicación */}
+      <div className="space-y-1">
+        <Label>Ubicación</Label>
+        <Controller
+          name="location"
+          control={control}
+          render={({ field }) => <Input {...field} placeholder="Ubicación" />}
+        />
+        {errors.location && (
+          <p className="text-sm text-destructive">{errors.location.message}</p>
+        )}
+      </div>
 
-          {/* Cuenta Contable */}
-          <Controller
-            name="accountId"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Cuenta Contable"
-                fullWidth
-                margin="dense"
-                error={!!errors.accountId}
-                helperText={errors.accountId?.message}
-                value={field.value || ""}
-                select
-              >
+      {/* Cuenta Contable */}
+      <div className="space-y-1">
+        <Label>Cuenta Contable</Label>
+        <Controller
+          name="accountId"
+          control={control}
+          render={({ field }) => (
+            <Select
+              value={field.value ?? undefined}
+              onValueChange={(value) => field.onChange(value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona una cuenta" />
+              </SelectTrigger>
+
+              <SelectContent>
                 {accounts.map((account) => (
-                  <MenuItem key={account.id} value={account.id}>
+                  <SelectItem
+                    key={account.id}
+                    value={account.id} // ✅ nunca vacío
+                  >
                     {account.code} - {account.name}
-                  </MenuItem>
+                  </SelectItem>
                 ))}
-              </TextField>
-            )}
-          />
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {errors.accountId && (
+          <p className="text-sm text-destructive">{errors.accountId.message}</p>
+        )}
+      </div>
 
-          {/* Botones */}
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: 2,
-              mt: 2,
-            }}
-          >
-            <Button onClick={onCancel}>Cancelar</Button>
-            <Button variant="contained" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Guardando..." : "Guardar Caja"}
-            </Button>
-          </Box>
-        </Box>
-      </DialogContent>
+      {/* Acciones */}
+      <div className="flex justify-end gap-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Guardando..." : "Guardar Caja"}
+        </Button>
+      </div>
     </form>
   );
 };

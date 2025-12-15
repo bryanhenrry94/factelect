@@ -33,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 const now = new Date();
 const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -51,8 +52,8 @@ export default function BankMovementsPage() {
   const [bankMovements, setBankMovements] = useState<BankMovementWithAccount[]>(
     []
   );
-  const [page, setPage] = useState(0);
-  const rowsPerPage = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   /* ========================== */
   /* Data */
@@ -177,7 +178,10 @@ export default function BankMovementsPage() {
 
                 <TableBody>
                   {bankMovements
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .slice(
+                      (currentPage - 1) * itemsPerPage,
+                      (currentPage - 1) * itemsPerPage + itemsPerPage
+                    )
                     .map((m) => (
                       <TableRow key={m.id}>
                         <TableCell>{m.account?.name}</TableCell>
@@ -209,25 +213,12 @@ export default function BankMovementsPage() {
                 </TableBody>
               </Table>
 
-              {/* Paginación simple */}
-              <div className="flex justify-end gap-2 mt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 0}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={(page + 1) * rowsPerPage >= bankMovements.length}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Siguiente
-                </Button>
-              </div>
+              <PaginationControls
+                currentPage={currentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={bankMovements.length}
+                onPageChange={(page) => setCurrentPage(page)}
+              />
             </>
           )}
         </CardContent>

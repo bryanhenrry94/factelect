@@ -145,9 +145,6 @@ export default function BankConciliacionPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Movimientos</CardTitle>
-        </CardHeader>
         <CardContent>
           {bankMovements.length === 0 ? (
             <div className="flex flex-col items-center py-12 text-muted-foreground">
@@ -210,12 +207,6 @@ export default function BankConciliacionPage() {
       {/* Modal */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>
-              {selected ? "Editar Conciliación" : "Nueva Conciliación"}
-            </DialogTitle>
-          </DialogHeader>
-
           <BankMovementForm bankMovementId={selected?.id} />
         </DialogContent>
       </Dialog>

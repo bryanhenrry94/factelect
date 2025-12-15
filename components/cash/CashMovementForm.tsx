@@ -1,29 +1,41 @@
-import React, { useEffect } from "react";
+"use client";
+
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { getAccounts } from "@/actions/accounting/chart-of-account";
-import { notifyError, notifyInfo } from "@/lib/notifications";
-import { ChartOfAccount } from "@/lib/validations";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Box,
-  Button,
-  DialogContent,
-  DialogTitle,
-  MenuItem,
-  TextField,
-  Typography,
-} from "@mui/material";
 import { Controller, useForm } from "react-hook-form";
-import {
-  CashMovement,
-  CreateCashMovement,
-  createCashMovementSchema,
-} from "@/lib/validations/cash/cash_movement";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import { getAccounts } from "@/actions/accounting/chart-of-account";
 import {
   createCashMovement,
   updateCashMovement,
 } from "@/actions/cash/cash-movement";
 import { getOpenCashSession } from "@/actions/cash/cash-session";
+import { notifyError, notifyInfo } from "@/lib/notifications";
+
+import { ChartOfAccount } from "@/lib/validations";
+import {
+  CashMovement,
+  CreateCashMovement,
+  createCashMovementSchema,
+} from "@/lib/validations/cash/cash_movement";
+
+/* shadcn */
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const initialState: CreateCashMovement = {
   type: "IN",
@@ -40,13 +52,13 @@ interface CashMovementFormProps {
   onCancel?: () => void;
 }
 
-export const CashMovementForm: React.FC<CashMovementFormProps> = ({
+export function CashMovementForm({
   cashMovementSelected,
   onSave,
   onCancel,
-}) => {
+}: CashMovementFormProps) {
   const { data: session } = useSession();
-  const [accounts, setAccounts] = React.useState<ChartOfAccount[]>([]);
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
 
   const {
     control,
@@ -58,24 +70,16 @@ export const CashMovementForm: React.FC<CashMovementFormProps> = ({
     defaultValues: initialState,
   });
 
+  /* 🔄 Cargar cuentas */
   useEffect(() => {
-    const fetchAccounts = async () => {
-      if (!session?.user?.tenantId) return;
+    if (!session?.user?.tenantId) return;
 
-      try {
-        const response = await getAccounts(session.user.tenantId);
-
-        if (response.success && response.data) {
-          setAccounts(response.data);
-        }
-      } catch (error) {
-        console.error("Error fetching accounts:", error);
-      }
-    };
-
-    fetchAccounts();
+    getAccounts(session.user.tenantId).then((res) => {
+      if (res.success && res.data) setAccounts(res.data);
+    });
   }, [session?.user?.tenantId]);
 
+  /* 🔄 Editar / resetear */
   useEffect(() => {
     reset(cashMovementSelected || initialState);
   }, [cashMovementSelected, reset]);
@@ -92,18 +96,12 @@ export const CashMovementForm: React.FC<CashMovementFormProps> = ({
         session.user.id
       );
 
-      if (!res.success) {
-        notifyError("Error al obtener la sesión de caja abierta");
+      if (!res.success || !res.data) {
+        notifyError("No hay una sesión de caja abierta");
         return;
       }
 
-      const cashSession = res.data;
-      if (!cashSession) {
-        notifyError("No hay una sesión de caja abierta para el usuario");
-        return;
-      }
-
-      data.cashSessionId = cashSession.id;
+      data.cashSessionId = res.data.id;
 
       const response = cashMovementSelected
         ? await updateCashMovement(cashMovementSelected.id, data)
@@ -111,174 +109,173 @@ export const CashMovementForm: React.FC<CashMovementFormProps> = ({
 
       if (response.success) {
         notifyInfo(
-          `Caja ${
+          `Movimiento ${
             cashMovementSelected ? "actualizado" : "registrado"
           } correctamente`
         );
         onSave?.();
-      } else {
-        notifyError("Error al guardar el movimiento de caja");
-      }
+      } else notifyError("Error al guardar el movimiento");
     } catch (error) {
-      notifyError("Error inesperado al guardar el movimiento de caja");
+      notifyError("Error inesperado al guardar el movimiento");
       console.error(error);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <DialogTitle>
-        {cashMovementSelected
-          ? "Editar Movimiento de Caja"
-          : "Registrar Movimiento de Caja"}
-      </DialogTitle>
-
-      <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <DialogHeader>
+        <DialogTitle>
           {cashMovementSelected
-            ? "Actualiza los datos del movimiento de caja."
+            ? "Editar Movimiento de Caja"
+            : "Registrar Movimiento de Caja"}
+        </DialogTitle>
+        <DialogDescription>
+          {cashMovementSelected
+            ? "Actualiza los datos del movimiento."
             : "Registra un nuevo movimiento de caja."}
-        </Typography>
+        </DialogDescription>
+      </DialogHeader>
 
-        <Box sx={{ display: "flex", flexDirection: "column" }}>
-          {/* Nombre */}
-          <Controller
-            name="type"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Tipo"
-                fullWidth
-                margin="dense"
-                error={!!errors.type}
-                helperText={errors.type?.message}
-                select
-                value={field.value || ""}
-              >
-                <MenuItem value="IN">Ingreso</MenuItem>
-                <MenuItem value="OUT">Egreso</MenuItem>
-              </TextField>
+      {/* Tipo */}
+      <Controller
+        name="type"
+        control={control}
+        render={({ field }) => (
+          <div>
+            <Select
+              value={field.value ?? undefined}
+              onValueChange={field.onChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Tipo de movimiento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="IN">Ingreso</SelectItem>
+                <SelectItem value="OUT">Egreso</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.type && (
+              <p className="text-sm text-destructive">{errors.type.message}</p>
             )}
-          />
+          </div>
+        )}
+      />
 
-          {/* Categoría */}
-          <Controller
-            name="category"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Categoría"
-                fullWidth
-                margin="dense"
-                error={!!errors.category}
-                helperText={errors.category?.message}
-                select
-                value={field.value || ""}
-              >
-                <MenuItem value="SALE">Venta</MenuItem>
-                <MenuItem value="PURCHASE">Compra</MenuItem>
-                <MenuItem value="PETTY_CASH">Caja Chica</MenuItem>
-                <MenuItem value="ADVANCE">Anticipo</MenuItem>
-                <MenuItem value="REFUND">Reembolso</MenuItem>
-                <MenuItem value="TRANSFER">Transferencia</MenuItem>
-                <MenuItem value="OTHER">Otro</MenuItem>
-              </TextField>
-            )}
-          />
-
-          {/* Monto */}
-          <Controller
-            name="amount"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Monto"
-                fullWidth
-                margin="dense"
-                value={field.value ?? 1}
-                onChange={(e) => {
-                  const text = e.target.value;
-
-                  // Mantén siempre string en el campo
-                  field.onChange(text);
-                }}
-                onBlur={() => {
-                  const numeric = parseFloat(
-                    field.value ? field.value.toString() : "0"
-                  );
-
-                  // Al salir del input conviertes a number seguro
-                  field.onChange(
-                    isNaN(numeric) ? 0 : Number(numeric.toFixed(2))
-                  );
-                }}
-                inputProps={{ inputMode: "decimal" }}
-                type="number"
-                error={!!errors.amount}
-                helperText={errors.amount?.message}
-              />
-            )}
-          />
-
-          {/* Descripción */}
-          <Controller
-            name="description"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Descripción"
-                fullWidth
-                margin="dense"
-                error={!!errors.description}
-                helperText={errors.description?.message}
-              />
-            )}
-          />
-
-          {/* Cuenta Contable */}
-          <Controller
-            name="accountId"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Cuenta Contable"
-                fullWidth
-                margin="dense"
-                error={!!errors.accountId}
-                helperText={errors.accountId?.message}
-                value={field.value || ""}
-                select
-              >
-                {accounts.map((account) => (
-                  <MenuItem key={account.id} value={account.id}>
-                    {account.code} - {account.name}
-                  </MenuItem>
+      {/* Categoría */}
+      <Controller
+        name="category"
+        control={control}
+        render={({ field }) => (
+          <div>
+            <Select
+              value={field.value ?? undefined}
+              onValueChange={field.onChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                {[
+                  "SALE",
+                  "PURCHASE",
+                  "PETTY_CASH",
+                  "ADVANCE",
+                  "REFUND",
+                  "TRANSFER",
+                  "OTHER",
+                ].map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
                 ))}
-              </TextField>
+              </SelectContent>
+            </Select>
+            {errors.category && (
+              <p className="text-sm text-destructive">
+                {errors.category.message}
+              </p>
             )}
-          />
+          </div>
+        )}
+      />
 
-          {/* Botones */}
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: 2,
-              mt: 2,
+      {/* Monto */}
+      <Controller
+        name="amount"
+        control={control}
+        render={({ field }) => (
+          <Input
+            type="number"
+            placeholder="Monto"
+            inputMode="decimal"
+            value={field.value ?? ""}
+            onChange={(e) => field.onChange(e.target.value)}
+            onBlur={() => {
+              const n = Number(field.value);
+              field.onChange(isNaN(n) ? 0 : Number(n.toFixed(2)));
             }}
-          >
-            <Button onClick={onCancel}>Cancelar</Button>
-            <Button variant="contained" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Guardando..." : "Guardar Caja"}
-            </Button>
-          </Box>
-        </Box>
-      </DialogContent>
+          />
+        )}
+      />
+      {errors.amount && (
+        <p className="text-sm text-destructive">{errors.amount.message}</p>
+      )}
+
+      {/* Descripción */}
+      <Controller
+        name="description"
+        control={control}
+        render={({ field }) => (
+          <Textarea
+            placeholder="Descripción"
+            {...field}
+            value={field.value ?? ""}
+          />
+        )}
+      />
+      {errors.description && (
+        <p className="text-sm text-destructive">{errors.description.message}</p>
+      )}
+
+      {/* Cuenta contable */}
+      <Controller
+        name="accountId"
+        control={control}
+        render={({ field }) => (
+          <div>
+            <Select
+              value={field.value ?? undefined}
+              onValueChange={field.onChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Cuenta contable" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.code} - {a.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.accountId && (
+              <p className="text-sm text-destructive">
+                {errors.accountId.message}
+              </p>
+            )}
+          </div>
+        )}
+      />
+
+      {/* Botones */}
+      <div className="flex justify-end gap-2 pt-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Guardando..." : "Guardar Movimiento"}
+        </Button>
+      </div>
     </form>
   );
-};
+}

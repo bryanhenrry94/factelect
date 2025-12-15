@@ -62,6 +62,7 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 const initialBankAccount: BankAccount = {
   id: "",
@@ -84,8 +85,9 @@ export default function BankAccountsPage() {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [bankSelected, setBankSelected] = useState<BankAccount | null>(null);
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
-  const [page, setPage] = useState(0);
-  const rowsPerPage = 5;
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const { search, setSearch } = useSearchFilter();
 
@@ -205,49 +207,60 @@ export default function BankAccountsPage() {
               No hay cuentas registradas
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Nro Cuenta</TableHead>
-                  <TableHead>Alias</TableHead>
-                  <TableHead>Cuenta Contable</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bankAccounts
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell>{a.bankName}</TableCell>
-                      <TableCell>{a.accountNumber}</TableCell>
-                      <TableCell>{a.alias}</TableCell>
-                      <TableCell>
-                        {accounts.find((c) => c.id === a.accountId)?.name}
-                      </TableCell>
-                      <TableCell>{a.type}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleEdit(a)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleDelete(a.id)}
-                        >
-                          <Delete className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Nro Cuenta</TableHead>
+                    <TableHead>Alias</TableHead>
+                    <TableHead>Cuenta Contable</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bankAccounts
+                    .slice(
+                      (currentPage - 1) * itemsPerPage,
+                      (currentPage - 1) * itemsPerPage + itemsPerPage
+                    )
+                    .map((a) => (
+                      <TableRow key={a.id}>
+                        <TableCell>{a.bankName}</TableCell>
+                        <TableCell>{a.accountNumber}</TableCell>
+                        <TableCell>{a.alias}</TableCell>
+                        <TableCell>
+                          {accounts.find((c) => c.id === a.accountId)?.name}
+                        </TableCell>
+                        <TableCell>{a.type}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleEdit(a)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDelete(a.id)}
+                          >
+                            <Delete className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+              <PaginationControls
+                currentPage={currentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={bankAccounts.length}
+                onPageChange={(page) => setCurrentPage(page)}
+              />
+            </>
           )}
         </CardContent>
       </Card>

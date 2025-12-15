@@ -1,48 +1,54 @@
 "use client";
+
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus, Edit, Trash2, ShoppingBag } from "lucide-react";
+
+import PageContainer from "@/components/container/PageContainer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+
+import {
+  Category,
+  CreateCategory,
+  CreateCategorySchema,
+} from "@/lib/validations/inventory/category";
 import {
   createCategory,
   deleteCategory,
   getAllCategories,
   updateCategory,
 } from "@/actions/inventory/category";
-import PageContainer from "@/components/container/PageContainer";
 import { notifyError, notifyInfo } from "@/lib/notifications";
-import {
-  Category,
-  CreateCategory,
-  CreateCategorySchema,
-} from "@/lib/validations/inventory/category";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
-import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Controller, useForm } from "react-hook-form";
-import { AlertService } from "@/lib/alerts";
-import { useSession } from "next-auth/react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useSearchFilter } from "@/hooks/useSearchFilter";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
-const CategorysProductsPage = () => {
-  const router = useRouter();
-  const params = useSearchParams();
+const ROWS_PER_PAGE = 5;
 
+export default function CategorysProductsPage() {
   const { data: session } = useSession();
+
+  const tenantId = session?.user?.tenantId || "";
 
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -50,134 +56,88 @@ const CategorysProductsPage = () => {
     null
   );
 
-  const [search, setSearch] = useState(params.get("search") ?? "");
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const { search, setSearch } = useSearchFilter();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
-  const [page, setPage] = useState(0);
-  const rowsPerPage = 5;
+  /* ---------------- form ---------------- */
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<CreateCategory>({
+    resolver: zodResolver(CreateCategorySchema),
+    defaultValues: { name: "" },
+  });
 
-  const handleOpen = () => {
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    reset({ name: "" });
-    setOpen(false);
-  };
-
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search); // actualiza el valor definitivo
-    }, 300);
-
-    return () => clearTimeout(handler); // limpia si sigue escribiendo
-  }, [search]);
-
-  const handleEdit = (category: Category) => {
-    setCategorySelected(category);
-    reset({ name: category.name ? category.name : "" });
-    handleOpen();
-  };
-
-  const handleDelete = async (id: string) => {
-    const confirm = await AlertService.showConfirm(
-      "Aviso",
-      "¿Deseas eliminar la categoría?"
-    );
-    if (!confirm) return;
-
-    try {
-      const result = await deleteCategory(id);
-
-      if (result.success) {
-        notifyInfo("Categoría eliminada correctamente");
-        fetchCategories();
-      } else notifyError("Error al eliminar la categoría");
-    } catch (error) {
-      notifyError("Error al eliminar la categoría");
-    }
-  };
-
+  /* ---------------- fetch ---------------- */
   const fetchCategories = async () => {
-    try {
-      if (!session?.user?.tenantId) return;
+    if (!tenantId) return;
 
-      const response = await getAllCategories(
-        session.user.tenantId,
-        debouncedSearch
-      );
-      if (!response.success) {
-        notifyError("Error al cargar las categorías");
-        return;
-      }
-
-      setCategories(response.data || []);
-    } catch (error) {
-      notifyError("Error al cargar las categorías");
+    const res = await getAllCategories(tenantId, search);
+    if (!res.success) {
+      notifyError("Error al cargar categorías");
+      return;
     }
+    setCategories(res.data || []);
   };
 
   useEffect(() => {
     fetchCategories();
-  }, [session?.user?.tenantId, debouncedSearch]);
+  }, [tenantId, search]);
 
-  useEffect(() => {
-    updateParam("search", debouncedSearch);
-  }, [debouncedSearch]);
+  /* ---------------- actions ---------------- */
+  const handleOpen = () => setOpen(true);
 
-  const updateParam = (key: string, value: string) => {
-    const query = new URLSearchParams(params.toString());
-    query.set(key, value);
-
-    if (query.get("search") === "") {
-      query.delete("search");
-    }
-
-    router.push(`/inventario/categorias?${query.toString()}`);
+  const handleClose = () => {
+    reset({ name: "" });
+    setCategorySelected(null);
+    setOpen(false);
   };
 
-  const { control, handleSubmit, reset } = useForm<CreateCategory>({
-    resolver: zodResolver(CreateCategorySchema),
-    defaultValues: {
-      name: "",
-    },
-  });
+  const handleEdit = (category: Category) => {
+    setCategorySelected(category);
+    reset({ name: category.name });
+    setOpen(true);
+  };
 
-  const onSubmit = async (data: CreateCategory) => {
-    try {
-      console.log(data);
+  const handleDelete = async (id: string) => {
+    const confirm = await ConfirmDialog.confirm(
+      "Eliminar categoría",
+      "¿Deseas eliminar esta categoría?"
+    );
+    if (!confirm) return;
 
-      if (!session?.user?.tenantId) {
-        notifyError("No se encontró el tenantId del usuario");
-        return;
-      }
-
-      const response = categorySelected
-        ? await updateCategory(categorySelected.id, data)
-        : await createCategory(session.user.tenantId, data);
-
-      if (response.success) {
-        await notifyInfo(
-          `Categoría ${
-            categorySelected ? "actualizada" : "creada"
-          } correctamente`
-        );
-        fetchCategories();
-        handleClose();
-        setCategorySelected(null);
-      } else {
-        notifyError(
-          `Error al ${categorySelected ? "actualizar" : "crear"} la categoría`
-        );
-      }
-    } catch (error) {
-      console.log(error);
-      notifyError("Error al guardar la categoría");
+    const res = await deleteCategory(id);
+    if (!res.success) {
+      notifyError("Error al eliminar la categoría");
+      return;
     }
+
+    notifyInfo("Categoría eliminada");
+    fetchCategories();
+  };
+
+  /* ---------------- submit ---------------- */
+  const onSubmit = async (data: CreateCategory) => {
+    if (!tenantId) {
+      notifyError("Tenant no encontrado");
+      return;
+    }
+
+    const res = categorySelected
+      ? await updateCategory(categorySelected.id, data)
+      : await createCategory(tenantId, data);
+
+    if (!res.success) {
+      notifyError("Error al guardar categoría");
+      return;
+    }
+
+    notifyInfo(categorySelected ? "Categoría actualizada" : "Categoría creada");
+    handleClose();
+    fetchCategories();
   };
 
   return (
@@ -185,140 +145,122 @@ const CategorysProductsPage = () => {
       title="Categorías de Productos"
       description="Gestiona las categorías de tus productos y servicios"
     >
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
-        }}
-      >
-        <TextField
-          label="Buscar categorías"
-          variant="outlined"
-          size="small"
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+        <Input
+          placeholder="Buscar categorías..."
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            updateParam("search", e.target.value);
-          }}
+          onChange={(e) => setSearch(e.target.value)}
+          className="sm:max-w-xs"
         />
-        <Button
-          variant="contained"
-          startIcon={<Plus />}
-          onClick={handleOpen}
-          sx={{ width: { xs: "100%", sm: "auto" } }}
-        >
-          Agregar Categoría
-        </Button>
-      </Box>
 
-      <Card sx={{ mt: 3 }}>
-        <CardContent>
+        <Button onClick={handleOpen}>
+          <Plus className="mr-2 h-4 w-4" />
+          Nuevo
+        </Button>
+      </div>
+
+      {/* List */}
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Categorías</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
           {categories.length === 0 ? (
-            <Box textAlign="center" py={6}>
-              <ShoppingBag />
-              <Typography variant="h6" mt={2}>
-                No hay categorías aún
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Agrega la primera categoría
-              </Typography>
-            </Box>
+            <div className="flex flex-col items-center py-10 text-muted-foreground">
+              <ShoppingBag className="h-10 w-10 mb-2" />
+              <p>No hay categorías aún</p>
+            </div>
           ) : (
-            <Box>
+            <>
               <Table>
-                <TableHead>
+                <TableHeader>
                   <TableRow>
-                    <TableCell>
-                      <strong>Nombre</strong>
-                    </TableCell>
-                    <TableCell align="right">
-                      <strong>Acciones</strong>
-                    </TableCell>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
                 <TableBody>
                   {categories
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .slice(
+                      (currentPage - 1) * itemsPerPage,
+                      (currentPage - 1) * itemsPerPage + itemsPerPage
+                    )
                     .map((category) => (
-                      <TableRow key={category.id} hover>
+                      <TableRow key={category.id}>
                         <TableCell>{category.name}</TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            color="primary"
+                        <TableCell className="text-right space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleEdit(category)}
                           >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            color="error"
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleDelete(category.id)}
                           >
-                            <Delete />
-                          </IconButton>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
               </Table>
 
-              <TablePagination
-                component="div"
-                color="primary"
-                count={categories.length}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                rowsPerPageOptions={[5]}
+              <Separator className="my-3" />
+
+              <PaginationControls
+                currentPage={currentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={categories.length}
+                onPageChange={(page) => setCurrentPage(page)}
               />
-            </Box>
+            </>
           )}
         </CardContent>
       </Card>
 
-      <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogTitle>
-            {categorySelected ? "Editar Categoría" : "Agregar Categoría"}
-          </DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {categorySelected
-                ? "Actualizar información de la categoría"
-                : "Agregar una nueva categoría a tu catálogo"}
-            </Typography>
-            <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}
-            >
-              <Controller
-                name="name"
-                control={control}
-                render={({ field, fieldState }) => (
-                  <TextField
+      {/* Dialog */}
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {categorySelected ? "Editar Categoría" : "Nueva Categoría"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <Controller
+              name="name"
+              control={control}
+              render={({ field }) => (
+                <>
+                  <Input
                     {...field}
-                    label="Nombre de la Categoría"
-                    variant="outlined"
-                    fullWidth
-                    margin="normal"
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
+                    placeholder="Nombre de la categoría"
+                    required
                   />
-                )}
-              />
-              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-                <Button onClick={handleClose}>Cancelar</Button>
-                <Button variant="contained" type="submit">
-                  Guardar
-                </Button>
-              </Box>
-            </Box>
-          </DialogContent>
-        </form>
+                  {errors.name && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.name.message}
+                    </p>
+                  )}
+                </>
+              )}
+            />
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" type="button" onClick={handleClose}>
+                Cancelar
+              </Button>
+              <Button type="submit">Guardar</Button>
+            </div>
+          </form>
+        </DialogContent>
       </Dialog>
     </PageContainer>
   );
-};
-
-export default CategorysProductsPage;
+}

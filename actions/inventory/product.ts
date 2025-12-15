@@ -11,7 +11,7 @@ import { $Enums } from "@/prisma/generated/prisma";
 export async function createProduct(
   data: CreateProduct,
   tenantId: string
-): Promise<{ success: boolean; data?: CreateProduct; error?: string }> {
+): Promise<{ success: boolean; data?: Product; error?: string }> {
   try {
     const parsed = createProductSchema.parse(data);
     if (!tenantId) {
@@ -47,7 +47,7 @@ export async function createProduct(
 export async function updateProduct(
   productId: string,
   data: Partial<UpdateProduct>
-): Promise<{ success: boolean; data?: UpdateProduct; error?: string }> {
+): Promise<{ success: boolean; data?: Product; error?: string }> {
   try {
     const product = await prisma.product.update({
       where: { id: productId },

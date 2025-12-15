@@ -1,133 +1,56 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { Unit, CreateUnit, CreateUnitSchema } from "@/lib/validations/unit";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { createUnit, deleteUnit, getUnits, updateUnit } from "@/actions/unit";
+import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
+
+/* shadcn */
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Box,
-  Button,
-  Card,
-  CardContent,
   Dialog,
   DialogContent,
+  DialogHeader,
   DialogTitle,
-  IconButton,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TablePagination,
+  TableHeader,
   TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
-import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Controller, useForm } from "react-hook-form";
-import { AlertService } from "@/lib/alerts";
-import { useSession } from "next-auth/react";
-import { createUnit, deleteUnit, getUnits, updateUnit } from "@/actions/unit";
+} from "@/components/ui/table";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { useSearchFilter } from "@/hooks/useSearchFilter";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+
+const ROWS_PER_PAGE = 5;
 
 const UnitsPage = () => {
   const router = useRouter();
   const params = useSearchParams();
-
   const { data: session } = useSession();
 
   const [open, setOpen] = useState(false);
   const [units, setUnits] = useState<Unit[]>([]);
   const [unitSelected, setUnitSelected] = useState<Unit | null>(null);
 
-  const [search, setSearch] = useState(params.get("search") ?? "");
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const { search, setSearch } = useSearchFilter();
 
-  const [page, setPage] = useState(0);
-  const rowsPerPage = 5;
-
-  const handleOpen = () => {
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    reset({ name: "", symbol: "" });
-    setOpen(false);
-  };
-
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search); // actualiza el valor definitivo
-    }, 300);
-
-    return () => clearTimeout(handler); // limpia si sigue escribiendo
-  }, [search]);
-
-  const handleEdit = (unit: Unit) => {
-    setUnitSelected(unit);
-    reset({
-      name: unit ? unit.name : "",
-      symbol: unit ? unit.symbol : "",
-    });
-    handleOpen();
-  };
-
-  const handleDelete = async (id: string) => {
-    const confirm = await AlertService.showConfirm(
-      "Aviso",
-      "¿Deseas eliminar la unidad?"
-    );
-    if (!confirm) return;
-
-    try {
-      const result = await deleteUnit(id);
-
-      if (result.success) {
-        notifyInfo("Unidad eliminada correctamente");
-        fetchUnits();
-      } else notifyError("Error al eliminar la unidad");
-    } catch (error) {
-      notifyError("Error al eliminar la unidad");
-    }
-  };
-
-  const fetchUnits = async () => {
-    try {
-      if (!session?.user?.tenantId) return;
-
-      const response = await getUnits(session.user.tenantId, debouncedSearch);
-      if (!response.success) {
-        notifyError("Error al cargar las unidades");
-        return;
-      }
-
-      setUnits(response.data || []);
-    } catch (error) {
-      notifyError("Error al cargar las categorías");
-    }
-  };
-
-  useEffect(() => {
-    fetchUnits();
-  }, [session?.user?.tenantId, debouncedSearch]);
-
-  useEffect(() => {
-    updateParam("search", debouncedSearch);
-  }, [debouncedSearch]);
-
-  const updateParam = (key: string, value: string) => {
-    const query = new URLSearchParams(params.toString());
-    query.set(key, value);
-
-    if (query.get("search") === "") {
-      query.delete("search");
-    }
-    router.push(`/inventario/unidades?${query.toString()}`);
-  };
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  /* =======================
+     FORM
+  ======================= */
   const { control, handleSubmit, reset } = useForm<CreateUnit>({
     resolver: zodResolver(CreateUnitSchema),
     defaultValues: {
@@ -136,192 +59,208 @@ const UnitsPage = () => {
     },
   });
 
-  const onSubmit = async (data: CreateUnit) => {
-    try {
-      console.log(data);
+  /* =======================
+     FETCH
+  ======================= */
+  const fetchUnits = async () => {
+    if (!session?.user?.tenantId) return;
 
-      if (!session?.user?.tenantId) {
-        notifyError("No se encontró el tenantId del usuario");
+    try {
+      const response = await getUnits(session.user.tenantId, search);
+      if (!response.success) {
+        notifyError("Error al cargar las unidades");
         return;
       }
-
-      const response = unitSelected
-        ? await updateUnit(unitSelected.id, data)
-        : await createUnit(session.user.tenantId, data);
-
-      if (response) {
-        notifyInfo(
-          `Unidad ${unitSelected ? "actualizada" : "creada"} correctamente`
-        );
-        fetchUnits();
-        handleClose();
-        setUnitSelected(null);
-      } else {
-        notifyError(
-          `Error al ${unitSelected ? "actualizar" : "crear"} la unidad`
-        );
-      }
-    } catch (error) {
-      console.log(error);
-      notifyError("Error al guardar la unidad");
+      setUnits(response.data || []);
+    } catch {
+      notifyError("Error al cargar las unidades");
     }
   };
 
+  useEffect(() => {
+    fetchUnits();
+  }, [session?.user?.tenantId, search]);
+
+  /* =======================
+     ACTIONS
+  ======================= */
+  const handleOpen = () => setOpen(true);
+
+  const handleClose = () => {
+    reset({ name: "", symbol: "" });
+    setUnitSelected(null);
+    setOpen(false);
+  };
+
+  const handleEdit = (unit: Unit) => {
+    setUnitSelected(unit);
+    reset({
+      name: unit.name ?? "",
+      symbol: unit.symbol ?? "",
+    });
+    handleOpen();
+  };
+
+  const handleDelete = async (id: string) => {
+    const confirm = await ConfirmDialog.confirm(
+      "Aviso",
+      "¿Deseas eliminar la unidad?"
+    );
+    if (!confirm) return;
+
+    const result = await deleteUnit(id);
+    if (result.success) {
+      notifyInfo("Unidad eliminada correctamente");
+      fetchUnits();
+    } else {
+      notifyError("Error al eliminar la unidad");
+    }
+  };
+
+  const onSubmit = async (data: CreateUnit) => {
+    if (!session?.user?.tenantId) {
+      notifyError("No se encontró el tenantId del usuario");
+      return;
+    }
+
+    const response = unitSelected
+      ? await updateUnit(unitSelected.id, data)
+      : await createUnit(session.user.tenantId, data);
+
+    if (response) {
+      notifyInfo(
+        `Unidad ${unitSelected ? "actualizada" : "creada"} correctamente`
+      );
+      fetchUnits();
+      handleClose();
+    } else {
+      notifyError(
+        `Error al ${unitSelected ? "actualizar" : "crear"} la unidad`
+      );
+    }
+  };
+
+  /* =======================
+     RENDER
+  ======================= */
   return (
     <PageContainer
       title="Unidades de Medida"
       description="Gestiona las unidades de medida de tus productos y servicios"
     >
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
-        }}
-      >
-        <TextField
-          label="Buscar unidades"
-          variant="outlined"
-          size="small"
+      {/* Header */}
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Input
+          placeholder="Buscar unidades..."
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            updateParam("search", e.target.value);
-          }}
+          onChange={(e) => setSearch(e.target.value)}
+          className="sm:max-w-xs"
         />
-        <Button
-          variant="contained"
-          startIcon={<Plus />}
-          onClick={handleOpen}
-          sx={{ width: { xs: "100%", sm: "auto" } }}
-        >
-          Agregar Unidad
-        </Button>
-      </Box>
 
-      <Card sx={{ mt: 3 }}>
-        <CardContent>
+        <Button onClick={handleOpen}>
+          <Plus className="mr-2 h-4 w-4" />
+          Nuevo
+        </Button>
+      </div>
+
+      {/* Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Unidades</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
           {units.length === 0 ? (
-            <Box textAlign="center" py={6}>
-              <ShoppingBag />
-              <Typography variant="h6" mt={2}>
-                No hay unidades aún
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Agrega la primera unidad de medida.
-              </Typography>
-            </Box>
+            <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+              <ShoppingBag className="h-10 w-10" />
+              <p className="text-lg font-medium">No hay unidades aún</p>
+              <p className="text-sm">Agrega la primera unidad de medida</p>
+            </div>
           ) : (
-            <Box>
+            <>
               <Table>
-                <TableHead>
+                <TableHeader>
                   <TableRow>
-                    <TableCell>
-                      <strong>Nombre</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Abreviatura</strong>
-                    </TableCell>
-                    <TableCell align="right">
-                      <strong>Acciones</strong>
-                    </TableCell>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Abreviatura</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
                 <TableBody>
                   {units
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((unit) => (
-                      <TableRow key={unit.id} hover>
+                    .slice(
+                      (currentPage - 1) * itemsPerPage,
+                      (currentPage - 1) * itemsPerPage + itemsPerPage
+                    )
+                    .map((unit: Unit) => (
+                      <TableRow key={unit.id}>
                         <TableCell>{unit.name}</TableCell>
                         <TableCell>{unit.symbol}</TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            color="primary"
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            size="icon"
+                            variant="outline"
                             onClick={() => handleEdit(unit)}
                           >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            color="error"
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="destructive"
                             onClick={() => handleDelete(unit.id)}
                           >
-                            <Delete />
-                          </IconButton>
+                            <Delete className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
               </Table>
 
-              <TablePagination
-                component="div"
-                color="primary"
-                count={units.length}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                rowsPerPageOptions={[5]}
+              <PaginationControls
+                currentPage={currentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={units.length}
+                onPageChange={(page) => setCurrentPage(page)}
               />
-            </Box>
+            </>
           )}
         </CardContent>
       </Card>
 
-      <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogTitle>
-            {unitSelected ? "Editar Unidad" : "Agregar Unidad"}
-          </DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {unitSelected
-                ? "Actualizar información de la unidad"
-                : "Agregar una nueva unidad a tu catálogo"}
-            </Typography>
-            <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}
-            >
-              <Controller
-                name="name"
-                control={control}
-                render={({ field, fieldState }) => (
-                  <TextField
-                    {...field}
-                    label="Nombre de la Unidad"
-                    variant="outlined"
-                    fullWidth
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                  />
-                )}
-              />
+      {/* Dialog */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {unitSelected ? "Editar Unidad" : "Agregar Unidad"}
+            </DialogTitle>
+          </DialogHeader>
 
-              <Controller
-                name="symbol"
-                control={control}
-                render={({ field, fieldState }) => (
-                  <TextField
-                    {...field}
-                    label="Abreviatura"
-                    variant="outlined"
-                    fullWidth
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                  />
-                )}
-              />
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <Controller
+              name="name"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} placeholder="Nombre de la unidad" required />
+              )}
+            />
 
-              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-                <Button onClick={handleClose}>Cancelar</Button>
-                <Button variant="contained" type="submit">
-                  Guardar
-                </Button>
-              </Box>
-            </Box>
-          </DialogContent>
-        </form>
+            <Controller
+              name="symbol"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} placeholder="Abreviatura" required />
+              )}
+            />
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={handleClose}>
+                Cancelar
+              </Button>
+              <Button type="submit">Guardar</Button>
+            </div>
+          </form>
+        </DialogContent>
       </Dialog>
     </PageContainer>
   );
