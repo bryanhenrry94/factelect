@@ -20,6 +20,7 @@ export default function AccountPage() {
     const result = await getTenantById(session?.user?.tenantId);
 
     if (result.success) {
+      console.log("Tenant data fetched:", result.data);
       setTenant(result.data || null);
     }
   };

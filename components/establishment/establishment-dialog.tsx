@@ -1,3 +1,9 @@
+"use client";
+
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { useSession } from "next-auth/react";
+
 import {
   createEstablishment,
   updateEstablishment,
@@ -7,20 +13,19 @@ import {
   CreateEstablishment,
   Establishment,
 } from "@/lib/validations/establishment";
+
+/* shadcn */
 import {
-  Box,
-  Button,
   Dialog,
-  DialogActions,
   DialogContent,
+  DialogHeader,
   DialogTitle,
-  MenuItem,
-  TextField,
-  Typography,
-} from "@mui/material";
-import { useSession } from "next-auth/react";
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface EstablishmentDialogProps {
   open: boolean;
@@ -43,14 +48,15 @@ const EstablishmentDialog: React.FC<EstablishmentDialogProps> = ({
     formState: { errors, isSubmitting },
     reset,
   } = useForm<CreateEstablishment>({
-    // resolver: zodResolver(createEstablishmentSchema),
     defaultValues: {
-      code: establishmentSelected?.code ?? "",
-      address: establishmentSelected?.address ?? "",
+      code: "",
+      address: "",
     },
   });
 
-  // 🔁 Rellena o limpia el formulario al cambiar el modo (editar o crear)
+  /**
+   * 🔁 Reset al abrir / cambiar modo
+   */
   useEffect(() => {
     if (establishmentSelected) {
       reset({
@@ -65,7 +71,9 @@ const EstablishmentDialog: React.FC<EstablishmentDialogProps> = ({
     }
   }, [establishmentSelected, reset]);
 
-  // 💾 Acción de crear o actualizar
+  /**
+   * 💾 Crear / Actualizar
+   */
   const onSubmit = async (data: CreateEstablishment) => {
     try {
       if (!session?.user?.tenantId) {
@@ -73,13 +81,16 @@ const EstablishmentDialog: React.FC<EstablishmentDialogProps> = ({
         return;
       }
 
-      const formattedData = { ...data, tenantId: session.user.tenantId };
+      const payload = {
+        ...data,
+        tenantId: session.user.tenantId,
+      };
 
-      const response = establishmentSelected
-        ? await updateEstablishment(establishmentSelected.id!, formattedData)
-        : await createEstablishment(session.user.tenantId, formattedData);
+      const result = establishmentSelected
+        ? await updateEstablishment(establishmentSelected.id!, payload)
+        : await createEstablishment(session.user.tenantId, payload);
 
-      if (response.success) {
+      if (result.success) {
         notifyInfo(
           establishmentSelected
             ? "Establecimiento actualizado correctamente"
@@ -88,62 +99,89 @@ const EstablishmentDialog: React.FC<EstablishmentDialogProps> = ({
         await onSuccess();
         onClose();
       } else {
-        notifyError(response.error || "Error al guardar el establecimiento");
+        notifyError(result.error || "Error al guardar el establecimiento");
       }
-    } catch (err: any) {
-      console.error(err);
-      notifyError("Ocurrió un error inesperado al guardar el establecimiento");
+    } catch (error) {
+      console.error(error);
+      notifyError("Ocurrió un error inesperado");
     }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <DialogTitle>
-          {establishmentSelected
-            ? "Editar Establecimiento"
-            : "Agregar Establecimiento"}
-        </DialogTitle>
-
-        <DialogContent sx={{ display: "grid", gap: 2 }}>
-          <Typography variant="body2" color="text.secondary">
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {establishmentSelected
+              ? "Editar Establecimiento"
+              : "Agregar Establecimiento"}
+          </DialogTitle>
+          <DialogDescription>
             {establishmentSelected
               ? "Actualiza la información del establecimiento."
               : "Agrega un nuevo establecimiento a tu base de datos."}
-          </Typography>
+          </DialogDescription>
+        </DialogHeader>
 
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <TextField
-              label="Código"
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Código */}
+          <div className="space-y-1">
+            <Label htmlFor="code">Código</Label>
+            <Input
+              id="code"
+              maxLength={3}
+              placeholder="001"
               {...register("code", {
                 required: "El código es obligatorio",
-                maxLength: 3,
-                minLength: 3,
+                minLength: {
+                  value: 3,
+                  message: "Debe tener 3 caracteres",
+                },
+                maxLength: {
+                  value: 3,
+                  message: "Debe tener 3 caracteres",
+                },
               })}
-              error={!!errors.code}
-              helperText={errors.code?.message}
-              fullWidth
             />
+            {errors.code && (
+              <p className="text-sm text-destructive">{errors.code.message}</p>
+            )}
+          </div>
 
-            <TextField
-              label="Dirección"
+          {/* Dirección */}
+          <div className="space-y-1">
+            <Label htmlFor="address">Dirección</Label>
+            <Input
+              id="address"
+              placeholder="Av. Principal y Calle Secundaria"
               {...register("address")}
-              error={!!errors.address}
-              helperText={errors.address?.message}
-              fullWidth
             />
-          </Box>
-        </DialogContent>
+            {errors.address && (
+              <p className="text-sm text-destructive">
+                {errors.address.message}
+              </p>
+            )}
+          </div>
 
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={onClose} variant="outlined" disabled={isSubmitting}>
-            Cancelar
-          </Button>
-          <Button type="submit" variant="contained" disabled={isSubmitting}>
-            {establishmentSelected ? "Actualizar" : "Agregar"}
-          </Button>
-        </DialogActions>
-      </form>
+          <DialogFooter className="pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting
+                ? "Guardando..."
+                : establishmentSelected
+                ? "Actualizar"
+                : "Agregar"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
     </Dialog>
   );
 };

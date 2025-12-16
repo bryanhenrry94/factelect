@@ -1,28 +1,24 @@
 "use client";
 
-import type React from "react";
 import { useEffect, useState } from "react";
-import { Tabs, Tab, Box, Card } from "@mui/material";
-import { Building2, CreditCard, FileText } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { Building2, CreditCard, FileText, Users } from "lucide-react";
+
+import PageContainer from "@/components/container/PageContainer";
 import CompanyForm from "@/components/setting/company-form";
 import SRIConfigForm from "@/components/setting/sri-config-form";
-import { getTenantById } from "@/actions/tenant";
-import { useSession } from "next-auth/react";
-import { Tenant } from "@/lib/validations/tenant";
-import PageContainer from "@/components/container/PageContainer";
-import TabPanel from "@/components/ui/TabPanel";
 import { BillingForm } from "@/components/billing/BillingForm";
+
+import { getTenantById } from "@/actions/tenant";
+import { Tenant } from "@/lib/validations/tenant";
+
+/* shadcn */
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
-
   const [tenant, setTenant] = useState<Tenant | null>(null);
-
-  const [tabValue, setTabValue] = useState(0);
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
 
   useEffect(() => {
     if (session?.user?.tenantId) {
@@ -32,8 +28,8 @@ export default function SettingsPage() {
 
   const fetchTenantData = async () => {
     if (!session?.user?.tenantId) return;
-    const result = await getTenantById(session?.user?.tenantId);
 
+    const result = await getTenantById(session.user.tenantId);
     if (result.success) {
       setTenant(result.data || null);
     }
@@ -44,46 +40,51 @@ export default function SettingsPage() {
       title="Configuración"
       description="Configuración de la cuenta"
     >
-      {/* HEADER */}
-      <Card>
-        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
-          <Tabs
-            value={tabValue}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-          >
-            <Tab
-              icon={<Building2 className="w-5 h-5" />}
-              iconPosition="start"
-              label="Empresa"
-            />
-            <Tab
-              icon={<FileText className="w-5 h-5" />}
-              iconPosition="start"
-              label="Facturación Electrónica"
-            />
-            <Tab
-              icon={<CreditCard className="w-5 h-5" />}
-              iconPosition="start"
-              label="Facturación"
-            />
-          </Tabs>
-        </Box>
+      <Card className="p-4">
+        <Tabs defaultValue="company" className="w-full">
+          {/* Tabs Header */}
+          <TabsList className="mb-6 flex w-full justify-start gap-2">
+            <TabsTrigger value="company" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Empresa
+            </TabsTrigger>
 
-        {/* Company Profile Tab */}
-        <TabPanel value={tabValue} index={0}>
-          {tenant && <CompanyForm initialData={tenant} />}
-        </TabPanel>
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Usuarios
+            </TabsTrigger>
 
-        {/* Electronic Invoicing Tab */}
-        <TabPanel value={tabValue} index={1}>
-          <SRIConfigForm tenantId={tenant?.id || ""} />
-        </TabPanel>
+            <TabsTrigger value="sri" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Facturación Electrónica
+            </TabsTrigger>
 
-        <TabPanel value={tabValue} index={2}>
-          <BillingForm />
-        </TabPanel>
+            <TabsTrigger value="billing" className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Facturación
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Empresa */}
+          <TabsContent value="company" className="mt-0">
+            {tenant && <CompanyForm initialData={tenant} />}
+          </TabsContent>
+
+          {/* Usuarios */}
+          <TabsContent value="users" className="mt-0">
+            <div>Gestión de usuarios en desarrollo</div>
+          </TabsContent>
+
+          {/* Facturación Electrónica */}
+          <TabsContent value="sri" className="mt-0">
+            <SRIConfigForm tenantId={tenant?.id || ""} />
+          </TabsContent>
+
+          {/* Billing */}
+          <TabsContent value="billing" className="mt-0">
+            <BillingForm />
+          </TabsContent>
+        </Tabs>
       </Card>
     </PageContainer>
   );

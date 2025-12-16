@@ -1,198 +1,136 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardActions,
-  CardContent,
-  Chip,
-  Divider,
-  Grid,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
+"use client";
+
 import { BoxIcon } from "lucide-react";
+
+/* shadcn */
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 export const BillingForm = () => {
   return (
-    <Grid container spacing={3}>
-      <Grid size={{ xs: 12, md: 6 }}>
-        {/* Invoices Tab Content */}
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      {/* Información de Facturación */}
+      <Card>
+        <CardContent className="space-y-4">
+          <h2 className="text-xl font-semibold">Información de Facturación</h2>
+
+          <Alert>
+            <AlertDescription>Funcionalidad en desarrollo</AlertDescription>
+          </Alert>
+
+          <Input
+            readOnly
+            value="Dazzsoft S.A.C"
+            placeholder="Nombre de la Empresa"
+          />
+
+          <Input readOnly value="20612345678" placeholder="RUC" />
+
+          <Input
+            readOnly
+            value="Av. Siempre Viva 123, Lima, Perú"
+            placeholder="Dirección"
+          />
+
+          <Input
+            readOnly
+            value="info@dazzsoft.com"
+            placeholder="Correo Electrónico"
+          />
+        </CardContent>
+
+        <CardFooter className="justify-end">
+          <Button size="lg">Guardar</Button>
+        </CardFooter>
+      </Card>
+
+      {/* Plan y Método de Pago */}
+      <div className="space-y-6">
+        {/* Plan Actual */}
         <Card>
-          <CardContent>
-            <Typography variant="h4" component="h1" gutterBottom>
-              Información de Facturación
-            </Typography>
-            <Alert severity="info">Funcionalidad en desarrollo</Alert>
+          <CardContent className="space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Plan Actual</h2>
+                <p className="text-sm text-muted-foreground">
+                  Gestiona tu plan de suscripción
+                </p>
 
-            <TextField
-              label="Nombre de la Empresa"
-              value="Dazzsoft S.A.C"
-              fullWidth
-              margin="normal"
-              InputProps={{
-                readOnly: true,
-              }}
-            />
+                <Alert className="mt-2">
+                  <AlertDescription>
+                    Funcionalidad en desarrollo
+                  </AlertDescription>
+                </Alert>
+              </div>
 
-            <TextField
-              label="RUC"
-              value="20612345678"
-              fullWidth
-              margin="normal"
-              InputProps={{
-                readOnly: true,
-              }}
-            />
+              <Badge variant="outline">Activo</Badge>
+            </div>
 
-            <TextField
-              label="Dirección"
-              value="Av. Siempre Viva 123, Lima, Perú"
-              fullWidth
-              margin="normal"
-              InputProps={{
-                readOnly: true,
-              }}
-            />
+            <Separator />
 
-            <TextField
-              label="Correo Electrónico"
-              value="info@dazzsoft.com"
-              fullWidth
-              margin="normal"
-              InputProps={{
-                readOnly: true,
-              }}
-            />
+            <div className="flex items-center gap-4 rounded-lg bg-muted p-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <BoxIcon className="h-6 w-6" />
+              </div>
+
+              <div className="flex-1">
+                <h3 className="font-semibold">Plan Free</h3>
+                <p className="text-sm text-muted-foreground">
+                  Acceso básico a todas las funcionalidades
+                </p>
+
+                <div className="mt-2 flex flex-wrap gap-6 text-sm text-muted-foreground">
+                  <span>
+                    <strong>Precio:</strong> $0.00 / mes
+                  </span>
+                  <span>
+                    <strong>Renovación:</strong> 30 de Diciembre de 2024
+                  </span>
+                </div>
+              </div>
+            </div>
           </CardContent>
-          <CardActions sx={{ p: 3 }}>
-            <Button variant="contained" color="primary" size="large">
-              Guardar
+
+          <CardFooter className="gap-3">
+            <Button size="lg">Cambiar Plan</Button>
+            <Button size="lg" variant="outline">
+              Ver Detalles
             </Button>
-          </CardActions>
+          </CardFooter>
         </Card>
-      </Grid>
-      <Grid size={{ xs: 12, md: 6 }}>
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 12 }}>
-            <Card>
-              <CardContent sx={{ p: 3 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    mb: 2,
-                  }}
-                >
-                  <Box>
-                    <Typography variant="h4" component="h1" gutterBottom>
-                      Plan Actual
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Gestiona tu plan de suscripción
-                    </Typography>
-                    <Alert severity="info">Funcionalidad en desarrollo</Alert>
-                  </Box>
-                  <Chip
-                    label="Activo"
-                    color="primary"
-                    variant="outlined"
-                    size="small"
-                  />
-                </Box>
 
-                <Divider sx={{ my: 2 }} />
-
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    p: 2,
-                    backgroundColor: "action.hover",
-                    borderRadius: 2,
-                    gap: 3,
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 56,
-                      height: 56,
-                      backgroundColor: "primary.main",
-                      borderRadius: 2,
-                      color: "white",
-                    }}
-                  >
-                    <BoxIcon size={24} />
-                  </Box>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" sx={{ mb: 0.5 }}>
-                      Plan Free
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mb: 1 }}
-                    >
-                      Acceso básico a todas las funcionalidades
-                    </Typography>
-                    <Stack direction="row" spacing={3}>
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>Precio:</strong> $0.00 / mes
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>Renovación:</strong> 30 de Diciembre de 2024
-                      </Typography>
-                    </Stack>
-                  </Box>
-                </Box>
-              </CardContent>
-              <CardActions sx={{ p: 3, pt: 0 }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                  sx={{ minWidth: 140 }}
-                >
-                  Cambiar Plan
-                </Button>
-                <Button variant="outlined" color="primary" size="large">
-                  Ver Detalles
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-          <Grid size={{ xs: 12, md: 12 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="h4" component="h1" gutterBottom>
-                  Método de Pago
-                </Typography>
-                <Alert severity="info">Funcionalidad en desarrollo</Alert>
-              </CardContent>
-              <CardActions sx={{ p: 3 }}>
-                <Button variant="outlined" color="error" size="large">
-                  Cancelar Suscripción
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-        </Grid>
-      </Grid>
-      <Grid size={{ xs: 12, md: 12 }}>
+        {/* Método de Pago */}
         <Card>
-          <CardContent>
-            <Typography variant="h4" component="h1" gutterBottom>
-              Historial de Facturación
-            </Typography>
-            <Alert severity="info">Funcionalidad en desarrollo</Alert>
+          <CardContent className="space-y-3">
+            <h2 className="text-xl font-semibold">Método de Pago</h2>
+
+            <Alert>
+              <AlertDescription>Funcionalidad en desarrollo</AlertDescription>
+            </Alert>
           </CardContent>
+
+          <CardFooter>
+            <Button variant="destructive" size="lg">
+              Cancelar Suscripción
+            </Button>
+          </CardFooter>
         </Card>
-      </Grid>
-    </Grid>
+      </div>
+
+      {/* Historial de Facturación */}
+      <Card className="md:col-span-2">
+        <CardContent className="space-y-3">
+          <h2 className="text-xl font-semibold">Historial de Facturación</h2>
+
+          <Alert>
+            <AlertDescription>Funcionalidad en desarrollo</AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    </div>
   );
 };

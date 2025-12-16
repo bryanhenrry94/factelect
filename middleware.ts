@@ -6,6 +6,7 @@ const PUBLIC_ROUTES = [
   "/auth/signup",
   "/auth/forgot-password",
   "/auth/reset-password",
+  "/auth/invitation",
   "/onboarding",
   "/_next", // para permitir assets internos
   "/api/auth", // rutas internas de NextAuth

@@ -1,88 +1,101 @@
 "use client";
+
 import { useCallback, useEffect, useState } from "react";
-import { Establishment } from "@/lib/validations";
 import { useSession } from "next-auth/react";
+import { Delete, Edit, PlusCircle } from "lucide-react";
+
+import { Establishment } from "@/lib/validations";
 import {
   deleteEstablishment,
   getEstablishments,
 } from "@/actions/establishment";
 import { AlertService } from "@/lib/alerts";
+import { notifyError, notifyInfo } from "@/lib/notifications";
+
+import EstablishmentDialog from "./establishment-dialog";
+
+/* shadcn */
 import {
-  Box,
-  Button,
-  Grid,
-  IconButton,
-  Paper,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
-  TableFooter,
   TableHead,
+  TableHeader,
   TableRow,
-  Typography,
-} from "@mui/material";
-import { Delete, Edit, PlusCircle } from "lucide-react";
-import EstablishmentDialog from "./establishment-dialog";
-import { notifyError, notifyInfo } from "@/lib/notifications";
+  TableFooter,
+} from "@/components/ui/table";
+import { ConfirmDialog } from "../ConfirmDialog";
 
 export const EstablishmentForm = () => {
   const [establishments, setEstablishments] = useState<Establishment[]>([]);
   const [open, setOpen] = useState(false);
   const [establishmentSelected, setEstablishmentSelected] =
     useState<Establishment | null>(null);
+
   const { data: session } = useSession();
 
   const fetchEstablishments = useCallback(async () => {
     if (!session?.user?.tenantId) return;
-    const result = await getEstablishments(session?.user?.tenantId);
-    if (result.success) setEstablishments(result.data || []);
+
+    const result = await getEstablishments(session.user.tenantId);
+    if (result.success) {
+      setEstablishments(result.data || []);
+    }
   }, [session?.user?.tenantId]);
 
   useEffect(() => {
-    if (session?.user?.tenantId) {
-      fetchEstablishments();
-    }
-  }, [session?.user?.tenantId, fetchEstablishments]);
+    fetchEstablishments();
+  }, [fetchEstablishments]);
 
   const handleDeleteEstablishment = async (id: string) => {
-    if (!id) return;
-    const confirm = await AlertService.showConfirm(
+    const confirm = await ConfirmDialog.confirm(
       "¿Eliminar este establecimiento?",
       "Esta acción eliminará todos los datos asociados. ¿Desea continuar?"
     );
     if (!confirm) return;
 
     const result = await deleteEstablishment(id);
-    result.success
-      ? (notifyInfo("Eliminando establecimiento..."), fetchEstablishments())
-      : notifyError("Error al eliminar el establecimiento");
+    if (result.success) {
+      notifyInfo("Establecimiento eliminado correctamente");
+      fetchEstablishments();
+    } else {
+      notifyError("Error al eliminar el establecimiento");
+    }
   };
 
   return (
-    <Box>
-      {/* Establecimientos */}
-      <Grid container spacing={2} sx={{ mt: 3 }}>
-        <Grid size={{ xs: 12, md: 12 }}>
-          <Typography variant="body1">Establecimientos</Typography>
-          <Typography variant="caption" color="text.secondary">
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Establecimientos</CardTitle>
+          <CardDescription>
             Configure los establecimientos registrados en el SRI.
-          </Typography>
-        </Grid>
-        <Grid size={{ xs: 12, md: 12 }}>
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableHead>
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell>Código</TableCell>
-                  <TableCell>Dirección</TableCell>
-                  <TableCell align="right">Acción</TableCell>
+                  <TableHead>Código</TableHead>
+                  <TableHead>Dirección</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              </TableHead>
+              </TableHeader>
+
               <TableBody>
                 {establishments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} align="center">
+                    <TableCell colSpan={3} className="text-center">
                       No hay establecimientos registrados.
                     </TableCell>
                   </TableRow>
@@ -91,57 +104,62 @@ export const EstablishmentForm = () => {
                     <TableRow key={item.id}>
                       <TableCell>{item.code}</TableCell>
                       <TableCell>{item.address}</TableCell>
-                      <TableCell align="right">
-                        <IconButton
-                          color="primary"
+                      <TableCell className="text-right space-x-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
                           onClick={() => {
                             setEstablishmentSelected(item);
                             setOpen(true);
                           }}
                         >
-                          <Edit />
-                        </IconButton>
-                        <IconButton
-                          color="error"
+                          <Edit className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-destructive"
                           onClick={() =>
                             handleDeleteEstablishment(item.id ?? "")
                           }
                         >
-                          <Delete />
-                        </IconButton>
+                          <Delete className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
+
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={3} align="right">
+                  <TableCell colSpan={3} className="text-right">
                     <Button
-                      variant="text"
-                      startIcon={<PlusCircle />}
+                      variant="ghost"
                       onClick={() => {
                         setEstablishmentSelected(null);
                         setOpen(true);
                       }}
                     >
+                      <PlusCircle className="mr-2 h-4 w-4" />
                       Nuevo Establecimiento
                     </Button>
                   </TableCell>
                 </TableRow>
               </TableFooter>
             </Table>
-          </TableContainer>
-        </Grid>
-      </Grid>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Dialogs */}
+      {/* Dialog */}
       <EstablishmentDialog
         open={open}
         onClose={() => setOpen(false)}
         onSuccess={fetchEstablishments}
         establishmentSelected={establishmentSelected}
       />
-    </Box>
+    </>
   );
 };

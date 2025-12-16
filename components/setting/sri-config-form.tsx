@@ -1,7 +1,9 @@
 "use client";
+
 import { useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useSession } from "next-auth/react";
+
 import {
   getTenantSriConfig,
   updateTenantSriConfig,
@@ -11,20 +13,25 @@ import {
   CreateTenantSriConfig,
   TenantSriConfigInput,
 } from "@/lib/validations/sri-config";
+
 import { AlertService } from "@/lib/alerts";
 import { sriEnvironmentOptions } from "@/constants/sri";
 import UploadCertificateForm from "../ui/UploadCertificateForm";
-
-import {
-  Box,
-  Button,
-  MenuItem,
-  TextField,
-  Typography,
-  Grid,
-  Stack,
-} from "@mui/material";
 import { notifyError, notifyInfo } from "@/lib/notifications";
+
+/* shadcn */
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 interface SriTenantFormProps {
   tenantId: string;
@@ -39,9 +46,11 @@ const SRIConfigForm: React.FC<SriTenantFormProps> = ({ tenantId }) => {
     watch,
     formState: { errors, isSubmitting, isDirty },
     reset,
+    setValue,
   } = useForm<CreateTenantSriConfig>();
 
   const certificatePath = watch("certificatePath");
+  const environment = watch("environment");
 
   const onSubmit = async (data: TenantSriConfigInput) => {
     const currentTenantId = session?.user?.tenantId;
@@ -59,6 +68,7 @@ const SRIConfigForm: React.FC<SriTenantFormProps> = ({ tenantId }) => {
     }
 
     const result = await updateTenantSriConfig(currentTenantId, data);
+
     if (result?.success) {
       notifyInfo("Configuración SRI actualizada correctamente.");
       reset(result.data);
@@ -82,92 +92,106 @@ const SRIConfigForm: React.FC<SriTenantFormProps> = ({ tenantId }) => {
   }, [fetchTenantSRIConfig]);
 
   return (
-    <Box sx={{ p: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        Configuración de Facturación Electrónica SRI
-      </Typography>
-      <Typography variant="body2" color="text.secondary" gutterBottom>
-        Configure los parámetros necesarios para emitir facturas electrónicas a
-        través del SRI.
-      </Typography>
+    <Card className="p-6 space-y-8">
+      {/* Header */}
+      <div>
+        <h3 className="text-lg font-semibold">
+          Configuración de Facturación Electrónica SRI
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Configure los parámetros necesarios para emitir facturas electrónicas
+          a través del SRI.
+        </p>
+      </div>
+
+      <Separator />
 
       {/* Ambiente SRI */}
-      <Grid container spacing={2} sx={{ mt: 2 }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Typography variant="body1">Ambiente SRI</Typography>
-          <Typography variant="caption" color="text.secondary">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h4 className="font-medium">Ambiente SRI</h4>
+          <p className="text-sm text-muted-foreground mt-1">
             <strong>Ambiente de Pruebas:</strong> Para realizar pruebas sin
-            afectar documentos reales. Los comprobantes no tienen validez
-            fiscal.
+            afectar documentos reales.
             <br />
-            <strong>Ambiente de Producción:</strong> Para emisión real de
-            comprobantes electrónicos con validez fiscal ante el SRI.
-          </Typography>
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Box component="form" onSubmit={handleSubmit(onSubmit)}>
-            <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 2 }}
+            <strong>Ambiente de Producción:</strong> Para emisión real con
+            validez fiscal ante el SRI.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Ambiente */}
+          <div className="space-y-1">
+            <Label>Ambiente</Label>
+            <Select
+              value={environment || ""}
+              onValueChange={(value) =>
+                setValue("environment", value as any, {
+                  shouldDirty: true,
+                })
+              }
             >
-              <TextField
-                select
-                fullWidth
-                label="Ambiente"
-                {...register("environment")}
-                value={watch("environment") || ""}
-                error={!!errors.environment}
-                helperText={errors.environment?.message}
-              >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccione un ambiente" />
+              </SelectTrigger>
+              <SelectContent>
                 {sriEnvironmentOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
+                  <SelectItem key={option.value} value={option.value}>
                     {option.label}
-                  </MenuItem>
+                  </SelectItem>
                 ))}
-              </TextField>
+              </SelectContent>
+            </Select>
+            {errors.environment && (
+              <p className="text-sm text-destructive">
+                {errors.environment.message}
+              </p>
+            )}
+          </div>
 
-              {certificatePath && (
-                <TextField
-                  fullWidth
-                  type="password"
-                  label="Contraseña del Certificado"
-                  {...register("certificatePassword")}
-                  placeholder="Ingrese la contraseña"
-                  error={!!errors.certificatePassword}
-                  helperText={errors.certificatePassword?.message}
-                />
+          {/* Password certificado */}
+          {certificatePath && (
+            <div className="space-y-1">
+              <Label>Contraseña del Certificado</Label>
+              <Input
+                type="password"
+                placeholder="Ingrese la contraseña"
+                {...register("certificatePassword")}
+              />
+              {errors.certificatePassword && (
+                <p className="text-sm text-destructive">
+                  {errors.certificatePassword.message}
+                </p>
               )}
+            </div>
+          )}
 
-              <Stack direction="row" justifyContent="flex-end">
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={isSubmitting || !isDirty}
-                >
-                  {isSubmitting ? "Guardando..." : "Guardar Cambios"}
-                </Button>
-              </Stack>
-            </Box>
-          </Box>
-        </Grid>
-      </Grid>
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isSubmitting || !isDirty}>
+              {isSubmitting ? "Guardando..." : "Guardar Cambios"}
+            </Button>
+          </div>
+        </form>
+      </div>
+
+      <Separator />
 
       {/* Certificado Digital */}
-      <Grid container spacing={2} sx={{ mt: 2 }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Typography variant="body1">Certificado Digital (.p12)</Typography>
-          <Typography variant="caption" color="text.secondary">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h4 className="font-medium">Certificado Digital (.p12)</h4>
+          <p className="text-sm text-muted-foreground">
             Suba su certificado digital emitido por el SRI.
-          </Typography>
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <UploadCertificateForm
-            tenantId={tenantId}
-            certificatePath={certificatePath || null}
-            onSave={fetchTenantSRIConfig}
-          />
-        </Grid>
-      </Grid>
-    </Box>
+          </p>
+        </div>
+
+        <UploadCertificateForm
+          tenantId={tenantId}
+          certificatePath={certificatePath || null}
+          onSave={fetchTenantSRIConfig}
+        />
+      </div>
+    </Card>
   );
 };
 

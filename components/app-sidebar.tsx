@@ -19,6 +19,7 @@ import {
   BarChart3,
   User,
   LayoutDashboard,
+  Building,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -69,11 +70,11 @@ const data = {
       items: [
         {
           title: "Clientes",
-          url: "personas?tipo=cliente",
+          url: "/personas?tipo=cliente",
         },
         {
           title: "Proveedores",
-          url: "personas?tipo=proveedor",
+          url: "/personas?tipo=proveedor",
         },
       ],
     },
@@ -186,33 +187,6 @@ const data = {
       ],
     },
     {
-      title: "Facturación Electrónica",
-      url: "#",
-      icon: Package,
-      items: [
-        {
-          title: "Facturas",
-          url: "/facturacion-electronica/facturas",
-        },
-        {
-          title: "Notas de Crédito",
-          url: "/facturacion-electronica/notas-credito",
-        },
-        {
-          title: "Notas de Débito",
-          url: "/facturacion-electronica/notas-debito",
-        },
-        {
-          title: "Guías de Remisión",
-          url: "/facturacion-electronica/guias-remision",
-        },
-        {
-          title: "Retenciones",
-          url: "/facturacion-electronica/retenciones",
-        },
-      ],
-    },
-    {
       title: "Contabilidad",
       url: "#",
       icon: BookOpen,
@@ -253,9 +227,9 @@ const data = {
   ],
   projects: [
     {
-      name: "General",
-      url: "/configuracion/general",
-      icon: Frame,
+      name: "Empresa",
+      url: "/configuracion/empresa",
+      icon: Building,
     },
     {
       name: "Perfil",

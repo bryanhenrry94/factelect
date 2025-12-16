@@ -3,30 +3,14 @@
 import { useTransition } from "react";
 import { uploadCertificateAction } from "@/actions/supabase";
 import { updateCertificatePath } from "@/actions/tenant-sri-config";
-import { Button, Paper, Typography } from "@mui/material";
-import {
-  CheckCircle2,
-  Cloud,
-  CloudCheck,
-  CloudUploadIcon,
-  File,
-  Upload,
-} from "lucide-react";
-import { styled } from "@mui/material/styles";
-import { AlertService } from "@/lib/alerts";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
-const VisuallyHiddenInput = styled("input")({
-  clip: "rect(0 0 0 0)",
-  clipPath: "inset(50%)",
-  height: 1,
-  overflow: "hidden",
-  position: "absolute",
-  bottom: 0,
-  left: 0,
-  whiteSpace: "nowrap",
-  width: 1,
-});
+import { Cloud, CloudCheck, CloudUpload } from "lucide-react";
+
+/* shadcn */
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface UploadCertificateFormProps {
   tenantId: string;
@@ -41,14 +25,11 @@ const UploadCertificateForm: React.FC<UploadCertificateFormProps> = ({
 }) => {
   const [isPending, startTransition] = useTransition();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+  const handleSubmit = (formData: FormData) => {
     formData.append("tenantId", tenantId);
 
     startTransition(async () => {
       const result = await uploadCertificateAction(formData);
-      console.log("Result: ", result);
 
       if (result.success) {
         await updateCertificatePath(
@@ -65,61 +46,58 @@ const UploadCertificateForm: React.FC<UploadCertificateFormProps> = ({
   };
 
   return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: 3,
-        textAlign: "center",
-      }}
-    >
-      <form onSubmit={handleSubmit}>
+    <Card className="p-6 text-center space-y-4 border-dashed">
+      {/* Estado */}
+      <div className="flex flex-col items-center gap-2">
         {certificatePath ? (
           <>
-            <CloudCheck size={48} color="#1976d2" />
-            <Typography variant="body2" fontWeight="medium">
-              Certificado subido con éxito
-            </Typography>
+            <CloudCheck className="h-10 w-10 text-primary" />
+            <p className="text-sm font-medium">Certificado subido con éxito</p>
           </>
         ) : (
           <>
-            <Cloud size={48} color="#1976d2" />
-            <Typography variant="body2" fontWeight="medium">
+            <Cloud className="h-10 w-10 text-muted-foreground" />
+            <p className="text-sm font-medium">
               No se ha subido ningún certificado
-            </Typography>
+            </p>
           </>
         )}
+      </div>
 
+      {/* Upload */}
+      <form action={handleSubmit} className="flex justify-center">
         <Button
-          component="label"
-          variant="outlined"
-          startIcon={<CloudUploadIcon />}
+          type="submit"
+          variant="outline"
           disabled={isPending}
-          sx={{ mt: 2 }}
+          className={cn(
+            "relative",
+            isPending && "cursor-not-allowed opacity-70"
+          )}
         >
+          <CloudUpload className="mr-2 h-4 w-4" />
           {isPending
             ? "Subiendo..."
-            : `${
-                certificatePath
-                  ? "Actualizar Certificado .p12"
-                  : "Subir Certificado .p12"
-              }`}
-          <VisuallyHiddenInput
+            : certificatePath
+            ? "Actualizar Certificado .p12"
+            : "Subir Certificado .p12"}
+
+          {/* Input oculto */}
+          <input
             type="file"
             name="file"
             accept=".p12"
             required
-            onChange={(event) => {
-              if (event.target.files && event.target.files[0]) {
-                const form = event.target.closest("form") as HTMLFormElement;
-                if (form) {
-                  form.requestSubmit();
-                }
+            className="absolute inset-0 cursor-pointer opacity-0"
+            onChange={(e) => {
+              if (e.target.files?.length) {
+                e.currentTarget.form?.requestSubmit();
               }
             }}
           />
         </Button>
       </form>
-    </Paper>
+    </Card>
   );
 };
 

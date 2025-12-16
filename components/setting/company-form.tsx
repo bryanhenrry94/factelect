@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import { Tenant, tenantSchema } from "@/lib/validations/tenant";
 import { updateTenant } from "@/actions/tenant";
@@ -29,15 +30,15 @@ interface CompanyFormProps {
 
 export default function CompanyForm({ initialData }: CompanyFormProps) {
   const {
-    register,
+    control,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
     watch,
   } = useForm<Tenant>({
     resolver: zodResolver(tenantSchema),
-    defaultValues: initialData || {
+    defaultValues: {
       name: "",
-      subdomain: "",
       tradeName: "",
       ruc: "",
       phone: "",
@@ -47,9 +48,19 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
     },
   });
 
+  /**
+   * 🔑 CLAVE:
+   * Cuando llega initialData → reset del formulario
+   */
+  useEffect(() => {
+    if (initialData) {
+      reset(initialData);
+    }
+  }, [initialData, reset]);
+
   const onSubmit = async (data: Tenant) => {
     try {
-      const result = await updateTenant(data.id || "", data);
+      const result = await updateTenant(data.id ?? "", data);
 
       if (result.success) {
         notifyInfo("Información de la empresa actualizada correctamente");
@@ -64,7 +75,6 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
 
   return (
     <Card>
-      {/* {JSON.stringify(errors)} */}
       <CardHeader>
         <CardTitle>Información de la Empresa</CardTitle>
         <CardDescription>
@@ -74,6 +84,12 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
 
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+          {Object.entries(errors).map(([key, value]) => (
+            <p key={key} className="text-sm text-destructive">
+              {value?.message as string}
+            </p>
+          ))}
+
           {/* RUC */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -84,11 +100,17 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
             </div>
 
             <div className="space-y-1">
-              <Input
-                placeholder="1790012345001"
-                disabled
-                maxLength={13}
-                {...register("ruc")}
+              <Controller
+                name="ruc"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    disabled
+                    maxLength={13}
+                    placeholder="Ej: 1790012345001"
+                    {...field}
+                  />
+                )}
               />
               {errors.ruc && (
                 <p className="text-sm text-destructive">{errors.ruc.message}</p>
@@ -108,7 +130,13 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
             </div>
 
             <div className="space-y-1">
-              <Input placeholder="Ej: Mi Empresa S.A." {...register("name")} />
+              <Controller
+                name="name"
+                control={control}
+                render={({ field }) => (
+                  <Input placeholder="Ej: Mi Empresa S.A." {...field} />
+                )}
+              />
               {errors.name && (
                 <p className="text-sm text-destructive">
                   {errors.name.message}
@@ -127,9 +155,12 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
             </div>
 
             <div className="space-y-1">
-              <Input
-                placeholder="Ej: Comercial Andina"
-                {...register("tradeName")}
+              <Controller
+                name="tradeName"
+                control={control}
+                render={({ field }) => (
+                  <Input placeholder="Ej: Tienda de Tecnología" {...field} />
+                )}
               />
               {errors.tradeName && (
                 <p className="text-sm text-destructive">
@@ -146,45 +177,40 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
             <div>
               <Label>Información de Contacto</Label>
               <p className="text-sm text-muted-foreground">
-                Datos de contacto visibles en documentos.
+                Datos visibles en documentos.
               </p>
             </div>
 
             <div className="space-y-4">
-              <div className="space-y-1">
-                <Input placeholder="0991234567" {...register("phone")} />
-                {errors.phone && (
-                  <p className="text-sm text-destructive">
-                    {errors.phone.message}
-                  </p>
+              <Controller
+                name="phone"
+                control={control}
+                render={({ field }) => (
+                  <Input placeholder="0991234567" {...field} />
                 )}
-              </div>
-
-              <div className="space-y-1">
-                <Input
-                  type="email"
-                  placeholder="info@empresa.com"
-                  {...register("contactEmail")}
-                />
-                {errors.contactEmail && (
-                  <p className="text-sm text-destructive">
-                    {errors.contactEmail.message}
-                  </p>
+              />
+              <Controller
+                name="contactEmail"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    type="email"
+                    placeholder="info@empresa.com"
+                    {...field}
+                  />
                 )}
-              </div>
-
-              <div className="space-y-1">
-                <Textarea
-                  placeholder="Av. Principal 123 y Calle Secundaria"
-                  rows={3}
-                  {...register("address")}
-                />
-                {errors.address && (
-                  <p className="text-sm text-destructive">
-                    {errors.address.message}
-                  </p>
+              />
+              <Controller
+                name="address"
+                control={control}
+                render={({ field }) => (
+                  <Textarea
+                    rows={3}
+                    placeholder="Av. Principal 123 y Calle Secundaria"
+                    {...field}
+                  />
                 )}
-              </div>
+              />
             </div>
           </div>
 
@@ -195,21 +221,16 @@ export default function CompanyForm({ initialData }: CompanyFormProps) {
             <div>
               <Label>Logo de la Empresa</Label>
               <p className="text-sm text-muted-foreground">
-                Logo que aparecerá en facturas y documentos oficiales.
+                Logo que aparecerá en documentos.
               </p>
             </div>
 
             <div className="space-y-4">
-              <Input
-                placeholder="https://miempresa.com/logo.png"
-                {...register("logoUrl")}
+              <Controller
+                name="logoUrl"
+                control={control}
+                render={({ field }) => <Input type="hidden" {...field} />}
               />
-              {errors.logoUrl && (
-                <p className="text-sm text-destructive">
-                  {errors.logoUrl.message}
-                </p>
-              )}
-
               <UploadLogoForm logoUrl={watch("logoUrl")} />
             </div>
           </div>

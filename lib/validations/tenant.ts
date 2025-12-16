@@ -15,7 +15,7 @@ export const tenantSchema = z.object({
   phone: z.string().optional(),
   contactEmail: z.string().email().optional(),
   address: z.string().optional(),
-  logoUrl: z.string().url().optional(),
+  logoUrl: z.string().optional(),
   sriConfig: z.any().optional(), // Replace with specific schema if needed
   obligatedAccounting: z.boolean().optional(),
   createdAt: z.date().optional(),

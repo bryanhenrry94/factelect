@@ -12,6 +12,6 @@ export * from "./sri";
 export * from "./supabase";
 export * from "./tenant-sri-config";
 export * from "./tenant";
-export * from "./user";
+export * from "./setting/user";
 export * from "./transaction";
 export * from "./document/document";

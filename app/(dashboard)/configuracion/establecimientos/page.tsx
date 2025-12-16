@@ -1,26 +1,20 @@
 "use client";
+
 import PageContainer from "@/components/container/PageContainer";
-import { Grid } from "@mui/material";
 
 import { EstablishmentForm } from "@/components/establishment/EstablishmentForm";
 import { EmissionPointForm } from "@/components/emission-point/EmissionPointForm";
 
-const EstablishmentsPage = () => {
+export default function EstablishmentsPage() {
   return (
     <PageContainer
       title="Establecimientos"
       description="Gestiona los establecimientos de tu negocio"
     >
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 12 }}>
-          <EstablishmentForm />
-        </Grid>
-        <Grid size={{ xs: 12, md: 12 }}>
-          <EmissionPointForm />
-        </Grid>
-      </Grid>
+      <div className="grid grid-cols-1 gap-6">
+        <EstablishmentForm />
+        <EmissionPointForm />
+      </div>
     </PageContainer>
   );
-};
-
-export default EstablishmentsPage;
+}

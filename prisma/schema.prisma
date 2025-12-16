@@ -53,8 +53,21 @@ model Tenant {
   inventoryAdjustmentItem InventoryAdjustmentItem[]
   bankMovementDetail      BankMovementDetail[]
   memberships             Membership[]
+  tenantInvitations       TenantInvitation[]
 
   @@map("tenant")
+}
+
+model TenantInvitation {
+  id        String                      @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  email     String   @map("email")
+  token     String   @map("token")      @unique
+  createdAt DateTime @map("created_at") @default(now())
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_invitation")
 }
 
 model SRIConfiguration {
@@ -118,6 +131,8 @@ model User {
   email               String               @map("email")                @unique
   password            String               @map("password")
   onboardingCompleted Boolean              @map("onboarding_completed") @default(false)
+  active              Boolean              @map("active")               @default(true)
+  isAdmin             Boolean              @map("is_admin")             @default(false)
 
   createdAt           DateTime             @map("created_at")           @default(now())
   updatedAt           DateTime             @map("updated_at")           @updatedAt

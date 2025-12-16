@@ -95,15 +95,11 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem
-                onClick={() => router.push("/configuracion/cuenta")}
-              >
+              <DropdownMenuItem>
                 <BadgeCheck />
                 Cuenta
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push("/configuracion/facturacion")}
-              >
+              <DropdownMenuItem>
                 <CreditCard />
                 Facturación
               </DropdownMenuItem>

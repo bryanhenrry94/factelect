@@ -5,6 +5,9 @@ export const userSchema = z.object({
   name: z.string().nullable().optional(),
   email: z.string().email(),
   password: z.string(),
+  active: z.boolean(),
+  isAdmin: z.boolean(),
+  onboardingCompleted: z.boolean(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

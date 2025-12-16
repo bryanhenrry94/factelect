@@ -49,6 +49,8 @@ export const getTenantById = async (
     return { success: false, error: "Tenant not found", data: null };
   }
 
+  console.log("Fetched tenant:", tenant);
+
   const formattedTenant: Tenant = {
     id: tenant.id,
     name: tenant.name,
