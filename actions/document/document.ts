@@ -8,32 +8,30 @@ import {
 import { $Enums, DocumentPayment } from "@/prisma/generated/prisma";
 import { formatDate } from "@/utils/formatters";
 
+import { Prisma } from "@/prisma/generated/prisma";
+
 export const getDocuments = async (
-  tenantId: string
+  tenantId: string,
+  personId?: string
 ): Promise<{ success: boolean; data?: DocumentResponse[]; error?: string }> => {
   try {
+    const whereClause: Prisma.DocumentWhereInput = {
+      tenantId,
+      ...(personId && { personId }),
+    };
+
     const documents = await prisma.document.findMany({
-      where: { tenantId },
+      where: whereClause,
       include: {
         person: true,
       },
     });
 
-    const allowedDocumentTypes: Array<
-      "INVOICE" | "CREDIT_NOTE" | "DEBIT_NOTE"
-    > = ["INVOICE", "CREDIT_NOTE", "DEBIT_NOTE"];
-
-    const formattedDocuments: DocumentResponse[] = documents
-      .filter((document) =>
-        allowedDocumentTypes.includes(document.documentType as any)
-      )
-      .map((document) => ({
+    const formattedDocuments: DocumentResponse[] = documents.map(
+      (document) => ({
         ...document,
         entityType: document.entityType,
-        documentType: document.documentType as
-          | "INVOICE"
-          | "CREDIT_NOTE"
-          | "DEBIT_NOTE",
+        documentType: document.documentType as $Enums.DocumentType,
         number: document.number || undefined,
         issueDate: document.issueDate,
         dueDate: document.dueDate || undefined,
@@ -57,12 +55,13 @@ export const getDocuments = async (
           : undefined,
         createdAt: document.createdAt,
         updatedAt: document.updatedAt,
-      }));
+      })
+    );
 
     return { success: true, data: formattedDocuments };
   } catch (error) {
-    console.error("Error fetching sales:", error);
-    return { success: false, error: "Error fetching sales" };
+    console.error("Error fetching documents:", error);
+    return { success: false, error: "Error fetching documents" };
   }
 };
 
@@ -182,10 +181,7 @@ export const createDocument = async (
       number: result.number || undefined,
       dueDate: result.dueDate || undefined,
       description: result.description || undefined,
-      documentType: result.documentType as
-        | "INVOICE"
-        | "CREDIT_NOTE"
-        | "DEBIT_NOTE",
+      documentType: result.documentType as $Enums.DocumentType,
     };
 
     return { success: true, data: formattedDocument };
@@ -280,10 +276,7 @@ export const updateDocument = async (
             identification: updatedDocument.person.identification || undefined,
           }
         : undefined,
-      documentType: updatedDocument.documentType as
-        | "INVOICE"
-        | "CREDIT_NOTE"
-        | "DEBIT_NOTE",
+      documentType: updatedDocument.documentType as $Enums.DocumentType,
     };
 
     return { success: true, data: formattedDocument };
@@ -330,10 +323,7 @@ export const getDocument = async (
     const formattedDocument: DocumentResponse = {
       ...document,
       entityType: document.entityType,
-      documentType: document.documentType as
-        | "INVOICE"
-        | "CREDIT_NOTE"
-        | "DEBIT_NOTE",
+      documentType: document.documentType as $Enums.DocumentType,
       number: document.number || undefined,
       issueDate: document.issueDate,
       dueDate: document.dueDate || undefined,

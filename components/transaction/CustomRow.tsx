@@ -1,19 +1,23 @@
-import React, { memo, useEffect } from "react";
-import {
-  TableRow,
-  TableCell,
-  TextField,
-  MenuItem,
-  IconButton,
-  Stack,
-  Typography,
-} from "@mui/material";
+"use client";
+
+import React, { memo, useEffect, useState } from "react";
 import { Delete, Search } from "lucide-react";
 import { Controller, useFormContext } from "react-hook-form";
 import { useSession } from "next-auth/react";
+
+import { TableRow, TableCell } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/utils/formatters";
 import { DocumentResponse, TransactionInput } from "@/lib/validations";
-import { getDocument } from "@/actions";
+import { getDocument, getDocuments } from "@/actions";
 
 interface CustomRowProps {
   field: any;
@@ -28,121 +32,134 @@ const CustomRow: React.FC<CustomRowProps> = memo(({ field, index, remove }) => {
     control,
     formState: { errors },
     watch,
-  } = useFormContext<TransactionInput>(); // <- accedemos al contexto del formulario
+  } = useFormContext<TransactionInput>();
 
-  const [documents, setDocuments] = React.useState<DocumentResponse[]>([]);
-  const [document, setDocument] = React.useState<DocumentResponse | null>(null);
+  const [documents, setDocuments] = useState<DocumentResponse[]>([]);
+  const [document, setDocument] = useState<DocumentResponse | null>(null);
 
   const handleChangeDocument = async (documentId: string) => {
-    const invoiceResponse = await getDocument(documentId);
-    if (invoiceResponse.success && invoiceResponse.data) {
-      const document = invoiceResponse.data;
-      setDocument(document);
+    const response = await getDocument(documentId);
+    if (response.success && response.data) {
+      setDocument(response.data);
     }
   };
 
+  const personId = watch("personId");
+
   useEffect(() => {
-    const fetchInvoices = async () => {
-      if (!session?.user?.tenantId) return;
+    if (!session?.user?.tenantId) return;
 
-      const watchPersonId = watch("personId");
+    const fetchDocuments = async () => {
+      try {
+        const response = await getDocuments(session.user.tenantId, personId);
 
-      if (!watchPersonId) {
+        if (!response.success || !response.data) {
+          setDocuments([]);
+          return;
+        }
+
+        setDocuments(response.data);
+      } catch (error) {
+        console.error("Error loading documents", error);
         setDocuments([]);
-        return;
       }
     };
-    fetchInvoices();
-  }, [session?.user?.tenantId, watch("personId")]);
+
+    fetchDocuments();
+  }, [session?.user?.tenantId, personId]);
 
   return (
-    <TableRow
-      sx={{
-        "& td, & th": {
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          borderRight: "1px solid",
-          "&:last-child": {
-            borderRight: 0,
-          },
-        },
-      }}
-    >
+    <TableRow className="border-b">
+      {/* Documento */}
       <TableCell>
-        <Stack direction="row" gap={2}>
+        <div className="flex items-center gap-2">
           <Controller
             control={control}
             name={`documents.${index}.documentId`}
             render={({ field }) => (
-              <TextField
-                fullWidth
-                size="small"
-                select
+              <Select
                 value={field.value || ""}
-                onChange={(e) => {
-                  field.onChange(e);
-                  handleChangeDocument(e.target.value);
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  handleChangeDocument(value);
                 }}
-                error={!!errors.documents?.[index]?.documentId}
-                helperText={
-                  errors.documents?.[index]?.documentId
-                    ? (errors.documents[index]?.documentId?.message as string)
-                    : ""
-                }
               >
-                {documents.map((inv) => (
-                  <MenuItem key={inv.id} value={inv.id}>
-                    {`FACT ${
-                      inv.DocumentFiscalInfo?.sequence
-                    } - $${inv.total.toFixed(2)} - ${new Date(
-                      inv.issueDate
-                    ).toLocaleDateString()} `}
-                  </MenuItem>
-                ))}
-              </TextField>
+                <SelectTrigger className="w-[280px]">
+                  <SelectValue placeholder="Seleccione documento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {documents.map((doc) => (
+                    <SelectItem key={doc.id} value={doc.id}>
+                      {`FACT ${
+                        doc.DocumentFiscalInfo?.sequence
+                      } - $${doc.total.toFixed(2)} - ${new Date(
+                        doc.issueDate
+                      ).toLocaleDateString()}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           />
 
-          <IconButton onClick={() => {}} color="primary">
-            <Search />
-          </IconButton>
-        </Stack>
+          <Button variant="outline" size="icon">
+            <Search className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {errors.documents?.[index]?.documentId && (
+          <p className="text-xs text-destructive mt-1">
+            {errors.documents[index]?.documentId?.message as string}
+          </p>
+        )}
       </TableCell>
+
+      {/* Fecha emisión */}
       <TableCell>
-        {document ? new Date(document.issueDate).toLocaleDateString() : ""}
+        {document ? new Date(document.issueDate).toLocaleDateString() : "-"}
       </TableCell>
-      <TableCell>{document ? `$${document.total.toFixed(2)}` : ""}</TableCell>
+
+      {/* Valor */}
+      <TableCell>{document ? `$${document.total.toFixed(2)}` : "-"}</TableCell>
+
+      {/* Saldo */}
       <TableCell>{formatCurrency(document?.balance || 0)}</TableCell>
+
+      {/* Valor a cobrar */}
       <TableCell>
         {document ? (
           <Controller
             control={control}
             name={`documents.${index}.amount`}
             render={({ field }) => (
-              <TextField
-                {...field}
+              <Input
                 type="number"
-                size="small"
-                sx={{ width: 120 }}
-                value={field.value || 0}
+                className="w-[120px]"
+                min={0}
+                step={0.01}
+                value={field.value ?? 0}
                 onChange={(e) => {
-                  const inputAmount = parseFloat(e.target.value);
-                  field.onChange(isNaN(inputAmount) ? 0 : inputAmount);
+                  const value = parseFloat(e.target.value);
+                  field.onChange(isNaN(value) ? 0 : value);
                 }}
-                inputProps={{ min: 0, step: 0.01 }}
               />
             )}
           />
         ) : (
-          <Typography variant="body2" color="textSecondary">
-            N/A
-          </Typography>
+          <p className="text-sm text-muted-foreground">N/A</p>
         )}
       </TableCell>
-      <TableCell>
-        <IconButton color="error" onClick={() => remove(index)}>
-          <Delete />
-        </IconButton>
+
+      {/* Acción */}
+      <TableCell className="text-right">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-destructive"
+          onClick={() => remove(index)}
+        >
+          <Delete className="h-4 w-4" />
+        </Button>
       </TableCell>
     </TableRow>
   );

@@ -1,7 +1,7 @@
 "use client";
+
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { Paper, Divider, Alert } from "@mui/material";
 
 import PageContainer from "@/components/container/PageContainer";
 import {
@@ -14,6 +14,10 @@ import { SRIConfiguration } from "@/prisma/generated/prisma";
 import { PersonFilter } from "@/types";
 import TransactionForm from "@/components/transaction/TransactionForm";
 
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+
 export default function TransactionNewPage() {
   const { data: session } = useSession();
 
@@ -25,6 +29,7 @@ export default function TransactionNewPage() {
 
   useEffect(() => {
     if (!session?.user?.tenantId) return;
+
     const fetchData = async () => {
       const filter: PersonFilter = {
         tenantId: session.user.tenantId,
@@ -37,11 +42,13 @@ export default function TransactionNewPage() {
         getEstablishmentsByTenant(session.user.tenantId),
         getTenantSriConfig(session.user.tenantId),
       ]);
+
       if (c.success) setClients(c.data);
       if (p.success) setProducts(p.data);
       if (e.success) setEstablishments(e.data);
       if (s.success) setSriConfig(s.data);
     };
+
     fetchData();
   }, [session?.user?.tenantId]);
 
@@ -50,12 +57,25 @@ export default function TransactionNewPage() {
       title="Nueva Transacción"
       description="Crear una nueva transacción"
     >
-      <Paper sx={{ p: 3, mb: 4 }}>
-        {error && <Alert severity="error">{error}</Alert>}
-        <Divider sx={{ mb: 2 }} />
+      <Card className="mb-6">
+        <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        <TransactionForm setError={setError} />
-      </Paper>
+          <Separator />
+
+          <TransactionForm
+            setError={setError}
+            clients={clients}
+            products={products}
+            establishments={establishments}
+            sriConfig={sriConfig}
+          />
+        </CardContent>
+      </Card>
     </PageContainer>
   );
 }

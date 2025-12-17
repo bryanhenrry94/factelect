@@ -1,24 +1,19 @@
 "use client";
-import {
-  Box,
-  Alert,
-  Stack,
-  TextField,
-  MenuItem,
-  Tabs,
-  Tab,
-  Grid,
-  Typography,
-} from "@mui/material";
+
 import { useEffect, useState } from "react";
-import HeaderActions from "./HeaderActions";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+
+import HeaderActions from "./HeaderActions";
+import DocumentTable from "./DocumentTable";
+
 import useTenant from "@/hooks/useTenant";
 import { AlertService } from "@/lib/alerts";
-import { useRouter } from "next/navigation";
+import { notifyError, notifyInfo } from "@/lib/notifications";
+
 import {
-  ChartOfAccount,
   CreateTransactionInput,
   createTransactionSchema,
 } from "@/lib/validations";
@@ -28,13 +23,21 @@ import {
   getTransaction,
   updateTransaction,
 } from "@/actions";
-import TabPanel from "../ui/TabPanel";
-import DocumentTable from "./DocumentTable";
 import { paymentMethodsIncome } from "@/utils/paymentMethods";
 import { PersonInput } from "@/lib/validations/person";
 import { PersonFilter } from "@/types/person";
-import { useSession } from "next-auth/react";
-import { notifyError, notifyInfo } from "@/lib/notifications";
+
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const initialState: CreateTransactionInput = {
   personId: "",
@@ -53,23 +56,28 @@ const initialState: CreateTransactionInput = {
 
 interface TransactionFormProps {
   transactionId?: string;
+  clients?: any[];
+  products?: any[];
+  establishments?: any[];
+  sriConfig?: any;
   setError?: (error: string | null) => void;
 }
 
 export default function TransactionForm({
   transactionId,
+  clients,
+  products,
+  establishments,
+  sriConfig,
   setError,
 }: TransactionFormProps) {
   const { data: session } = useSession();
-  const [modeEdit, setModeEdit] = useState<boolean>(!!transactionId);
-  const [tabValue, setTabValue] = useState(0);
-  const [persons, setPersons] = useState<PersonInput[]>([]);
-  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
+  const { tenant } = useTenant();
   const router = useRouter();
 
-  const { tenant } = useTenant();
-
-  const handleTabChange = (_: any, newValue: number) => setTabValue(newValue);
+  const [modeEdit, setModeEdit] = useState(!!transactionId);
+  const [persons, setPersons] = useState<PersonInput[]>([]);
+  const [tab, setTab] = useState("documents");
 
   const methods = useForm<CreateTransactionInput>({
     resolver: zodResolver(createTransactionSchema),
@@ -78,272 +86,218 @@ export default function TransactionForm({
 
   const {
     handleSubmit,
-    formState: { errors },
     reset,
     watch,
     setValue,
+    formState: { errors },
   } = methods;
 
-  useEffect(() => {
-    if (!transactionId) return;
+  /* -------------------- Load data -------------------- */
 
-    loadInvoice();
-  }, [transactionId, reset]);
+  useEffect(() => {
+    if (transactionId) loadTransaction();
+  }, [transactionId]);
 
   useEffect(() => {
     loadPersons("CLIENT");
   }, [session?.user?.tenantId]);
 
-  const loadPersons = async (role: string) => {
+  const loadPersons = async (role: "CLIENT" | "SUPPLIER") => {
     if (!session?.user?.tenantId) return;
 
     setValue("personId", "");
 
     const filter: PersonFilter = {
       tenantId: session.user.tenantId,
-      role: role as "CLIENT" | "SUPPLIER",
+      role,
     };
 
-    const response = await getPersonsByTenant(filter);
-
-    if (response.success && response.data) {
-      setPersons(response.data);
-    }
+    const res = await getPersonsByTenant(filter);
+    if (res.success && res.data) setPersons(res.data);
   };
 
-  const handleChangeType = (type: string) => {
-    const role = type === "INCOME" ? "CLIENT" : "SUPPLIER";
-    loadPersons(role);
-  };
-
-  const loadInvoice = async () => {
-    try {
-      if (!transactionId) return;
-
-      const response = await getTransaction(transactionId);
-
-      if (response.success && response.data) {
-        setModeEdit(true);
-
-        const data: CreateTransactionInput = {
-          personId: response.data.personId,
-          type: response.data.type,
-          method: response.data.method,
-          amount: response.data.amount,
-          issueDate: response.data.issueDate,
-          reference: response.data.reference,
-          description: response.data.description,
-          documents: response.data.documents,
-          reconciled: response.data.reconciled ?? false,
-          reconciledAt: response.data.reconciledAt ?? null,
-          bankAccountId: response.data.bankAccountId ?? null,
-          cashBoxId: response.data.cashBoxId ?? null,
-        };
-
-        reset(data);
-      } else {
-        notifyError("Error al cargar la transacción");
-      }
-    } catch (error) {
+  const loadTransaction = async () => {
+    const res = await getTransaction(transactionId!);
+    if (!res.success || !res.data) {
       notifyError("Error al cargar la transacción");
+      return;
     }
+
+    setModeEdit(true);
+    reset({
+      ...res.data,
+      reconciled: res.data.reconciled ?? false,
+      reconciledAt: res.data.reconciledAt ?? null,
+      bankAccountId: res.data.bankAccountId ?? null,
+      cashBoxId: res.data.cashBoxId ?? null,
+    });
   };
+
+  /* -------------------- Submit -------------------- */
 
   const onSubmit = async (data: CreateTransactionInput) => {
-    console.log("Transaction Data:", data);
-
     try {
       setError?.(null);
 
       const confirm = await AlertService.showConfirm(
-        "Estas seguro de continuar?",
+        "¿Estás seguro de continuar?",
         `Esta acción ${modeEdit ? "actualizará" : "creará"} la transacción.`
       );
       if (!confirm) return;
 
-      const response = modeEdit
+      const res = modeEdit
         ? await updateTransaction(transactionId!, data)
         : await createTransaction(data, tenant.id ?? "");
 
-      if (!response) {
-        setError?.("Error al procesar la solicitud");
-        return;
-      }
-
-      if (!response.success) {
-        setError?.(
-          response.error ||
-            `Error al ${modeEdit ? "actualizar" : "crear"} la transacción`
-        );
+      if (!res?.success) {
+        setError?.(res?.error || "Error al procesar la solicitud");
         return;
       }
 
       notifyInfo(
-        `Transacción ${modeEdit ? "actualizada" : "creada"} exitosamente.`
+        `Transacción ${modeEdit ? "actualizada" : "creada"} exitosamente`
       );
 
       if (!modeEdit) reset(initialState);
-      router.push(`/transacciones`);
-    } catch (err) {
-      console.error(err);
+      router.push("/transacciones");
+    } catch {
       setError?.("Error al procesar la solicitud");
     }
   };
 
+  /* -------------------- UI -------------------- */
+
   return (
     <FormProvider {...methods}>
-      <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <HeaderActions modeEdit={modeEdit} />
 
-        {/* {JSON.stringify(errors)} */}
         {Object.keys(errors).length > 0 && (
-          <Stack spacing={1} sx={{ mb: 2 }}>
-            {Object.entries(errors).map(([field, error]: [string, any]) => (
-              <Alert key={field} severity="error">
-                <strong>{field}:</strong> {error.message}
-              </Alert>
-            ))}
-          </Stack>
+          <Alert variant="destructive">
+            <AlertDescription>
+              Revisa los campos obligatorios del formulario
+            </AlertDescription>
+          </Alert>
         )}
 
-        {/* Form Fields Here */}
-        <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Box sx={{ mt: 2 }}>
-              <Controller
-                name="type"
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Tipo de Transacción"
-                    select
-                    fullWidth
-                    margin="dense"
-                    value={field.value || ""}
-                    onChange={(e) => {
-                      field.onChange(e);
-                      handleChangeType(e.target.value);
-                    }}
-                    size="small"
-                  >
-                    <MenuItem value="INCOME">Ingreso</MenuItem>
-                    <MenuItem value="EXPENSE">Egreso</MenuItem>
-                  </TextField>
-                )}
-              />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Tipo */}
+          <Controller
+            name="type"
+            render={({ field }) => (
+              <Select
+                value={field.value}
+                onValueChange={(v) => {
+                  field.onChange(v);
+                  loadPersons(v === "INCOME" ? "CLIENT" : "SUPPLIER");
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo de Transacción" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="INCOME">Ingreso</SelectItem>
+                  <SelectItem value="EXPENSE">Egreso</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
 
-              <Controller
-                name="method"
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Método de Pago"
-                    select
-                    fullWidth
-                    margin="dense"
-                    value={field.value || ""}
-                    size="small"
-                  >
-                    {paymentMethodsIncome
-                      .filter((method) => method.type.includes(watch("type")))
-                      .map((method) => (
-                        <MenuItem key={method.value} value={method.value}>
-                          {method.label}
-                        </MenuItem>
-                      ))}
-                  </TextField>
-                )}
-              />
-
-              <Controller
-                name="issueDate"
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Fecha de Emisión"
-                    type="date"
-                    fullWidth
-                    margin="dense"
-                    InputLabelProps={{
-                      shrink: true,
-                    }}
-                    value={
-                      field.value
-                        ? new Date(field.value).toISOString().split("T")[0]
-                        : ""
-                    }
-                    size="small"
-                  />
-                )}
-              />
-
-              <Controller
-                name="personId"
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Persona"
-                    fullWidth
-                    margin="dense"
-                    value={field.value || ""}
-                    size="small"
-                    select
-                  >
-                    {persons.map((person) => (
-                      <MenuItem key={person.id} value={person.id}>
-                        {`${person.firstName} ${person.lastName}`}
-                      </MenuItem>
+          {/* Método */}
+          <Controller
+            name="method"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Método de Pago" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paymentMethodsIncome
+                    .filter((m) => m.type.includes(watch("type")))
+                    .map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
                     ))}
-                  </TextField>
-                )}
-              />
+                </SelectContent>
+              </Select>
+            )}
+          />
 
-              <Controller
-                name="reference"
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Referencia"
-                    fullWidth
-                    margin="dense"
-                    value={field.value || ""}
-                    size="small"
-                  />
-                )}
+          {/* Fecha */}
+          <Controller
+            name="issueDate"
+            render={({ field }) => (
+              <Input
+                type="date"
+                value={
+                  field.value
+                    ? new Date(field.value).toISOString().split("T")[0]
+                    : ""
+                }
+                onChange={(e) => field.onChange(e.target.value)}
               />
+            )}
+          />
 
-              <Controller
-                name="description"
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Descripción"
-                    fullWidth
-                    margin="dense"
-                    multiline
-                    rows={4}
-                    value={field.value || ""}
-                    size="small"
-                  />
-                )}
+          {/* Persona */}
+          <Controller
+            name="personId"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Persona" />
+                </SelectTrigger>
+                <SelectContent>
+                  {persons.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.firstName} {p.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+
+          <Controller
+            name="reference"
+            render={({ field }) => (
+              <Input
+                placeholder="Referencia"
+                {...field}
+                value={field.value || ""}
               />
+            )}
+          />
 
-              {/* Add other fields similarly */}
-            </Box>
-          </Grid>
-        </Grid>
-        <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 2 }}>
-          <Tab label="Documentos" />
+          <Controller
+            name="description"
+            render={({ field }) => (
+              <Textarea
+                placeholder="Descripción"
+                {...field}
+                value={field.value || ""}
+              />
+            )}
+          />
+        </div>
+
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList>
+            <TabsTrigger value="documents">Documentos</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="documents">
+            {watch("type") === "INCOME" ? (
+              <DocumentTable />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No hay documentos para mostrar.
+              </p>
+            )}
+          </TabsContent>
         </Tabs>
-
-        <TabPanel value={tabValue} index={0}>
-          {watch("type") === "INCOME" ? (
-            <DocumentTable />
-          ) : (
-            <Typography>No hay documentos para mostrar.</Typography>
-          )}
-        </TabPanel>
-      </Box>
+      </form>
     </FormProvider>
   );
 }

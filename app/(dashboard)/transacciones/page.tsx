@@ -1,62 +1,54 @@
 "use client";
 
-import PageContainer from "@/components/container/PageContainer";
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  IconButton,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-  TableContainer,
-  Paper,
-  CircularProgress,
-  Table,
-} from "@mui/material";
-import { Delete, Edit, File, Plus } from "lucide-react";
-import React from "react";
+import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { Plus, Edit, Trash2, File } from "lucide-react";
+
+import PageContainer from "@/components/container/PageContainer";
 import { getTransactions } from "@/actions";
 import { TransactionInput } from "@/lib/validations";
 import { formatDate } from "@/utils/formatters";
 import { getTransactionTypeLabel } from "@/utils/transaction";
 import { getPaymentMethodLabel } from "@/utils/paymentMethods";
 
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+
 const TransactionsPage = () => {
   const { data: session } = useSession();
+  const router = useRouter();
+
   const [transactions, setTransactions] = React.useState<TransactionInput[]>(
     []
   );
+  const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState<boolean>(false);
-  const router = useRouter();
 
   const handleAdd = () => router.push("/transacciones/nueva");
-
   const handleEdit = (t: TransactionInput) => {};
-
   const handleDelete = (id: string) => {};
 
   const fetchTransactions = async () => {
     try {
       if (!session?.user?.tenantId) return;
       setLoading(true);
-
       const res = await getTransactions(session.user.tenantId);
 
-      if (res.success && res.data) {
-        setTransactions(res.data);
-      } else {
-        setTransactions([]);
-      }
-    } catch (err) {
+      if (res.success && res.data) setTransactions(res.data);
+      else setTransactions([]);
+    } catch {
       setError("No se pudieron obtener las transacciones.");
     } finally {
       setLoading(false);
@@ -72,117 +64,89 @@ const TransactionsPage = () => {
       title="Transacciones"
       description="Administra las transacciones de tu negocio"
     >
-      {/* Header actions */}
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
-        }}
-      >
-        <TextField
-          label="Buscar transacciones"
-          variant="outlined"
-          size="small"
-          fullWidth={false}
-        />
+      {/* Header */}
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Input placeholder="Buscar transacciones" className="sm:max-w-sm" />
 
-        <Button variant="contained" startIcon={<Plus />} onClick={handleAdd}>
+        <Button onClick={handleAdd}>
+          <Plus className="mr-2 h-4 w-4" />
           Nuevo
         </Button>
-      </Box>
+      </div>
 
-      {/* Main content */}
-      <Card sx={{ mt: 2 }}>
-        <CardContent>
+      {/* Content */}
+      <Card>
+        <CardContent className="pt-6">
           {loading ? (
-            <Box py={6} textAlign="center">
-              <CircularProgress />
-              <Typography variant="body2" mt={2} color="text.secondary">
-                Cargando transacciones...
-              </Typography>
-            </Box>
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
           ) : transactions.length === 0 ? (
-            <Box textAlign="center" py={6}>
-              <File size={42} />
-              <Typography variant="h6" mt={2}>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <File className="h-10 w-10 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">
                 No hay transacciones registradas
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
+              </h3>
+              <p className="text-sm text-muted-foreground">
                 Agrega tu primera transacción para comenzar
-              </Typography>
-            </Box>
+              </p>
+            </div>
           ) : (
-            <TableContainer component={Paper} elevation={0}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    {[
-                      "Tipo",
-                      "Método",
-                      "Persona",
-                      "Fecha",
-                      "Referencia",
-                      "Descripción",
-                      "Acciones",
-                    ].map((label) => (
-                      <TableCell key={label} sx={{ fontWeight: 600 }}>
-                        {label}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-
-                <TableBody>
-                  {transactions.map((t) => (
-                    <TableRow
-                      key={t.id}
-                      hover
-                      sx={{
-                        "&:last-child td": { border: 0 },
-                        "&:nth-of-type(odd)": {
-                          backgroundColor: "rgba(0,0,0,0.015)",
-                        },
-                      }}
-                    >
-                      <TableCell>{getTransactionTypeLabel(t.type)}</TableCell>
-                      <TableCell>{getPaymentMethodLabel(t.method)}</TableCell>
-                      <TableCell>{t.personId}</TableCell>
-                      <TableCell>
-                        {formatDate(t.issueDate.toString())}
-                      </TableCell>
-                      <TableCell>{t.reference || "-"}</TableCell>
-                      <TableCell>{t.description || "-"}</TableCell>
-
-                      <TableCell align="right">
-                        <IconButton
-                          color="primary"
-                          onClick={() => handleEdit(t)}
-                        >
-                          <Edit size={18} />
-                        </IconButton>
-
-                        <IconButton
-                          color="error"
-                          onClick={() => handleDelete(t.id || "")}
-                        >
-                          <Delete size={18} />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {[
+                    "Tipo",
+                    "Método",
+                    "Persona",
+                    "Fecha",
+                    "Referencia",
+                    "Descripción",
+                    "Acciones",
+                  ].map((h) => (
+                    <TableHead key={h}>{h}</TableHead>
                   ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {transactions.map((t) => (
+                  <TableRow key={t.id}>
+                    <TableCell>{getTransactionTypeLabel(t.type)}</TableCell>
+                    <TableCell>{getPaymentMethodLabel(t.method)}</TableCell>
+                    <TableCell>{t.personId}</TableCell>
+                    <TableCell>{formatDate(t.issueDate.toString())}</TableCell>
+                    <TableCell>{t.reference || "-"}</TableCell>
+                    <TableCell>{t.description || "-"}</TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleEdit(t)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleDelete(t.id || "")}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
 
       {error && (
-        <Alert severity="error" sx={{ mt: 3 }}>
-          {error}
+        <Alert variant="destructive" className="mt-4">
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
     </PageContainer>

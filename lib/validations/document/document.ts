@@ -1,14 +1,16 @@
 import { z } from "zod";
 import { createDocumentItemSchema } from "./document-item";
 import { createDocumentFiscalInfoSchema } from "./document-fiscal-info";
-import { DocumentFiscalInfo } from "@/components/document/DocumentFiscalInfo";
 import { createDocumentPaymentSchema } from "./document-payment";
 
 export const entityTypeEnum = z.enum(["CUSTOMER", "SUPPLIER"]);
 export const documentTypeEnum = z.enum([
   "INVOICE",
-  "CREDIT_NOTE",
-  "DEBIT_NOTE",
+  "BILL",
+  "RECEIPT",
+  "PAYMENT",
+  "COLLECTION",
+  "OTHER",
 ]);
 
 export const documentStatusEnum = z.enum(["DRAFT", "CONFIRMED", "CANCELED"]);

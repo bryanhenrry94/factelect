@@ -1,7 +1,8 @@
 "use client";
-import { Box, Button, Stack } from "@mui/material";
+
 import { Save } from "lucide-react";
 import { useFormContext } from "react-hook-form";
+import { Button } from "@/components/ui/button";
 
 interface HeaderActionsProps {
   modeEdit?: boolean;
@@ -13,22 +14,17 @@ export default function HeaderActions({ modeEdit }: HeaderActionsProps) {
     watch,
   } = useFormContext();
 
+  // Se mantiene por compatibilidad si luego lo usas
   const total = watch("total");
 
   return (
-    <Box display="flex" justifyContent="flex-end" gap={2} mb={2}>
-      <Stack direction="row" spacing={2}>
-        <Button
-          type="submit"
-          variant="contained"
-          color="primary"
-          startIcon={<Save />}
-          disabled={isSubmitting}
-          loading={isSubmitting}
-        >
+    <div className="flex justify-end mb-4">
+      <div className="flex gap-2">
+        <Button type="submit" disabled={isSubmitting}>
+          <Save className="mr-2 h-4 w-4" />
           {modeEdit ? "Actualizar" : "Guardar"}
         </Button>
-      </Stack>
-    </Box>
+      </div>
+    </div>
   );
 }
