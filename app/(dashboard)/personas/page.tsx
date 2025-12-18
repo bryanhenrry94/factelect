@@ -43,9 +43,6 @@ export default function PersonsPage() {
   const { data: session } = useSession();
 
   const [persons, setPersons] = useState<PersonInput[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingPerson, setEditingPerson] = useState<PersonInput | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState(params.get("search") ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -120,18 +117,11 @@ export default function PersonsPage() {
   }, [loadPersons]);
 
   const handleAdd = () => {
-    setEditingPerson(null);
-    setDialogOpen(true);
+    router.push("/personas/nuevo");
   };
 
   const handleEdit = (person: PersonInput) => {
-    setEditingPerson(person);
-    setDialogOpen(true);
-  };
-
-  const handleClose = () => {
-    setDialogOpen(false);
-    setEditingPerson(null);
+    router.push(`/personas/${person.id}/editar`);
   };
 
   const handleDelete = async (personId: string) => {
@@ -193,16 +183,6 @@ export default function PersonsPage() {
           onClick={() => updateParam("tipo", "proveedor")}
         />
       </div>
-
-      {/* DIALOGO */}
-      <PersonFormDialog
-        open={dialogOpen}
-        onClose={handleClose}
-        onSuccess={loadPersons}
-        editingPerson={editingPerson}
-        tenantId={session?.user?.tenantId ?? ""}
-        setError={setError}
-      />
 
       {/* TABLA */}
       <Card className="mt-4">
@@ -278,13 +258,6 @@ export default function PersonsPage() {
           )}
         </CardContent>
       </Card>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 }

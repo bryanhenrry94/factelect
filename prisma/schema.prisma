@@ -552,6 +552,9 @@ model Transaction {
 
   tenant                                                    Tenant                @relation(fields: [tenantId], references: [id])
 
+  cashMovements                                             CashMovement[]
+  bankMovements                                             BankMovement[]
+
   @@map("transaction")
 }
 
@@ -610,6 +613,9 @@ model BankMovement {
 
   journalEntryId   String?              @map("journal_entry_id") @unique
   journalEntry     JournalEntry?        @relation(fields: [journalEntryId], references: [id])
+
+  transactionId    String?              @map("transaction_id")
+  transaction      Transaction?         @relation(fields: [transactionId], references: [id])
 
   createdAt        DateTime             @map("created_at")       @default(now())
 
@@ -716,11 +722,16 @@ model CashMovement {
   cashSessionId String               @map("cash_session_id")
   cashSession   CashSession          @relation(fields: [cashSessionId], references: [id])
 
+  transactionId String?              @map("transaction_id")
+  transaction   Transaction?         @relation(fields: [transactionId], references: [id])
+
   type          CashMovementType
   category      CashMovementCategory                         @default(OTHER)
   amount        Float
   description   String?
   reference     String?
+  issueDate     DateTime             @map("issue_date")      @default(now())
+
   createdAt     DateTime             @map("created_at")      @default(now())
 
   accountId     String?

@@ -52,6 +52,38 @@ export default function InvoiceItemsTable({
     }
   };
 
+  /** ------------------------------------------------
+   *  Watch completo de items (UN SOLO HOOK)
+   * ------------------------------------------------ */
+  const items = watch("items");
+
+  /** ------------------------------------------------
+   *  Cálculo global (UN SOLO useEffect)
+   * ------------------------------------------------ */
+  useEffect(() => {
+    if (!items?.length) return;
+
+    items.forEach((item: any, index: number) => {
+      const quantity = item?.quantity ?? 0;
+      const unitPrice = item?.unitPrice ?? 0;
+      const discountRate = item?.discountRate ?? 0;
+      const tax = item?.tax || "IVA_0";
+
+      const taxRate = taxOptions.find((t) => t.value === tax)?.rate ?? 0;
+
+      const subtotal = quantity * unitPrice;
+      const discountAmount = (subtotal * discountRate) / 100;
+      const subtotalAfterDiscount = subtotal - discountAmount;
+      const taxAmount = (subtotalAfterDiscount * taxRate) / 100;
+      const total = subtotalAfterDiscount + taxAmount;
+
+      setValue(`items.${index}.discountAmount`, discountAmount);
+      setValue(`items.${index}.taxAmount`, taxAmount);
+      setValue(`items.${index}.subtotal`, subtotalAfterDiscount);
+      setValue(`items.${index}.total`, total);
+    });
+  }, [items, taxOptions, setValue]);
+
   return (
     <div className="space-y-4">
       {/* {JSON.stringify(watch("items"))} */}
@@ -73,40 +105,19 @@ export default function InvoiceItemsTable({
 
           <TableBody>
             {fields.map((field, index) => {
-              const quantity = watch(`items.${index}.quantity`) ?? 0;
-              const unitPrice = watch(`items.${index}.unitPrice`) ?? 0;
-              const discountRate = watch(`items.${index}.discountRate`) ?? 0;
-              const tax = watch(`items.${index}.tax`) || "IVA_0";
+              const quantity = items?.[index]?.quantity ?? 0;
+              const unitPrice = items?.[index]?.unitPrice ?? 0;
+              const discountRate = items?.[index]?.discountRate ?? 0;
+              const tax = items?.[index]?.tax || "IVA_0";
 
               const taxRate =
-                taxOptions.find((o) => o.value === tax)?.rate ?? 0;
+                taxOptions.find((t) => t.value === tax)?.rate ?? 0;
 
               const subtotal = quantity * unitPrice;
               const discountAmount = (subtotal * discountRate) / 100;
               const subtotalAfterDiscount = subtotal - discountAmount;
-              const taxAmount = (subtotalAfterDiscount * taxRate) / 100;
-              const totalWithTax = subtotalAfterDiscount + taxAmount;
-
-              useEffect(() => {
-                setValue(
-                  `items.${index}.taxAmount`,
-                  subtotalAfterDiscount * taxRate
-                );
-                setValue(`items.${index}.discountAmount`, discountAmount);
-                setValue(`items.${index}.subtotal`, subtotalAfterDiscount);
-                setValue(`items.${index}.total`, totalWithTax);
-              }, [
-                quantity,
-                unitPrice,
-                discountRate,
-                tax,
-                subtotalAfterDiscount,
-                discountAmount,
-                totalWithTax,
-                taxRate,
-                index,
-                setValue,
-              ]);
+              const total =
+                subtotalAfterDiscount + (subtotalAfterDiscount * taxRate) / 100;
 
               return (
                 <TableRow key={field.id} className="hover:bg-muted/30">
@@ -266,7 +277,7 @@ export default function InvoiceItemsTable({
 
                   {/* Total */}
                   <TableCell className="text-right font-semibold">
-                    ${totalWithTax.toFixed(2)}
+                    ${total.toFixed(2)}
                   </TableCell>
 
                   {/* Acciones */}

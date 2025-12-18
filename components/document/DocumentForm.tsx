@@ -227,6 +227,15 @@ export default function DocumentForm({
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
+            {errors && Object.keys(errors).length > 0 && (
+              <Alert variant="destructive">
+                <AlertTitle>Errores en el formulario</AlertTitle>
+                <AlertDescription>
+                  Por favor revise los campos marcados en rojo.
+                  {JSON.stringify(errors)}
+                </AlertDescription>
+              </Alert>
+            )}
             <DocumentInfo modeEdit={modeEdit} persons={persons} />
           </CardContent>
         </Card>

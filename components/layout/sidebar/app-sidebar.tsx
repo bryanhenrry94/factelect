@@ -6,11 +6,9 @@ import {
   CreditCard,
   PiggyBank,
   Command,
-  Frame,
   GalleryVerticalEnd,
   Map,
   PieChart,
-  Settings2,
   SquareTerminal,
   Banknote,
   Calculator,
@@ -18,14 +16,12 @@ import {
   BookOpen,
   BarChart3,
   User,
-  LayoutDashboard,
   Building,
 } from "lucide-react";
 
-import { NavMain } from "@/components/nav-main";
-import { NavProjects } from "@/components/nav-projects";
-import { NavUser } from "@/components/nav-user";
-import { TeamSwitcher } from "@/components/team-switcher";
+import { NavMain } from "@/components/layout/sidebar/nav-main";
+import { NavProjects } from "@/components/layout/sidebar/nav-projects";
+import { NavUser } from "@/components/layout/sidebar/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -89,10 +85,6 @@ const data = {
           url: "/documentos",
         },
         {
-          title: "Cobros",
-          url: "/transacciones",
-        },
-        {
           title: "Estado de Cuenta",
           url: "/estado-cuenta-clientes",
         },
@@ -112,10 +104,6 @@ const data = {
           url: "/documentos",
         },
         {
-          title: "Pagos",
-          url: "/transacciones",
-        },
-        {
           title: "Estado de Cuenta",
           url: "/estado-cuenta-proveedores",
         },
@@ -123,6 +111,16 @@ const data = {
           title: "Ordenes de Compra",
           url: "/ordenes-compra",
         },
+      ],
+    },
+    {
+      title: "Transacciones",
+      url: "/transacciones",
+      icon: CreditCard,
+      items: [
+        { title: "Todas las Transacciones", url: "/transacciones" },
+        { title: "Cobros", url: "/transacciones?tipo=cobro" },
+        { title: "Pagos", url: "/transacciones?tipo=pago" },
       ],
     },
     {

@@ -95,7 +95,7 @@ export const PaymentMethodsTable = () => {
                         type="number"
                         className="text-right"
                         value={field.value ?? 0}
-                        onChange={field.onChange}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     )}
                   />

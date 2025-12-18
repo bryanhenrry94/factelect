@@ -49,6 +49,7 @@ import {
 } from "../ui/field";
 import { CashBox } from "@/lib/validations/cash/cash_box";
 import { BankAccount } from "@/lib/validations/bank/bank_account";
+import { ConfirmDialog } from "../ConfirmDialog";
 
 const initialState: CreateTransactionInput = {
   personId: "",
@@ -154,7 +155,7 @@ export default function TransactionForm({
     try {
       setError?.(null);
 
-      const confirm = await AlertService.showConfirm(
+      const confirm = await ConfirmDialog.confirm(
         "¿Estás seguro de continuar?",
         `Esta acción ${modeEdit ? "actualizará" : "creará"} la transacción.`
       );
@@ -223,14 +224,14 @@ export default function TransactionForm({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="INCOME">Ingreso</SelectItem>
-                      <SelectItem value="EXPENSE">Egreso</SelectItem>
+                      <SelectItem value="INCOME">Cobro</SelectItem>
+                      <SelectItem value="EXPENSE">Pago</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               />
               <FieldDescription>
-                Define si la transacción es un ingreso o egreso
+                Define si la transacción es un cobro o pago.
               </FieldDescription>
             </Field>
 

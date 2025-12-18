@@ -100,6 +100,21 @@ export const createDocument = async (
       }
     }
 
+    // Valida que el detalle del documento no tenga campos vacios
+    for (const item of data.items) {
+      if (
+        !item.warehouseId ||
+        !item.productId ||
+        item.quantity <= 0 ||
+        item.unitPrice < 0
+      ) {
+        return {
+          success: false,
+          error: "El detalle del documento contiene campos vacíos o inválidos",
+        };
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       // 1. Crear documento
       const newDocument = await tx.document.create({

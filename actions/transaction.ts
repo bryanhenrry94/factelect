@@ -13,43 +13,122 @@ export const createTransaction = async (
   try {
     const parsedData = createTransactionSchema.parse(data);
 
-    const transaction = await prisma.transaction.create({
-      data: {
-        personId: parsedData.personId,
-        type: parsedData.type,
-        method: parsedData.method,
-        amount: parsedData.amount,
-        issueDate: parsedData.issueDate,
-        reference: parsedData.reference ?? null,
-        description: parsedData.description ?? null,
-        // documents: parsedData.documents,
-        reconciled: parsedData.reconciled ?? false,
-        reconciledAt: parsedData.reconciledAt ?? null,
-        bankAccountId: parsedData.bankAccountId ?? null,
-        cashBoxId: parsedData.cashBoxId ?? null,
-        tenantId,
-      },
-    });
+    const result = await prisma.$transaction(async (tx) => {
+      /* -------------------------------------------------
+       * 1. Crear Transacción
+       * ------------------------------------------------- */
+      const transaction = await tx.transaction.create({
+        data: {
+          personId: parsedData.personId,
+          type: parsedData.type,
+          method: parsedData.method,
+          amount: parsedData.amount,
+          issueDate: parsedData.issueDate,
+          reference: parsedData.reference ?? null,
+          description: parsedData.description ?? null,
+          reconciled: parsedData.reconciled ?? false,
+          reconciledAt: parsedData.reconciledAt ?? null,
+          bankAccountId: parsedData.bankAccountId ?? null,
+          cashBoxId: parsedData.cashBoxId ?? null,
+          tenantId,
+        },
+      });
 
-    if (parsedData.documents && parsedData.documents.length > 0) {
-      for (const doc of parsedData.documents) {
-        await prisma.transactionDocument.create({
+      /* -------------------------------------------------
+       * 2. Aplicar pagos a documentos
+       * ------------------------------------------------- */
+      if (parsedData.documents?.length) {
+        for (const doc of parsedData.documents) {
+          // Relación transacción-documento
+          await tx.transactionDocument.create({
+            data: {
+              transactionId: transaction.id,
+              documentId: doc.documentId,
+              amount: doc.amount,
+              tenantId,
+            },
+          });
+
+          // Documento actual
+          const document = await tx.document.findUnique({
+            where: { id: doc.documentId },
+            select: {
+              total: true,
+              paidAmount: true,
+            },
+          });
+
+          if (!document) {
+            throw new Error("Documento no encontrado");
+          }
+
+          const newPaidAmount =
+            Number(document.paidAmount || 0) + Number(doc.amount);
+
+          const newBalance = Number(document.total) - newPaidAmount;
+
+          await tx.document.update({
+            where: { id: doc.documentId },
+            data: {
+              paidAmount: newPaidAmount,
+              balance: Math.max(newBalance, 0),
+            },
+          });
+        }
+      }
+
+      /* -------------------------------------------------
+       * 3. Generar movimiento Caja / Banco
+       * ------------------------------------------------- */
+      const isIncome = parsedData.type === "INCOME";
+      const isExpense = parsedData.type === "EXPENSE";
+
+      if (parsedData.method === "CASH") {
+        if (!parsedData.cashBoxId) {
+          throw new Error("Caja no especificada");
+        }
+
+        await tx.cashMovement.create({
           data: {
+            cashSessionId: parsedData.cashBoxId,
             transactionId: transaction.id,
-            documentId: doc.documentId,
-            amount: doc.amount,
+            type: isIncome ? "IN" : "OUT",
+            amount: parsedData.amount,
+            description: parsedData.description ?? "",
+            issueDate: parsedData.issueDate,
             tenantId,
           },
         });
       }
-    }
 
-    const transactionFormatted: TransactionInput = {
-      ...transaction,
-      documents: parsedData.documents || [],
+      if (parsedData.method === "TRANSFER") {
+        if (!parsedData.bankAccountId) {
+          throw new Error("Cuenta bancaria no especificada");
+        }
+
+        const bankMov = await tx.bankMovement.create({
+          data: {
+            bankAccountId: parsedData.bankAccountId,
+            transactionId: transaction.id,
+            type: isIncome ? "CREDIT" : "DEBIT",
+            amount: parsedData.amount,
+            description: parsedData.description ?? "",
+            date: parsedData.issueDate,
+            tenantId,
+          },
+        });
+      }
+
+      return transaction;
+    });
+
+    return {
+      success: true,
+      data: {
+        ...result,
+        documents: parsedData.documents || [],
+      },
     };
-
-    return { success: true, data: transactionFormatted };
   } catch (error) {
     console.error("Error creating transaction:", error);
     return { success: false, error: "Error creating transaction" };
