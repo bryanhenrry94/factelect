@@ -38,6 +38,17 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+  FieldTitle,
+} from "../ui/field";
+import { CashBox } from "@/lib/validations/cash/cash_box";
+import { BankAccount } from "@/lib/validations/bank/bank_account";
 
 const initialState: CreateTransactionInput = {
   personId: "",
@@ -61,6 +72,8 @@ interface TransactionFormProps {
   establishments?: any[];
   sriConfig?: any;
   setError?: (error: string | null) => void;
+  cashBoxes?: CashBox[];
+  bankAccounts?: BankAccount[];
 }
 
 export default function TransactionForm({
@@ -70,6 +83,8 @@ export default function TransactionForm({
   establishments,
   sriConfig,
   setError,
+  cashBoxes,
+  bankAccounts,
 }: TransactionFormProps) {
   const { data: session } = useSession();
   const { tenant } = useTenant();
@@ -169,9 +184,16 @@ export default function TransactionForm({
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <HeaderActions modeEdit={modeEdit} />
+      <FieldSet>
+        <FieldLegend>
+          {modeEdit ? "Editar Transacción" : "Nueva Transacción"}
+        </FieldLegend>
+        <FieldDescription>
+          Completa la información general y luego asocia los documentos.
+        </FieldDescription>
+      </FieldSet>
 
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         {Object.keys(errors).length > 0 && (
           <Alert variant="destructive">
             <AlertDescription>
@@ -180,123 +202,214 @@ export default function TransactionForm({
           </Alert>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Tipo */}
-          <Controller
-            name="type"
-            render={({ field }) => (
-              <Select
-                value={field.value}
-                onValueChange={(v) => {
-                  field.onChange(v);
-                  loadPersons(v === "INCOME" ? "CLIENT" : "SUPPLIER");
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Tipo de Transacción" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="INCOME">Ingreso</SelectItem>
-                  <SelectItem value="EXPENSE">Egreso</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          />
+        <FieldGroup>
+          <FieldTitle>Información general</FieldTitle>
 
-          {/* Método */}
-          <Controller
-            name="method"
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Método de Pago" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentMethodsIncome
-                    .filter((m) => m.type.includes(watch("type")))
-                    .map((m) => (
-                      <SelectItem key={m.value} value={m.value}>
-                        {m.label}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-
-          {/* Fecha */}
-          <Controller
-            name="issueDate"
-            render={({ field }) => (
-              <Input
-                type="date"
-                value={
-                  field.value
-                    ? new Date(field.value).toISOString().split("T")[0]
-                    : ""
-                }
-                onChange={(e) => field.onChange(e.target.value)}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Tipo */}
+            <Field>
+              <FieldLabel>Tipo</FieldLabel>
+              <Controller
+                name="type"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={(v) => {
+                      field.onChange(v);
+                      loadPersons(v === "INCOME" ? "CLIENT" : "SUPPLIER");
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="INCOME">Ingreso</SelectItem>
+                      <SelectItem value="EXPENSE">Egreso</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               />
-            )}
-          />
+              <FieldDescription>
+                Define si la transacción es un ingreso o egreso
+              </FieldDescription>
+            </Field>
 
-          {/* Persona */}
-          <Controller
-            name="personId"
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Persona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {persons.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.firstName} {p.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-
-          <Controller
-            name="reference"
-            render={({ field }) => (
-              <Input
-                placeholder="Referencia"
-                {...field}
-                value={field.value || ""}
+            {/* Método */}
+            <Field>
+              <FieldLabel>Método</FieldLabel>
+              <Controller
+                name="method"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {paymentMethodsIncome
+                        .filter((m) => m.type.includes(watch("type")))
+                        .map((m) => (
+                          <SelectItem key={m.value} value={m.value}>
+                            {m.label}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                )}
               />
-            )}
-          />
+            </Field>
 
-          <Controller
-            name="description"
-            render={({ field }) => (
-              <Textarea
-                placeholder="Descripción"
-                {...field}
-                value={field.value || ""}
-              />
+            {watch("method") === "CASH" && (
+              <Field>
+                <FieldLabel>Caja</FieldLabel>
+                <Controller
+                  name="cashBoxId"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una caja" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cashBoxes?.map((cb: CashBox) => (
+                          <SelectItem key={cb.id} value={cb.id}>
+                            {cb.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
             )}
-          />
-        </div>
+
+            {watch("method") === "TRANSFER" && (
+              <Field>
+                <FieldLabel>Cuenta bancaria</FieldLabel>
+                <Controller
+                  name="bankAccountId"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una cuenta bancaria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {bankAccounts?.map((ba: BankAccount) => (
+                          <SelectItem key={ba.id} value={ba.id}>
+                            {ba.bankName} - {ba.accountNumber}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+            )}
+
+            {/* Fecha */}
+            <Field>
+              <FieldLabel>Fecha</FieldLabel>
+              <Controller
+                name="issueDate"
+                render={({ field }) => (
+                  <Input
+                    type="date"
+                    value={
+                      field.value
+                        ? new Date(field.value).toISOString().split("T")[0]
+                        : ""
+                    }
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                )}
+              />
+            </Field>
+          </div>
+        </FieldGroup>
+
+        <FieldGroup>
+          <FieldTitle>Contraparte</FieldTitle>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field>
+              <FieldLabel>
+                {watch("type") === "INCOME" ? "Cliente" : "Proveedor"}
+              </FieldLabel>
+              <Controller
+                name="personId"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una persona" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {persons.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.firstName} {p.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </Field>
+
+            <Field>
+              <FieldLabel>Referencia</FieldLabel>
+              <Controller
+                name="reference"
+                render={({ field }) => (
+                  <Input
+                    placeholder="Ej: Depósito, transferencia, comprobante #123"
+                    {...field}
+                    value={field.value || ""}
+                  />
+                )}
+              />
+            </Field>
+          </div>
+
+          <Field>
+            <FieldLabel>Descripción</FieldLabel>
+            <Controller
+              name="description"
+              render={({ field }) => (
+                <Textarea
+                  rows={3}
+                  placeholder="Notas adicionales sobre la transacción"
+                  {...field}
+                  value={field.value || ""}
+                />
+              )}
+            />
+          </Field>
+        </FieldGroup>
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
-            <TabsTrigger value="documents">Documentos</TabsTrigger>
+            <TabsTrigger value="documents">Documentos asociados</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="documents">
+          <TabsContent value="documents" className="pt-4">
             {watch("type") === "INCOME" ? (
               <DocumentTable />
             ) : (
-              <p className="text-sm text-muted-foreground">
-                No hay documentos para mostrar.
-              </p>
+              <Alert>
+                <AlertDescription>
+                  Los egresos no requieren documentos asociados.
+                </AlertDescription>
+              </Alert>
             )}
           </TabsContent>
         </Tabs>
+
+        <div className="sticky bottom-0 bg-background border-t pt-4">
+          <HeaderActions modeEdit={modeEdit} />
+        </div>
       </form>
     </FormProvider>
   );
