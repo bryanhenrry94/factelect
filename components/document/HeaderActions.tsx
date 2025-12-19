@@ -1,12 +1,11 @@
 "use client";
 
-import { File, Save, Send } from "lucide-react";
+import { DollarSign, File, Save, Send } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import StatusLabel from "./StatusLabel";
 import { CreateDocument } from "@/lib/validations";
-import { cn } from "@/lib/utils";
 
 interface HeaderActionsProps {
   modeEdit?: boolean;
@@ -14,6 +13,7 @@ interface HeaderActionsProps {
   sendingSRI?: boolean;
   handleDownloadXML?: () => void;
   handleDownloadPDF?: () => void;
+  handlePaymentRegister?: () => void;
 }
 
 export default function HeaderActions({
@@ -22,6 +22,7 @@ export default function HeaderActions({
   sendingSRI,
   handleDownloadXML,
   handleDownloadPDF,
+  handlePaymentRegister,
 }: HeaderActionsProps) {
   const {
     formState: { isSubmitting },
@@ -52,31 +53,36 @@ export default function HeaderActions({
         </Button>
 
         {/* SEND TO SRI */}
-        {modeEdit && (
-          <Button
-            variant="outline"
-            onClick={handleSendToSRI}
-            disabled={sendingSRI || !isDraft || disableByTotal}
-          >
-            <Send className="mr-2 h-4 w-4" />
-            {sendingSRI ? "Enviando..." : "Enviar al SRI"}
-          </Button>
-        )}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleSendToSRI}
+          disabled={sendingSRI || !isDraft || disableByTotal}
+        >
+          <Send className="mr-2 h-4 w-4" />
+          {sendingSRI ? "Enviando..." : "Enviar al SRI"}
+        </Button>
+
+        {/* REGISTER PAYMENT */}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => handlePaymentRegister!()}
+        >
+          <DollarSign />
+          Registrar Pago
+        </Button>
 
         {/* DOWNLOADS */}
-        {modeEdit && isConfirmed && (
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={handleDownloadXML}>
-              <File className="mr-2 h-4 w-4" />
-              XML
-            </Button>
+        <Button type="button" variant="secondary" onClick={handleDownloadXML}>
+          <File className="mr-2 h-4 w-4" />
+          XML
+        </Button>
 
-            <Button variant="secondary" onClick={handleDownloadPDF}>
-              <File className="mr-2 h-4 w-4" />
-              Ride
-            </Button>
-          </div>
-        )}
+        <Button type="button" variant="secondary" onClick={handleDownloadPDF}>
+          <File className="mr-2 h-4 w-4" />
+          Ride
+        </Button>
       </div>
     </div>
   );

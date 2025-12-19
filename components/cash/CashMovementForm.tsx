@@ -42,7 +42,7 @@ const initialState: CreateCashMovement = {
   category: "OTHER",
   amount: 0,
   description: "",
-  cashSessionId: "",
+  cashBoxId: "",
   accountId: null,
 };
 
@@ -101,7 +101,7 @@ export function CashMovementForm({
         return;
       }
 
-      data.cashSessionId = res.data.id;
+      data.cashBoxId = res.data.id;
 
       const response = cashMovementSelected
         ? await updateCashMovement(cashMovementSelected.id, data)

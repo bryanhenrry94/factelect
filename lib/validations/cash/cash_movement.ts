@@ -2,7 +2,8 @@ import { z } from "zod";
 
 export const CashMovementSchema = z.object({
   id: z.string(),
-  cashSessionId: z.string(),
+  cashBoxId: z.string(),
+  transactionId: z.string().optional(),
   type: z.enum(["IN", "OUT"]),
   category: z.enum([
     "SALE",

@@ -28,12 +28,25 @@ export const transactionSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
-export const createTransactionSchema = transactionSchema.omit({
-  id: true,
-  tenantId: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const createTransactionSchema = transactionSchema
+  .omit({
+    id: true,
+    tenantId: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === "INCOME" && data.method === "CASH") {
+      if (!data.cashBoxId) {
+        ctx.addIssue({
+          path: ["cashBoxId"],
+          message:
+            "La caja es obligatoria cuando el tipo es Cobro y el método es Efectivo.",
+          code: z.ZodIssueCode.custom,
+        });
+      }
+    }
+  });
 
 export type TransactionInput = z.infer<typeof transactionSchema>;
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;

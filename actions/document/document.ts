@@ -13,50 +13,67 @@ import { Prisma } from "@/prisma/generated/prisma";
 export const getDocuments = async (
   tenantId: string,
   personId?: string
-): Promise<{ success: boolean; data?: DocumentResponse[]; error?: string }> => {
+): Promise<{
+  success: boolean;
+  data?: DocumentResponse[];
+  error?: string;
+}> => {
   try {
-    const whereClause: Prisma.DocumentWhereInput = {
+    const where: Prisma.DocumentWhereInput = {
       tenantId,
-      ...(personId && { personId }),
+      ...(personId ? { personId } : {}),
     };
 
     const documents = await prisma.document.findMany({
-      where: whereClause,
+      where,
       include: {
         person: true,
+        documentFiscalInfo: {
+          include: {
+            establishment: true,
+            emissionPoint: true,
+          },
+        },
       },
     });
 
-    const formattedDocuments: DocumentResponse[] = documents.map(
-      (document) => ({
-        ...document,
-        entityType: document.entityType,
-        documentType: document.documentType as $Enums.DocumentType,
-        number: document.number || undefined,
-        issueDate: document.issueDate,
-        dueDate: document.dueDate || undefined,
-        status: document.status as "DRAFT" | "CONFIRMED" | "CANCELED",
-        personId: document.personId,
-        subtotal: document.subtotal,
-        taxTotal: document.taxTotal,
-        discount: document.discount,
-        total: document.total,
-        paidAmount: document.paidAmount,
-        balance: document.balance,
-        description: document.description || undefined,
-        person: document.person
+    const formattedDocuments: DocumentResponse[] = documents.map((doc) => {
+      const { person, documentFiscalInfo, number, dueDate, description } = doc;
+
+      const establishmentCode = documentFiscalInfo?.establishment.code ?? "";
+      const emissionPointCode = documentFiscalInfo?.emissionPoint.code ?? "";
+      const sequence =
+        documentFiscalInfo?.sequence?.toString().padStart(9, "0") ?? "";
+
+      const documentNumber =
+        establishmentCode && emissionPointCode && sequence
+          ? `${establishmentCode}-${emissionPointCode}-${sequence}`
+          : undefined;
+
+      const fullname = person
+        ? person.firstName
+          ? `${person.firstName} ${person.lastName}`
+          : person.businessName ?? undefined
+        : undefined;
+
+      return {
+        ...doc,
+        documentType: doc.documentType as $Enums.DocumentType,
+        status: doc.status as "DRAFT" | "CONFIRMED" | "CANCELED",
+        number: number || undefined,
+        dueDate: dueDate || undefined,
+        description: description || undefined,
+        documentFiscalInfo: documentFiscalInfo || undefined,
+        person: person
           ? {
-              id: document.person.id,
-              identification: document.person.identification || undefined,
-              fullname: document.person.firstName
-                ? `${document.person.firstName} ${document.person.lastName}`
-                : document.person.businessName || undefined,
+              id: person.id,
+              identification: person.identification || undefined,
+              fullname,
             }
           : undefined,
-        createdAt: document.createdAt,
-        updatedAt: document.updatedAt,
-      })
-    );
+        documentNumber,
+      };
+    });
 
     return { success: true, data: formattedDocuments };
   } catch (error) {
@@ -208,15 +225,17 @@ export const createDocument = async (
 
 export const updateDocument = async (
   id: string,
-  data: Partial<CreateDocument>
+  data: CreateDocument
 ): Promise<{ success: boolean; data?: DocumentResponse; error?: string }> => {
   try {
-    // Validar total de pagos solo para facturas de clientes
+    const balance = data.total - (data.paidAmount || 0);
+
+    // Validar pagos solo para facturas de clientes
     if (data.entityType === "CUSTOMER" && data.documentType === "INVOICE") {
       const totalPayments =
         data.documentPayments?.reduce((sum, p) => sum + p.amount, 0) || 0;
 
-      if (data.total !== undefined && totalPayments !== data.total) {
+      if (totalPayments !== data.total) {
         return {
           success: false,
           error: "El total de pagos debe ser igual al total del documento",
@@ -224,74 +243,118 @@ export const updateDocument = async (
       }
     }
 
-    const updatedDocument = await prisma.$transaction(async (tx) => {
+    // Valida que el detalle del documento no tenga campos vacíos
+    for (const item of data.items) {
+      if (
+        !item.warehouseId ||
+        !item.productId ||
+        item.quantity <= 0 ||
+        item.unitPrice < 0
+      ) {
+        return {
+          success: false,
+          error: "El detalle del documento contiene campos vacíos o inválidos",
+        };
+      }
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
       // 1. Actualizar documento
-      const doc = await tx.document.update({
-        where: { id },
+      const updatedDocument = await tx.document.update({
+        where: {
+          id,
+        },
         data: {
-          personId: data.personId,
+          entityType: data.entityType,
+          documentType: data.documentType as $Enums.DocumentType,
+          number: data.number || undefined,
           issueDate: data.issueDate,
+          dueDate: data.dueDate || undefined,
           status: data.status,
+          personId: data.personId,
           subtotal: data.subtotal,
           taxTotal: data.taxTotal,
           discount: data.discount,
           total: data.total,
           paidAmount: data.paidAmount,
-          balance:
-            data.total && data.paidAmount !== undefined
-              ? data.total - data.paidAmount
-              : data.balance, // recalculo seguro
+          balance,
           description: data.description || undefined,
         },
-        include: { person: true },
       });
 
-      // 2. Items (delete + recreate)
-      if (data.items) {
-        await tx.documentItem.deleteMany({ where: { documentId: id } });
+      // 2. Reemplazar items
+      await tx.documentItem.deleteMany({
+        where: { documentId: id },
+      });
 
-        if (data.items.length > 0) {
-          await tx.documentItem.createMany({
-            data: data.items.map((item) => ({ ...item, documentId: id })),
-            skipDuplicates: true,
-          });
-        }
+      if (data.items?.length) {
+        await tx.documentItem.createMany({
+          data: data.items.map((item) => ({
+            ...item,
+            documentId: id,
+          })),
+        });
       }
 
-      // 3. Pagos (delete + recreate)
-      if (data.documentPayments) {
-        await tx.documentPayment.deleteMany({ where: { documentId: id } });
+      // 3. Fiscal Info (update o create)
+      if (data.fiscalInfo) {
+        const existingFiscal = await tx.documentFiscalInfo.findUnique({
+          where: { documentId: id },
+        });
 
-        if (data.documentPayments.length > 0) {
-          await tx.documentPayment.createMany({
-            data: data.documentPayments.map((p) => ({
-              ...p,
+        if (existingFiscal) {
+          await tx.documentFiscalInfo.update({
+            where: { documentId: id },
+            data: {
+              establishmentId: data.fiscalInfo.establishmentId,
+              emissionPointId: data.fiscalInfo.emissionPointId,
+              sequence: data.fiscalInfo.sequence,
+              environment: data.fiscalInfo.environment,
+              sriStatus: data.fiscalInfo.sriStatus,
+            },
+          });
+        } else {
+          await tx.documentFiscalInfo.create({
+            data: {
               documentId: id,
-            })),
-            skipDuplicates: true,
+              establishmentId: data.fiscalInfo.establishmentId,
+              emissionPointId: data.fiscalInfo.emissionPointId,
+              sequence: data.fiscalInfo.sequence,
+              environment: data.fiscalInfo.environment,
+              sriStatus: data.fiscalInfo.sriStatus,
+            },
           });
         }
+      } else {
+        // Si ya no viene fiscalInfo, eliminarla
+        await tx.documentFiscalInfo.deleteMany({
+          where: { documentId: id },
+        });
       }
 
-      return doc;
+      // 4. Reemplazar payments
+      await tx.documentPayment.deleteMany({
+        where: { documentId: id },
+      });
+
+      if (data.documentPayments?.length) {
+        await tx.documentPayment.createMany({
+          data: data.documentPayments.map((p) => ({
+            ...p,
+            documentId: id,
+          })),
+        });
+      }
+
+      return updatedDocument;
     });
 
-    // Formato de respuesta
     const formattedDocument: DocumentResponse = {
-      ...updatedDocument,
-      number: updatedDocument.number || undefined,
-      dueDate: updatedDocument.dueDate || undefined,
-      description: updatedDocument.description || undefined,
-      person: updatedDocument.person
-        ? {
-            id: updatedDocument.person.id,
-            fullname: updatedDocument.person.firstName
-              ? `${updatedDocument.person.firstName} ${updatedDocument.person.lastName}`
-              : updatedDocument.person.businessName || undefined,
-            identification: updatedDocument.person.identification || undefined,
-          }
-        : undefined,
-      documentType: updatedDocument.documentType as $Enums.DocumentType,
+      ...result,
+      number: result.number || undefined,
+      dueDate: result.dueDate || undefined,
+      description: result.description || undefined,
+      documentType: result.documentType as $Enums.DocumentType,
     };
 
     return { success: true, data: formattedDocument };
@@ -328,12 +391,24 @@ export const getDocument = async (
       where: { id },
       include: {
         person: true,
+        documentFiscalInfo: {
+          include: {
+            establishment: true,
+            emissionPoint: true,
+          },
+        },
       },
     });
 
     if (!document) {
       return { success: false, error: "Documento no encontrado" };
     }
+
+    const documentNumber = `${
+      document.documentFiscalInfo?.establishment.code
+    }-${
+      document.documentFiscalInfo?.emissionPoint.code
+    }-${document.documentFiscalInfo?.sequence.toString().padStart(9, "0")}`;
 
     const formattedDocument: DocumentResponse = {
       ...document,
@@ -353,6 +428,17 @@ export const getDocument = async (
       description: document.description || undefined,
       createdAt: document.createdAt,
       updatedAt: document.updatedAt,
+      documentFiscalInfo: document.documentFiscalInfo || undefined,
+      documentNumber: documentNumber,
+      person: document.person
+        ? {
+            id: document.person.id,
+            identification: document.person.identification || undefined,
+            fullname: document.person.firstName
+              ? `${document.person.firstName} ${document.person.lastName}`
+              : document.person.businessName || undefined,
+          }
+        : undefined,
     };
 
     return { success: true, data: formattedDocument };

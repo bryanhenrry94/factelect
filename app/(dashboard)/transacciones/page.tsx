@@ -3,17 +3,23 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Plus, Edit, Trash2, File } from "lucide-react";
+import { Plus, Edit, Trash2, File, Car } from "lucide-react";
 
 import PageContainer from "@/components/container/PageContainer";
-import { getTransactions } from "@/actions";
+import { getPersonsByTenant, getTransactions } from "@/actions";
 import { TransactionInput } from "@/lib/validations";
-import { formatDate } from "@/utils/formatters";
+import { formatCurrency, formatDate } from "@/utils/formatters";
 import { getTransactionTypeLabel } from "@/utils/transaction";
 import { getPaymentMethodLabel } from "@/utils/paymentMethods";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -25,39 +31,115 @@ import {
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PersonInput } from "@/lib/validations/person";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useSearchFilter } from "@/hooks/useSearchFilter";
+import { useDateRangeFilter } from "@/hooks/useDateRangeFilter";
+import { usePersonFilter } from "@/hooks/usePersonFilter";
+import { useTypeFilter } from "@/hooks/useTypeFilter";
 
 const TransactionsPage = () => {
   const { data: session } = useSession();
   const router = useRouter();
 
+  const { search, setSearch } = useSearchFilter();
+  const { dateFrom, setDateFrom, dateTo, setDateTo } = useDateRangeFilter();
+  const { person, setPerson } = usePersonFilter();
+  const { type, setType } = useTypeFilter();
+
   const [transactions, setTransactions] = React.useState<TransactionInput[]>(
     []
   );
+  const [persons, setPersons] = React.useState<PersonInput[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 5;
+
   const handleAdd = () => router.push("/transacciones/nueva");
-  const handleEdit = (t: TransactionInput) => {};
+  const handleEdit = (t: TransactionInput) => {
+    router.push(`/transacciones/${t.id}/editar`);
+  };
   const handleDelete = (id: string) => {};
 
-  const fetchTransactions = async () => {
+  const normalizedSearch = React.useMemo(
+    () => search?.trim() || undefined,
+    [search]
+  );
+
+  const tenantId = session?.user?.tenantId;
+
+  const fetchTransactions = React.useCallback(
+    async (signal?: AbortSignal) => {
+      if (!tenantId) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await getTransactions({
+          tenantId,
+          search: normalizedSearch,
+          type: type === "none" ? undefined : (type as "INCOME" | "EXPENSE"),
+          personId: person === "none" ? undefined : person,
+          fromDate: dateFrom,
+          toDate: dateTo,
+        });
+
+        if (!signal?.aborted) {
+          setTransactions(res.success && res.data ? res.data : []);
+        }
+      } catch {
+        if (!signal?.aborted) {
+          setError("No se pudieron obtener las transacciones.");
+        }
+      } finally {
+        if (!signal?.aborted) setLoading(false);
+      }
+    },
+    [tenantId, normalizedSearch, type, person, dateFrom, dateTo]
+  );
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    fetchTransactions(controller.signal);
+    return () => controller.abort();
+  }, [fetchTransactions]);
+
+  const getPersons = async () => {
     try {
       if (!session?.user?.tenantId) return;
-      setLoading(true);
-      const res = await getTransactions(session.user.tenantId);
-
-      if (res.success && res.data) setTransactions(res.data);
-      else setTransactions([]);
+      const res = await getPersonsByTenant({ tenantId: session.user.tenantId });
+      if (res.success && res.data) {
+        setPersons(res.data);
+      } else {
+        setPersons([]);
+      }
     } catch {
-      setError("No se pudieron obtener las transacciones.");
-    } finally {
-      setLoading(false);
+      setError("No se pudieron obtener las personas.");
     }
   };
 
   React.useEffect(() => {
+    getPersons();
     fetchTransactions();
   }, [session?.user?.tenantId]);
+
+  const getPersonName = (personId: string) => {
+    const person = persons.find((p) => p.id === personId);
+    return person
+      ? `${person.firstName} ${person.lastName}` || person.businessName
+      : "Desconocido";
+  };
 
   return (
     <PageContainer
@@ -65,18 +147,100 @@ const TransactionsPage = () => {
       description="Administra las transacciones de tu negocio"
     >
       {/* Header */}
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <Input placeholder="Buscar transacciones" className="sm:max-w-sm" />
+      <Card className="shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div>
+            <CardTitle className="text-lg">Filtros</CardTitle>
+            {/* <CardDescription>
+              Filtra y busca entre las transacciones registradas
+            </CardDescription> */}
+          </div>
 
-        <Button onClick={handleAdd}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo
-        </Button>
-      </div>
+          <Button onClick={handleAdd} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo
+          </Button>
+        </CardHeader>
+
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {/* Buscar */}
+            <Field>
+              <FieldLabel>Buscar</FieldLabel>
+              <Input
+                placeholder="Buscar transacciones"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </Field>
+
+            {/* Tipo */}
+            <Field>
+              <FieldLabel>Tipo</FieldLabel>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo de transacción" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Todos</SelectItem>
+                  <SelectItem value="INCOME">Cobro</SelectItem>
+                  <SelectItem value="EXPENSE">Pago</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+
+            {/* Persona */}
+            <Field>
+              <FieldLabel>Persona</FieldLabel>
+              <Select value={person} onValueChange={setPerson}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Persona" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Todos</SelectItem>
+                  {persons.map((p) => (
+                    <SelectItem key={p.id} value={p.id || ""}>
+                      {p.firstName && p.lastName
+                        ? `${p.firstName} ${p.lastName}`
+                        : p.businessName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            {/* Desde */}
+            <Field>
+              <FieldLabel>Desde</FieldLabel>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </Field>
+
+            {/* Hasta */}
+            <Field>
+              <FieldLabel>Hasta</FieldLabel>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </Field>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Content */}
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Lista de Transacciones</CardTitle>
+          <CardDescription>
+            Administra las transacciones registradas en el sistema.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           {loading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
@@ -94,52 +258,71 @@ const TransactionsPage = () => {
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {[
-                    "Tipo",
-                    "Método",
-                    "Persona",
-                    "Fecha",
-                    "Referencia",
-                    "Descripción",
-                    "Acciones",
-                  ].map((h) => (
-                    <TableHead key={h}>{h}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-
-              <TableBody>
-                {transactions.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell>{getTransactionTypeLabel(t.type)}</TableCell>
-                    <TableCell>{getPaymentMethodLabel(t.method)}</TableCell>
-                    <TableCell>{t.personId}</TableCell>
-                    <TableCell>{formatDate(t.issueDate.toString())}</TableCell>
-                    <TableCell>{t.reference || "-"}</TableCell>
-                    <TableCell>{t.description || "-"}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleEdit(t)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleDelete(t.id || "")}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {[
+                      "Tipo",
+                      "Método",
+                      "Persona",
+                      "Fecha",
+                      "Referencia",
+                      "Descripción",
+                      "Monto",
+                      "Acciones",
+                    ].map((h) => (
+                      <TableHead key={h}>{h}</TableHead>
+                    ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+
+                <TableBody>
+                  {transactions
+                    .slice(
+                      (currentPage - 1) * itemsPerPage,
+                      currentPage * itemsPerPage
+                    )
+                    .map((t) => (
+                      <TableRow key={t.id}>
+                        <TableCell>{getTransactionTypeLabel(t.type)}</TableCell>
+                        <TableCell>{getPaymentMethodLabel(t.method)}</TableCell>
+                        <TableCell>
+                          {persons && getPersonName(t.personId)}
+                        </TableCell>
+                        <TableCell>
+                          {formatDate(t.issueDate.toString())}
+                        </TableCell>
+                        <TableCell>{t.reference || "-"}</TableCell>
+                        <TableCell>{t.description || "-"}</TableCell>
+                        <TableCell>{formatCurrency(t.amount)}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleEdit(t)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDelete(t.id || "")}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+              <PaginationControls
+                currentPage={currentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={transactions.length}
+                onPageChange={(page) => setCurrentPage(page)}
+              />
+            </>
           )}
         </CardContent>
       </Card>

@@ -10,7 +10,6 @@ import {
   getTenantSriConfig,
   getAllProducts,
 } from "@/actions";
-import { SRIConfiguration } from "@/prisma/generated/prisma";
 import { PersonFilter } from "@/types";
 import TransactionForm from "@/components/transaction/TransactionForm";
 
@@ -21,15 +20,21 @@ import { CashBox } from "@/lib/validations/cash/cash_box";
 import { BankAccount } from "@/lib/validations/bank/bank_account";
 import { getAllCashBoxes } from "@/actions/cash/cash-box";
 import { getAllBankAccounts } from "@/actions/bank/bank-account";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
+import { SlashIcon } from "lucide-react";
 
 export default function TransactionNewPage() {
   const { data: session } = useSession();
 
   const [error, setError] = useState<string | null>(null);
-  const [clients, setClients] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [establishments, setEstablishments] = useState<any[]>([]);
-  const [sriConfig, setSriConfig] = useState<SRIConfiguration | null>(null);
   const [cashBoxes, setCashBoxes] = useState<CashBox[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
 
@@ -51,15 +56,8 @@ export default function TransactionNewPage() {
         getAllBankAccounts(session.user.tenantId),
       ]);
 
-      if (c.success) setClients(c.data);
-      if (p.success) setProducts(p.data);
-      if (e.success) setEstablishments(e.data);
-      if (s.success) setSriConfig(s.data);
       if (cb.success && cb.data) setCashBoxes(cb.data);
       if (ba.success && ba.data) setBankAccounts(ba.data);
-
-      console.log("Cash Boxes:", cb);
-      console.log("Bank Accounts:", ba);
     };
 
     fetchData();
@@ -70,22 +68,44 @@ export default function TransactionNewPage() {
       title="Nueva Transacción"
       description="Crear una nueva transacción"
     >
-      <Card className="mb-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/">Inicio</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator>
+            <SlashIcon />
+          </BreadcrumbSeparator>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/transacciones">Transacciones</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator>
+            <SlashIcon />
+          </BreadcrumbSeparator>
+          <BreadcrumbItem>
+            <BreadcrumbPage>Nuevo</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <Card className="mb-6 mt-4">
         <CardContent className="space-y-4">
           {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+            <div className="mt-4">
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            </div>
           )}
 
           <Separator />
 
           <TransactionForm
             setError={setError}
-            clients={clients}
-            products={products}
-            establishments={establishments}
-            sriConfig={sriConfig}
             cashBoxes={cashBoxes}
             bankAccounts={bankAccounts}
           />

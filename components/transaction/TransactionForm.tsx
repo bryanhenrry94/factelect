@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,7 +10,6 @@ import HeaderActions from "./HeaderActions";
 import DocumentTable from "./DocumentTable";
 
 import useTenant from "@/hooks/useTenant";
-import { AlertService } from "@/lib/alerts";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
 import {
@@ -19,6 +18,7 @@ import {
 } from "@/lib/validations";
 import {
   createTransaction,
+  getDocument,
   getPersonsByTenant,
   getTransaction,
   updateTransaction,
@@ -50,6 +50,8 @@ import {
 import { CashBox } from "@/lib/validations/cash/cash_box";
 import { BankAccount } from "@/lib/validations/bank/bank_account";
 import { ConfirmDialog } from "../ConfirmDialog";
+import { getTransactionDocuments } from "@/actions/transaction-document";
+import { TransactionDocumentInput } from "@/lib/validations/transaction-document";
 
 const initialState: CreateTransactionInput = {
   personId: "",
@@ -68,10 +70,6 @@ const initialState: CreateTransactionInput = {
 
 interface TransactionFormProps {
   transactionId?: string;
-  clients?: any[];
-  products?: any[];
-  establishments?: any[];
-  sriConfig?: any;
   setError?: (error: string | null) => void;
   cashBoxes?: CashBox[];
   bankAccounts?: BankAccount[];
@@ -79,10 +77,6 @@ interface TransactionFormProps {
 
 export default function TransactionForm({
   transactionId,
-  clients,
-  products,
-  establishments,
-  sriConfig,
   setError,
   cashBoxes,
   bankAccounts,
@@ -94,6 +88,8 @@ export default function TransactionForm({
   const [modeEdit, setModeEdit] = useState(!!transactionId);
   const [persons, setPersons] = useState<PersonInput[]>([]);
   const [tab, setTab] = useState("documents");
+
+  const params = useSearchParams();
 
   const methods = useForm<CreateTransactionInput>({
     resolver: zodResolver(createTransactionSchema),
@@ -110,6 +106,19 @@ export default function TransactionForm({
 
   /* -------------------- Load data -------------------- */
 
+  const documents = watch("documents");
+
+  const totalDocumentAmount = documents.reduce(
+    (sum, doc) => sum + doc.amount,
+    0
+  );
+
+  useEffect(() => {
+    if (totalDocumentAmount > 0) {
+      setValue("amount", totalDocumentAmount);
+    }
+  }, [totalDocumentAmount]);
+
   useEffect(() => {
     if (transactionId) loadTransaction();
   }, [transactionId]);
@@ -118,10 +127,42 @@ export default function TransactionForm({
     loadPersons("CLIENT");
   }, [session?.user?.tenantId]);
 
+  useEffect(() => {
+    if (params.get("documento") && !transactionId) {
+      const setDocumentFromParam = async () => {
+        const documentId = params.get("documento");
+
+        const response = await getDocument(documentId!);
+
+        if (response.success && response.data) {
+          const doc = response.data;
+
+          console.log("document: ", doc);
+
+          const initialDocument: TransactionDocumentInput = {
+            id: "",
+            transactionId: "",
+            documentId: doc.id,
+            amount: 0,
+            tenantId: session?.user.tenantId!,
+          };
+
+          setValue("description", doc.description);
+          setValue("personId", doc.personId);
+          setValue("documents", [initialDocument]);
+        } else {
+          notifyError(
+            "No se pudo cargar el documento desde el parámetro de búsqueda."
+          );
+        }
+      };
+
+      setDocumentFromParam();
+    }
+  }, [params.get("documento")]);
+
   const loadPersons = async (role: "CLIENT" | "SUPPLIER") => {
     if (!session?.user?.tenantId) return;
-
-    setValue("personId", "");
 
     const filter: PersonFilter = {
       tenantId: session.user.tenantId,
@@ -133,24 +174,41 @@ export default function TransactionForm({
   };
 
   const loadTransaction = async () => {
-    const res = await getTransaction(transactionId!);
-    if (!res.success || !res.data) {
-      notifyError("Error al cargar la transacción");
-      return;
-    }
+    try {
+      // cabecera
+      const res = await getTransaction(transactionId!);
+      if (!res.success || !res.data) {
+        notifyError("Error al cargar la transacción");
+        return;
+      }
 
-    setModeEdit(true);
-    reset({
-      ...res.data,
-      reconciled: res.data.reconciled ?? false,
-      reconciledAt: res.data.reconciledAt ?? null,
-      bankAccountId: res.data.bankAccountId ?? null,
-      cashBoxId: res.data.cashBoxId ?? null,
-    });
+      // detalle
+      const resDet = await getTransactionDocuments(
+        transactionId!,
+        session?.user?.tenantId!
+      );
+
+      const documents = resDet.success && resDet.data ? resDet.data : [];
+
+      const data = {
+        ...res.data,
+        reconciled: res.data.reconciled ?? false,
+        reconciledAt: res.data.reconciledAt ?? null,
+        bankAccountId: res.data.bankAccountId ?? null,
+        cashBoxId: res.data.cashBoxId ?? null,
+        documents: documents,
+      };
+
+      console.log("Transaction loaded:", data);
+
+      setModeEdit(true);
+      reset(data);
+    } catch (error) {
+      setError?.("Error al cargar la transacción");
+    }
   };
 
   /* -------------------- Submit -------------------- */
-
   const onSubmit = async (data: CreateTransactionInput) => {
     try {
       setError?.(null);
@@ -196,11 +254,13 @@ export default function TransactionForm({
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         {Object.keys(errors).length > 0 && (
-          <Alert variant="destructive">
-            <AlertDescription>
-              Revisa los campos obligatorios del formulario
-            </AlertDescription>
-          </Alert>
+          <div className="mt-4">
+            <Alert variant="destructive">
+              <AlertDescription>
+                Revisa los campos obligatorios del formulario
+              </AlertDescription>
+            </Alert>
+          </div>
         )}
 
         <FieldGroup>
@@ -209,7 +269,7 @@ export default function TransactionForm({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Tipo */}
             <Field>
-              <FieldLabel>Tipo</FieldLabel>
+              <FieldLabel>Tipo de Transacción</FieldLabel>
               <Controller
                 name="type"
                 render={({ field }) => (
@@ -237,7 +297,11 @@ export default function TransactionForm({
 
             {/* Método */}
             <Field>
-              <FieldLabel>Método</FieldLabel>
+              <FieldLabel>
+                {watch("type") === "INCOME"
+                  ? "Forma de Cobro"
+                  : "Forma de Pago"}
+              </FieldLabel>
               <Controller
                 name="method"
                 render={({ field }) => (
@@ -282,6 +346,11 @@ export default function TransactionForm({
                     </Select>
                   )}
                 />
+                {errors.cashBoxId && (
+                  <span className="text-sm text-destructive">
+                    {errors.cashBoxId.message || "Selecciona una caja válida."}
+                  </span>
+                )}
               </Field>
             )}
 
@@ -313,7 +382,7 @@ export default function TransactionForm({
 
             {/* Fecha */}
             <Field>
-              <FieldLabel>Fecha</FieldLabel>
+              <FieldLabel>Fecha de Emisión</FieldLabel>
               <Controller
                 name="issueDate"
                 render={({ field }) => (
@@ -333,8 +402,6 @@ export default function TransactionForm({
         </FieldGroup>
 
         <FieldGroup>
-          <FieldTitle>Contraparte</FieldTitle>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field>
               <FieldLabel>
@@ -373,7 +440,6 @@ export default function TransactionForm({
               />
             </Field>
           </div>
-
           <Field>
             <FieldLabel>Descripción</FieldLabel>
             <Controller

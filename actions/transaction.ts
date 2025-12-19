@@ -11,6 +11,42 @@ export const createTransaction = async (
   tenantId: string
 ): Promise<{ success: boolean; error?: string; data?: TransactionInput }> => {
   try {
+    // valida que el detalle tenga un monto mayor a cero
+    if (!data.personId) {
+      return {
+        success: false,
+        error: "Debe seleccionar una persona para la transacción.",
+      };
+    }
+
+    if (data.documents && data.documents.length > 0) {
+      const totalAmount = data.documents.reduce(
+        (sum, doc) => sum + doc.amount,
+        0
+      );
+      if (totalAmount <= 0) {
+        return {
+          success: false,
+          error: "El monto total de los documentos debe ser mayor a cero.",
+        };
+      }
+
+      // monto no puede ser mayor al saldo pendiente de los documentos
+      for (const doc of data.documents) {
+        const document = await prisma.document.findUnique({
+          where: { id: doc.documentId },
+          select: { balance: true },
+        });
+
+        if (document && doc.amount > document.balance) {
+          return {
+            success: false,
+            error: `El monto aplicado no puede ser mayor al saldo pendiente.`,
+          };
+        }
+      }
+    }
+
     const parsedData = createTransactionSchema.parse(data);
 
     const result = await prisma.$transaction(async (tx) => {
@@ -90,7 +126,7 @@ export const createTransaction = async (
 
         await tx.cashMovement.create({
           data: {
-            cashSessionId: parsedData.cashBoxId,
+            cashBoxId: parsedData.cashBoxId,
             transactionId: transaction.id,
             type: isIncome ? "IN" : "OUT",
             amount: parsedData.amount,
@@ -197,14 +233,66 @@ export const getTransaction = async (
   }
 };
 
+export type FilterTransactionsParams = {
+  tenantId: string;
+  search?: string;
+  type?: "INCOME" | "EXPENSE";
+  method?: "CASH" | "TRANSFER";
+  personId?: string;
+  fromDate?: string;
+  toDate?: string;
+};
+
 export const getTransactions = async (
-  tenantId: string
+  params: FilterTransactionsParams
 ): Promise<{ success: boolean; error?: string; data?: TransactionInput[] }> => {
   try {
+    const { tenantId, search, type, method, fromDate, toDate, personId } =
+      params;
+
+    // 🔁 Convertir strings a Date (normalizando inicio/fin del día)
+    const from = fromDate ? new Date(`${fromDate}T00:00:00.000Z`) : undefined;
+
+    const to = toDate ? new Date(`${toDate}T23:59:59.999Z`) : undefined;
+
+    const where: any = {
+      tenantId,
+      ...(type && { type }),
+      ...(method && { method }),
+      ...(personId && { personId }),
+      ...(from || to
+        ? {
+            issueDate: {
+              ...(from && { gte: from }),
+              ...(to && { lte: to }),
+            },
+          }
+        : {}),
+      ...(search &&
+        search.trim() && {
+          OR: [
+            { reference: { contains: search, mode: "insensitive" } },
+            { description: { contains: search, mode: "insensitive" } },
+            {
+              person: {
+                OR: [
+                  { firstName: { contains: search, mode: "insensitive" } },
+                  { lastName: { contains: search, mode: "insensitive" } },
+                  { businessName: { contains: search, mode: "insensitive" } },
+                ],
+              },
+            },
+          ],
+        }),
+    };
+
     const transactions = await prisma.transaction.findMany({
-      where: { tenantId },
+      where,
       orderBy: { issueDate: "desc" },
-      include: { documents: true },
+      include: {
+        documents: true,
+        person: true,
+      },
     });
 
     return { success: true, data: transactions };

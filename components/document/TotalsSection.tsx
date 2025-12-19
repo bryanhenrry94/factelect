@@ -122,6 +122,13 @@ export default function InvoiceTotalsSection() {
                 <TableCell>Total</TableCell>
                 <TableCell className="text-right">{total.toFixed(2)}</TableCell>
               </TableRow>
+
+              <TableRow className="font-normal border-t">
+                <TableCell>Saldo</TableCell>
+                <TableCell className="text-right">
+                  {watch("balance") && watch("balance").toFixed(2)}
+                </TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         </CardContent>

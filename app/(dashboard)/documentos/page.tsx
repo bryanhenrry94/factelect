@@ -119,7 +119,7 @@ export default function DocumentsPage() {
                     <TableRow key={document.id}>
                       <TableCell>
                         <div>
-                          <div className="font-normal text-base">
+                          <div className="font-normal text-sm">
                             {document?.person?.fullname || "N/A"}
                           </div>
                           <div className="text-xs text-muted-foreground">

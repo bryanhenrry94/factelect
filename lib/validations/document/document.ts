@@ -71,12 +71,13 @@ export const documentResponseSchema = documentSchema.extend({
       identification: z.string().optional(),
     })
     .optional(),
-  DocumentFiscalInfo: z
+  documentFiscalInfo: z
     .object({
       id: z.string(),
       sequence: z.number(),
     })
     .optional(),
+  documentNumber: z.string().optional(),
 });
 
 export type Document = z.infer<typeof documentSchema>;

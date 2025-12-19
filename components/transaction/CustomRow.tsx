@@ -45,6 +45,7 @@ const CustomRow: React.FC<CustomRowProps> = memo(({ field, index, remove }) => {
   };
 
   const personId = watch("personId");
+  const documentId = watch(`documents.${index}.documentId`);
 
   useEffect(() => {
     if (!session?.user?.tenantId) return;
@@ -68,6 +69,14 @@ const CustomRow: React.FC<CustomRowProps> = memo(({ field, index, remove }) => {
     fetchDocuments();
   }, [session?.user?.tenantId, personId]);
 
+  useEffect(() => {
+    if (documentId) {
+      handleChangeDocument(documentId);
+    } else {
+      setDocument(null);
+    }
+  }, [documentId]);
+
   return (
     <TableRow className="border-b">
       {/* Documento */}
@@ -88,13 +97,9 @@ const CustomRow: React.FC<CustomRowProps> = memo(({ field, index, remove }) => {
                   <SelectValue placeholder="Seleccione documento" />
                 </SelectTrigger>
                 <SelectContent>
-                  {documents.map((doc) => (
+                  {documents.map((doc: DocumentResponse) => (
                     <SelectItem key={doc.id} value={doc.id}>
-                      {`FACT ${
-                        doc.DocumentFiscalInfo?.sequence
-                      } - $${doc.total.toFixed(2)} - ${new Date(
-                        doc.issueDate
-                      ).toLocaleDateString()}`}
+                      {`FACT ${doc.documentNumber}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -139,8 +144,20 @@ const CustomRow: React.FC<CustomRowProps> = memo(({ field, index, remove }) => {
                 step={0.01}
                 value={field.value ?? 0}
                 onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  field.onChange(isNaN(value) ? 0 : value);
+                  const text = e.target.value;
+
+                  // Mantén siempre string en el campo
+                  field.onChange(text);
+                }}
+                onBlur={() => {
+                  const numeric = parseFloat(
+                    field.value ? field.value.toString() : "0"
+                  );
+
+                  // Al salir del input conviertes a number seguro
+                  field.onChange(
+                    isNaN(numeric) ? 0 : Number(numeric.toFixed(2))
+                  );
                 }}
               />
             )}

@@ -1,6 +1,6 @@
 export const TransactionTypes = [
-  { value: "INCOME", label: "Ingreso" },
-  { value: "EXPENSE", label: "Egreso" },
+  { value: "INCOME", label: "Cobro" },
+  { value: "EXPENSE", label: "Pago" },
 ];
 
 export const getTransactionTypeLabel = (type: string) => {

@@ -34,7 +34,15 @@ export const getAllCashMovements = async (
       },
     });
 
-    return { success: true, data: cashMovements };
+    const mappedCashMovements = cashMovements.map((cm) => ({
+      ...cm,
+      transactionId: cm.transactionId ?? undefined,
+      description: cm.description ?? undefined,
+      reference: cm.reference ?? undefined,
+      accountId: cm.accountId ?? undefined,
+    }));
+
+    return { success: true, data: mappedCashMovements };
   } catch (error) {
     return {
       success: false,
@@ -55,7 +63,15 @@ export const createCashMovement = async (
       },
     });
 
-    return { success: true, data: newCashMovement };
+    const mappedCashMovement = {
+      ...newCashMovement,
+      transactionId: newCashMovement.transactionId ?? undefined,
+      description: newCashMovement.description ?? undefined,
+      reference: newCashMovement.reference ?? undefined,
+      accountId: newCashMovement.accountId ?? undefined,
+    };
+
+    return { success: true, data: mappedCashMovement };
   } catch (error) {
     return {
       success: false,
@@ -87,7 +103,17 @@ export const updateCashMovement = async (
       where: { id },
     });
 
-    return { success: true, data: cashMovement || undefined };
+    const mappedCashMovement = cashMovement
+      ? {
+          ...cashMovement,
+          transactionId: cashMovement.transactionId ?? undefined,
+          description: cashMovement.description ?? undefined,
+          reference: cashMovement.reference ?? undefined,
+          accountId: cashMovement.accountId ?? undefined,
+        }
+      : undefined;
+
+    return { success: true, data: mappedCashMovement };
   } catch (error) {
     return {
       success: false,

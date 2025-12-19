@@ -674,20 +674,21 @@ model BankTransfer {
 }
 
 model CashBox {
-  id          String                             @id @default(cuid())
-  name        String
-  location    String
-  createdAt   DateTime        @map("created_at") @default(now())
-  updatedAt   DateTime        @map("updated_at") @updatedAt
+  id            String                             @id @default(cuid())
+  name          String
+  location      String
+  createdAt     DateTime        @map("created_at") @default(now())
+  updatedAt     DateTime        @map("updated_at") @updatedAt
 
-  accountId   String?
-  account     ChartOfAccount? @relation(fields: [accountId], references: [id])
+  accountId     String?
+  account       ChartOfAccount? @relation(fields: [accountId], references: [id])
 
-  tenantId    String          @map("tenant_id")
-  tenant      Tenant          @relation(fields: [tenantId], references: [id])
+  tenantId      String          @map("tenant_id")
+  tenant        Tenant          @relation(fields: [tenantId], references: [id])
 
-  cashSession CashSession[]
-  transaction Transaction[]
+  cashMovements CashMovement[]
+  cashSession   CashSession[]
+  transaction   Transaction[]
 
   @@map("cash_box")
 }
@@ -709,7 +710,6 @@ model CashSession {
   tenant             Tenant               @relation(fields: [tenantId], references: [id])
   user               User                 @relation(fields: [userId], references: [id])
 
-  cashMovement       CashMovement[]
   cashCount          CashCount[]
   cashReconciliation CashReconciliation[]
 
@@ -717,22 +717,22 @@ model CashSession {
 }
 
 model CashMovement {
-  id            String                                       @id @default(cuid())
+  id            String                                      @id @default(cuid())
 
-  cashSessionId String               @map("cash_session_id")
-  cashSession   CashSession          @relation(fields: [cashSessionId], references: [id])
+  cashBoxId     String               @map("cash_box_id")
+  cashBox       CashBox              @relation(fields: [cashBoxId], references: [id])
 
   transactionId String?              @map("transaction_id")
   transaction   Transaction?         @relation(fields: [transactionId], references: [id])
 
   type          CashMovementType
-  category      CashMovementCategory                         @default(OTHER)
+  category      CashMovementCategory                        @default(OTHER)
   amount        Float
   description   String?
   reference     String?
-  issueDate     DateTime             @map("issue_date")      @default(now())
+  issueDate     DateTime             @map("issue_date")     @default(now())
 
-  createdAt     DateTime             @map("created_at")      @default(now())
+  createdAt     DateTime             @map("created_at")     @default(now())
 
   accountId     String?
   account       ChartOfAccount?      @relation(fields: [accountId], references: [id])

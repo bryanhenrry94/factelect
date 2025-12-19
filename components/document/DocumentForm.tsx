@@ -202,11 +202,18 @@ export default function DocumentForm({
     }
   };
 
+  const handlePaymentRegister = () => {
+    router.push(`/transacciones/nueva?documento=${documentId}`);
+  };
+
   return (
     <FormProvider {...methods}>
       {/* {JSON.stringify(errors)} */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <HeaderActions modeEdit={modeEdit} />
+        <HeaderActions
+          modeEdit={modeEdit}
+          handlePaymentRegister={handlePaymentRegister}
+        />
 
         {error && (
           <Alert variant="destructive">
