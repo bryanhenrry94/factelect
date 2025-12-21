@@ -1,53 +1,108 @@
 "use server";
 import { prisma } from "@/lib/prisma";
+import { CreateDocument, Document } from "@/lib/validations";
 import {
   CreateJournalEntry,
   JournalEntry,
-  JournalEntrySchema,
+  JournalEntryResponse,
 } from "@/lib/validations/accounting/journal_entry";
+import { $Enums, Prisma } from "@/prisma/generated/prisma";
+
+export interface JournalEntryFilter {
+  tenantId: string;
+  search?: string;
+  accountId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  type?: $Enums.EntryType;
+}
 
 export const getJournalEntries = async (
-  tenantId: string,
-  search?: string
-): Promise<{ success: boolean; data?: JournalEntry[]; error?: string }> => {
+  params: JournalEntryFilter
+): Promise<{
+  success: boolean;
+  data?: JournalEntryResponse[];
+  error?: string;
+}> => {
   try {
+    const where: Prisma.JournalEntryWhereInput = {
+      tenantId: params.tenantId,
+    };
+
+    // 🔍 Search en descripción
+    if (params.search?.trim()) {
+      where.description = {
+        contains: params.search.trim(),
+        mode: "insensitive",
+      };
+    }
+
+    // 🧾 Tipo de asiento
+    if (params.type) {
+      where.type = params.type;
+    }
+
+    // 📅 Rango de fechas
+    if (params.dateFrom || params.dateTo) {
+      where.date = {
+        ...(params.dateFrom && { gte: new Date(params.dateFrom) }),
+        ...(params.dateTo && {
+          lte: new Date(params.dateTo + "T23:59:59.999Z"),
+        }),
+      };
+    }
+
+    // 🧮 Filtro por cuenta contable (en líneas)
+    if (params.accountId) {
+      where.lines = {
+        some: {
+          accountId: params.accountId,
+        },
+      };
+    }
+
     const journalEntries = await prisma.journalEntry.findMany({
-      where: {
-        tenantId,
-        ...(search
-          ? {
-              OR: [
-                { description: { contains: search, mode: "insensitive" } },
-                { documentId: { contains: search, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-      },
+      where,
       include: {
-        lines: true,
+        lines: {
+          include: {
+            account: true,
+            costCenter: true,
+          },
+        },
       },
       orderBy: { date: "desc" },
     });
 
-    const formatted: JournalEntry[] = journalEntries.map((je) => ({
-      ...je,
+    const formatted: JournalEntryResponse[] = journalEntries.map((je) => ({
+      id: je.id,
+      tenantId: je.tenantId,
+      date: je.date,
+      type: je.type,
       description: je.description || undefined,
-      documentType: je.documentType || undefined,
-      documentId: je.documentId || undefined,
+      sourceType: je.sourceType || undefined,
+      sourceId: je.sourceId || undefined,
       createdAt: je.createdAt,
       updatedAt: je.updatedAt,
       lines: je.lines.map((e) => ({
-        ...e,
-        debit: typeof e.debit === "object" ? e.debit.toNumber() : e.debit,
-        credit: typeof e.credit === "object" ? e.credit.toNumber() : e.credit,
+        id: e.id,
+        tenantId: e.tenantId,
+        journalEntryId: e.journalEntryId,
+        accountId: e.accountId,
+        debit: e.debit.toNumber() || 0,
+        credit: e.credit.toNumber() || 0,
         createdAt: e.createdAt,
+        personId: e.personId,
+        costCenterId: e.costCenterId,
+        account: e.account || undefined,
+        costCenter: e.costCenter || undefined,
       })),
     }));
 
     return { success: true, data: formatted };
   } catch (error) {
-    console.error("Error fetching journal lines:", error);
-    return { success: false, error: "Error fetching journal lines" };
+    console.error("Error fetching journal entries:", error);
+    return { success: false, error: "Error fetching journal entries" };
   }
 };
 
@@ -69,8 +124,8 @@ export const getJournalEntryById = async (
       createdAt: journalEntry.createdAt,
       updatedAt: journalEntry.updatedAt,
       description: journalEntry.description || undefined,
-      documentType: journalEntry.documentType || undefined,
-      documentId: journalEntry.documentId || undefined,
+      sourceType: journalEntry.sourceType || undefined,
+      sourceId: journalEntry.sourceId || undefined,
       lines: journalEntry.lines.map((e) => ({
         ...e,
         accountId: e.accountId,
@@ -116,11 +171,39 @@ export const deleteJournalEntry = async (
 export const createJournalEntry = async (
   tenantId: string,
   data: CreateJournalEntry
+) => {
+  try {
+    const result = await prisma.$transaction((tx) =>
+      createJournalEntryTx(tx, tenantId, data)
+    );
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    return { success: true, data: result.data };
+  } catch (error: any) {
+    console.error(error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const createJournalEntryTx = async (
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  data: CreateJournalEntry
 ): Promise<{ success: boolean; data?: JournalEntry; error?: string }> => {
   try {
     // ------------------------------
     // VALIDACIONES
     // ------------------------------
+
+    if (!data.lines?.length) {
+      return {
+        success: false,
+        error: "El asiento debe tener al menos un detalle",
+      };
+    }
 
     if (!data.lines || data.lines.length === 0) {
       return {
@@ -154,24 +237,20 @@ export const createJournalEntry = async (
       }
     }
 
-    // ------------------------------
-    // TRANSACCIÓN
-    // ------------------------------
+    // ---------------- CREACIÓN ----------------
+    const newJournal = await tx.journalEntry.create({
+      data: {
+        tenantId,
+        date: data.date,
+        description: data.description,
+        type: data.type as $Enums.EntryType,
+        sourceType: data.sourceType as $Enums.JournalSourceType,
+        sourceId: data.sourceId,
+      },
+    });
 
-    const result = await prisma.$transaction(async (tx) => {
-      const newJournal = await tx.journalEntry.create({
-        data: {
-          tenantId,
-          date: data.date,
-          description: data.description,
-          type: data.type,
-          documentType: data.documentType,
-          documentId: data.documentId,
-        },
-      });
-
-      // crear ledger lines
-      const ledgerEntriesData = data.lines.map((e) => ({
+    await tx.journalEntryLine.createMany({
+      data: data.lines.map((e) => ({
         tenantId,
         journalEntryId: newJournal.id,
         accountId: e.accountId,
@@ -179,52 +258,28 @@ export const createJournalEntry = async (
         credit: e.credit,
         costCenterId: e.costCenterId || null,
         personId: e.personId || null,
-      }));
-
-      await tx.journalEntryLine.createMany({
-        data: ledgerEntriesData,
-      });
-
-      // retornar el asiento completo
-      return tx.journalEntry.findUnique({
-        where: { id: newJournal.id },
-        include: {
-          lines: true,
-        },
-      });
+      })),
     });
 
-    // ------------------------------
-    // VALIDACIÓN POST-TRANSACCIÓN
-    // ------------------------------
+    const result = await tx.journalEntry.findUniqueOrThrow({
+      where: { id: newJournal.id },
+      include: { lines: true },
+    });
 
-    if (!result) {
-      return {
-        success: false,
-        error: "Error al crear el asiento contable",
-      };
-    }
-
-    // Adaptar al schema final si fuera necesario
-    const formatted: JournalEntry = {
-      ...result,
-      createdAt: result.createdAt,
-      updatedAt: result.updatedAt,
-      description: result.description || undefined,
-      documentType: result.documentType || undefined,
-      documentId: result.documentId || undefined,
-      lines: result.lines.map((e) => ({
-        ...e,
-        accountId: e.accountId,
-        debit: e.debit.toNumber(),
-        credit: e.credit.toNumber(),
-        costCenterId: e.costCenterId,
-        personId: e.personId,
-        createdAt: e.createdAt,
-      })),
+    return {
+      success: true,
+      data: {
+        ...result,
+        description: result.description || undefined,
+        sourceType: result.sourceType || undefined,
+        sourceId: result.sourceId || undefined,
+        lines: result.lines.map((line) => ({
+          ...line,
+          debit: line.debit.toNumber(),
+          credit: line.credit.toNumber(),
+        })),
+      },
     };
-
-    return { success: true, data: formatted };
   } catch (error) {
     console.error("Error creating journal entry:", error);
     return { success: false, error: "Error creating journal entry" };
@@ -278,7 +333,10 @@ export const updateJournalEntry = async (
       // 1. Actualizar journal entry
       const updated = await tx.journalEntry.update({
         where: { id },
-        data: journalData,
+        data: {
+          ...journalData,
+          type: journalData.type as $Enums.EntryType | undefined,
+        },
       });
 
       if (!updated) {
@@ -325,8 +383,8 @@ export const updateJournalEntry = async (
     const formatted: JournalEntry = {
       ...result,
       description: result.description || undefined,
-      documentType: result.documentType || undefined,
-      documentId: result.documentId || undefined,
+      sourceType: result.sourceType || undefined,
+      sourceId: result.sourceId || undefined,
       lines: result.lines.map((e) => ({
         ...e,
         debit: typeof e.debit === "object" ? e.debit.toNumber() : e.debit,
@@ -340,4 +398,103 @@ export const updateJournalEntry = async (
     console.error("Error updating journal entry:", error);
     return { success: false, error: "Error updating journal entry" };
   }
+};
+
+export const getJournalEntriesDocumentData = async (
+  tx: Prisma.TransactionClient,
+  documentId: string
+): Promise<CreateJournalEntry> => {
+  const document = await tx.document.findUnique({
+    where: { id: documentId },
+    include: { items: true },
+  });
+
+  if (!document) {
+    throw new Error("Documento no encontrado");
+  }
+
+  // Obtener la persona asociada al documento
+  const person = await tx.person.findUnique({
+    where: { id: document.personId },
+  });
+
+  if (!person) {
+    throw new Error("Persona no encontrada para el documento");
+  }
+
+  const journalData: CreateJournalEntry = {
+    date: document.issueDate,
+    description: document.description || "-",
+    type: document.entityType === "CUSTOMER" ? "SALE" : "PURCHASE",
+    sourceType: "DOCUMENT",
+    sourceId: document.id,
+    lines: [
+      // Ejemplo:
+      // Debe: CxC
+      // Haber: Ingresos
+      {
+        accountId:
+          document.entityType === "CUSTOMER"
+            ? person.accountReceivableId!
+            : person.accountPayableId!,
+        debit: document.total,
+        credit: 0,
+        personId: document.personId,
+      },
+    ],
+  };
+
+  if (!document.items || document.items.length === 0) {
+    throw new Error(
+      "El documento no tiene ítems para generar el asiento contable"
+    );
+  }
+
+  // Haber/Debe: Ingresos por ventas (agrupar por cuenta de ingresos si es necesario)
+  // Haber: Ingresos por ventas (agrupar por cuenta de ingresos si es necesario)
+  const productIds = document.items.map((i) => i.productId);
+
+  const products = await tx.product.findMany({
+    where: { id: { in: productIds } },
+    select: { id: true, salesAccountId: true },
+  });
+
+  const productMap = new Map(products.map((p) => [p.id, p.salesAccountId]));
+
+  const salesMap = new Map<string, number>();
+
+  for (const item of document.items) {
+    const accountId = productMap.get(item.productId);
+
+    if (!accountId) {
+      throw new Error(
+        `Cuenta de venta no definida para el producto: ${item.productId}`
+      );
+    }
+
+    const prev = salesMap.get(accountId) ?? 0;
+    salesMap.set(accountId, prev + item.subtotal);
+  }
+
+  for (const [accountId, total] of salesMap.entries()) {
+    journalData.lines.push({
+      accountId,
+      debit: 0,
+      credit: total,
+    });
+  }
+
+  // Haber: IVA por pagar
+  if (document.taxTotal && document.taxTotal > 0) {
+    journalData.lines.push({
+      accountId:
+        document.entityType === "CUSTOMER"
+          ? "4fc61e72-aeb1-43f0-a9bf-fdbd9374d8c7" // 2.1.7.4.1	IVA sobre Ventas
+          : "6ca61431-bd5e-48cf-ac59-cf2cf2c13ba4", // 1.1.5.1.1	IVA sobre Compras
+      debit: 0,
+      credit: document.taxTotal,
+    });
+  }
+
+  return journalData;
 };

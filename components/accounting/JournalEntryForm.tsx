@@ -44,15 +44,16 @@ import {
   JournalEntry,
 } from "@/lib/validations/accounting/journal_entry";
 import { $Enums } from "@/prisma/generated/prisma";
+import { AccountSelect } from "../AccountSelected";
 
 /* ------------------------------------------------------------------ */
 
 const initialState: CreateJournalEntry = {
   date: new Date(),
   description: "",
-  type: $Enums.EntryType.JOURNAL,
-  documentType: $Enums.DocumentType.OTHER,
-  documentId: "null",
+  type: $Enums.EntryType.ENTRY,
+  sourceType: "MANUAL_ENTRY",
+  sourceId: "",
   lines: [
     { accountId: "", debit: 0, credit: 0, costCenterId: null },
     { accountId: "", debit: 0, credit: 0, costCenterId: null },
@@ -113,6 +114,8 @@ export function JournalEntryForm({ journalEntryToEdit }: Props) {
 
     reset({
       ...journalEntryToEdit,
+      sourceType: journalEntryToEdit.sourceType || "MANUAL_ENTRY",
+      sourceId: journalEntryToEdit.sourceId || "",
       lines: journalEntryToEdit.lines.map((l) => ({
         accountId: l.accountId,
         debit: l.debit,
@@ -192,7 +195,6 @@ export function JournalEntryForm({ journalEntryToEdit }: Props) {
               <TableHead />
             </TableRow>
           </TableHeader>
-
           <TableBody>
             {fields.map((row, index) => (
               <TableRow key={row.id}>
@@ -202,24 +204,12 @@ export function JournalEntryForm({ journalEntryToEdit }: Props) {
                     name={`lines.${index}.accountId`}
                     control={control}
                     render={({ field }) => (
-                      <Select
-                        value={field.value || "none"}
-                        onValueChange={(v) =>
-                          field.onChange(v === "none" ? "" : v)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar cuenta" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">—</SelectItem>
-                          {accounts.map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.code} {a.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <AccountSelect
+                        label="Seleccionar cuenta"
+                        accounts={accounts}
+                        value={field.value ?? null}
+                        onChange={field.onChange}
+                      />
                     )}
                   />
                 </TableCell>

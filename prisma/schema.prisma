@@ -179,6 +179,9 @@ model Product {
   createdAt                DateTime                  @map("created_at")           @default(now())
   updatedAt                DateTime                  @map("updated_at")           @updatedAt
 
+  salesAccountId           String?                   @map("sales_account_id")
+  salesAccount             ChartOfAccount?           @relation("ProductSalesAccount", fields: [salesAccountId], references: [id])
+
   inventoryAccountId       String?                   @map("inventory_account_id")
   inventoryAccount         ChartOfAccount?           @relation("ProductInventoryAccount", fields: [inventoryAccountId], references: [id])
 
@@ -854,6 +857,7 @@ model ChartOfAccount {
   // NUEVOS → relaciones inversas necesarias
   personsReceivable  Person[]             @relation("person_account_receivable")
   personsPayable     Person[]             @relation("person_account_payable")
+  productsSales      Product[]            @relation("ProductSalesAccount")
   productsInventory  Product[]            @relation("ProductInventoryAccount")
   productsCost       Product[]            @relation("ProductCostAccount")
 
@@ -870,20 +874,23 @@ model ChartOfAccount {
 // COMPROBANTES CONTABLES
 // ------------------------------
 model JournalEntry {
-  id           String                                   @id @default(uuid())
+  id           String                                 @id @default(uuid())
   tenantId     String             @map("tenant_id")
   date         DateTime
   description  String?
-  type         EntryType                                @default(JOURNAL)
-  documentType DocumentType?      @map("document_type")
-  documentId   String?            @map("document_id")
+  type         EntryType                             @default(ENTRY)
+
+  // 🔹 Nuevo: qué tipo de evento lo generó
+  sourceType   JournalSourceType  @map("source_type")
+  // 🔹 Id de la entidad origen (documento, movimiento, etc.)
+  sourceId     String?            @map("source_id")
 
   // Relación con líneas
   lines        JournalEntryLine[]
   bankMovement BankMovement?
 
-  createdAt    DateTime           @map("created_at")    @default(now())
-  updatedAt    DateTime           @map("updated_at")    @updatedAt
+  createdAt    DateTime           @map("created_at")  @default(now())
+  updatedAt    DateTime           @map("updated_at")  @updatedAt
 
   @@map("journal_entry")
 }
@@ -1075,12 +1082,6 @@ enum AccountType {
   EXPENSE // Gastos
 }
 
-enum EntryType {
-  JOURNAL // Diario general
-  ADJUSTMENT // Ajuste
-  CLOSING // Cierre contable
-}
-
 enum DocumentType {
   INVOICE // Factura
   BILL // Gasto / Cuenta por pagar
@@ -1088,6 +1089,27 @@ enum DocumentType {
   PAYMENT // Pago
   COLLECTION // Cobro
   OTHER
+}
+
+enum EntryType {
+  PURCHASE           // Compra
+  SALE               // Venta
+  DEPOSIT            // Depósito
+  INVENTORY          // Inventario
+  WITHHOLDING        // Retención
+  ENTRY              // Asiento
+  INCOME             // Ingreso
+  EXPENSE            // Gasto
+  AUTOMATIC_CLOSING  // Cierre automático
+  PAYROLL            // Nómina
+}
+
+enum JournalSourceType {
+  DOCUMENT
+  INVENTORY_MOVEMENT
+  BANK_MOVEMENT
+  CASH_MOVEMENT
+  MANUAL_ENTRY
 }
 
 enum BankAccountType {

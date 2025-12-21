@@ -19,6 +19,7 @@ export const productSchema = z.object({
   barcode: z.string().optional().nullable(),
   unitId: z.string().min(1, "La unidad es obligatoria"),
   categoryId: z.string().min(1, "La categoría es obligatoria"),
+  salesAccountId: z.string().optional().nullable(),
   inventoryAccountId: z.string().optional().nullable(),
   costAccountId: z.string().optional().nullable(),
   status: z.enum(["ACTIVE", "INACTIVE"]),

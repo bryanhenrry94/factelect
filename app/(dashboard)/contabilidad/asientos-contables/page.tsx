@@ -7,19 +7,22 @@ import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
 
 import PageContainer from "@/components/container/PageContainer";
 import { notifyError, notifyInfo } from "@/lib/notifications";
-import { AlertService } from "@/lib/alerts";
 
 import {
   deleteJournalEntry,
   getJournalEntries,
+  JournalEntryFilter,
 } from "@/actions/accounting/journal-entry";
-import { JournalEntry } from "@/lib/validations/accounting/journal_entry";
-import { formatDate } from "@/utils/formatters";
+import {
+  JournalEntry,
+  JournalEntryResponse,
+} from "@/lib/validations/accounting/journal_entry";
+import { formatCurrency, formatDate } from "@/utils/formatters";
 
 /* ShadCN */
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -29,43 +32,69 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { Field, FieldLabel } from "@/components/ui/field";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useSearchFilter } from "@/hooks/useSearchFilter";
+import { useDateRangeFilter } from "@/hooks/useDateRangeFilter";
+import { useTypeFilter } from "@/hooks/useTypeFilter";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useAccountFilter } from "@/hooks/useAccountFilter";
+import { ChartOfAccount } from "@/lib/validations";
+import { getAccounts } from "@/actions/accounting/chart-of-account";
 
 export default function AsientosContablesPage() {
   const router = useRouter();
   const params = useSearchParams();
   const { data: session } = useSession();
 
-  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
-  const [search, setSearch] = useState(params.get("search") ?? "");
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
+  const [journalEntries, setJournalEntries] = useState<JournalEntryResponse[]>(
+    []
+  );
 
+  // Filters
+  const { search, setSearch } = useSearchFilter();
+  const { account, setAccount } = useAccountFilter();
+  const { dateFrom, setDateFrom, dateTo, setDateTo } = useDateRangeFilter();
+  const { type, setType } = useTypeFilter();
+
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  /* ---------------- Debounce ---------------- */
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  /* ---------------- URL params ---------------- */
-  useEffect(() => {
-    const query = new URLSearchParams(params.toString());
-    debouncedSearch
-      ? query.set("search", debouncedSearch)
-      : query.delete("search");
-
-    router.push(`/contabilidad/asientos-contables?${query.toString()}`);
-  }, [debouncedSearch]);
-
   /* ---------------- Fetch ---------------- */
+  const fetchAccounts = async () => {
+    if (!session?.user?.tenantId) return;
+
+    try {
+      const response = await getAccounts(session.user.tenantId);
+      if (response.success) {
+        setAccounts(response.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching accounts:", error);
+    }
+  };
+
   const fetchJournalEntries = async () => {
     if (!session?.user?.tenantId) return;
 
-    const response = await getJournalEntries(
-      session.user.tenantId,
-      debouncedSearch
-    );
+    const filters: JournalEntryFilter = {
+      tenantId: session.user.tenantId,
+      search: search || undefined,
+      accountId: account || undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+      type: type !== "none" ? (type as any) : undefined,
+    };
+
+    const response = await getJournalEntries(filters);
 
     if (!response.success) {
       notifyError("Error al cargar los asientos contables");
@@ -77,7 +106,11 @@ export default function AsientosContablesPage() {
 
   useEffect(() => {
     fetchJournalEntries();
-  }, [session?.user?.tenantId, debouncedSearch]);
+  }, [session?.user?.tenantId, search, account, dateFrom, dateTo, type]);
+
+  useEffect(() => {
+    fetchAccounts();
+  }, [session?.user?.tenantId]);
 
   /* ---------------- Actions ---------------- */
   const handleCreate = () => {
@@ -89,7 +122,7 @@ export default function AsientosContablesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    const confirmed = await AlertService.showConfirm(
+    const confirmed = await ConfirmDialog.confirm(
       "Aviso",
       "¿Deseas eliminar el asiento contable?"
     );
@@ -111,26 +144,80 @@ export default function AsientosContablesPage() {
       title="Asientos Contables"
       description="Gestiona los asientos contables de tu organización"
     >
-      {/* Top bar */}
-      <div className="flex flex-col sm:flex-row gap-2 justify-between mb-4">
-        <Input
-          placeholder="Buscar..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="sm:max-w-xs"
-        />
+      <Card className="shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div>
+            <CardTitle className="text-lg">Filtros</CardTitle>
+          </div>
 
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo
-        </Button>
-      </div>
+          <Button onClick={handleCreate} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo
+          </Button>
+        </CardHeader>
+
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {/* Buscar */}
+            <Field>
+              <FieldLabel>Buscar</FieldLabel>
+              <Input
+                placeholder="Buscar por descripción..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </Field>
+            {/* Tipo */}
+            <Field>
+              <FieldLabel>Tipo</FieldLabel>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo de transacción" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Todos</SelectItem>
+                  <SelectItem value="PURCHASE">Compra</SelectItem>
+                  <SelectItem value="SALE">Venta</SelectItem>
+                  <SelectItem value="DEPOSIT">Depósito</SelectItem>
+                  <SelectItem value="INVENTORY">Inventario</SelectItem>
+                  <SelectItem value="WITHHOLDING">Retención</SelectItem>
+                  <SelectItem value="ENTRY">Asiento</SelectItem>
+                  <SelectItem value="INCOME">Ingreso</SelectItem>
+                  <SelectItem value="EXPENSE">Gasto</SelectItem>
+                  <SelectItem value="AUTOMATIC_CLOSING">
+                    Cierre automático
+                  </SelectItem>
+                  <SelectItem value="PAYROLL">Nómina</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            {/* Desde */}
+            <Field>
+              <FieldLabel>Desde</FieldLabel>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </Field>
+            {/* Hasta */}
+            <Field>
+              <FieldLabel>Hasta</FieldLabel>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </Field>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
-        <CardContent>
+        <CardContent className="p-6">
           {journalEntries.length === 0 ? (
-            <div className="flex flex-col items-center py-10 text-center">
-              <ShoppingBag className="h-10 w-10 text-muted-foreground" />
+            <div className="flex flex-col items-center py-12 text-center">
+              <ShoppingBag className="h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">
                 No hay asientos contables
               </h3>
@@ -139,28 +226,37 @@ export default function AsientosContablesPage() {
               </p>
             </div>
           ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {journalEntries
-                    .slice(
-                      (currentPage - 1) * itemsPerPage,
-                      (currentPage - 1) * itemsPerPage + itemsPerPage
-                    )
-                    .map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell>
-                          {formatDate(entry.date.toString())}
-                        </TableCell>
-                        <TableCell>{entry.description}</TableCell>
-                        <TableCell className="text-right space-x-2">
+            <div className="space-y-4">
+              {journalEntries
+                .slice(
+                  (currentPage - 1) * itemsPerPage,
+                  (currentPage - 1) * itemsPerPage + itemsPerPage
+                )
+                .map((entry) => (
+                  <Card
+                    key={entry.id}
+                    className="border shadow-sm hover:shadow-md transition"
+                  >
+                    {/* HEADER */}
+                    <CardContent className="p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(entry.date.toString())}
+                          </p>
+                          <h4 className="text-sm font-semibold">
+                            {entry.description || "Asiento contable"}
+                          </h4>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {/* Puedes mostrar origen si lo tienes */}
+                          {entry.type && (
+                            <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                              {entry.type}
+                            </span>
+                          )}
+
                           <Button
                             variant="ghost"
                             size="icon"
@@ -171,23 +267,96 @@ export default function AsientosContablesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="text-destructive"
                             onClick={() => handleDelete(entry.id)}
                           >
                             <Delete className="h-4 w-4" />
                           </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
+                        </div>
+                      </div>
 
+                      {/* LINES */}
+                      <div className="mt-4 overflow-x-auto">
+                        {entry.lines && entry.lines.length > 0 ? (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Cuenta</TableHead>
+                                <TableHead className="text-right">
+                                  Debe
+                                </TableHead>
+                                <TableHead className="text-right">
+                                  Haber
+                                </TableHead>
+                                <TableHead className="text-center">
+                                  Centro de Costo
+                                </TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {entry.lines.map((line, idx) => (
+                                <TableRow key={line.id || idx}>
+                                  <TableCell className="font-medium">
+                                    {line.account?.name || "-"}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {line.debit
+                                      ? formatCurrency(line.debit)
+                                      : "—"}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {line.credit
+                                      ? formatCurrency(line.credit)
+                                      : "—"}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    {line.costCenter?.name
+                                      ? `${line.costCenter.code} ${line.costCenter.name}`
+                                      : "-"}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+
+                              {/* Totales */}
+                              <TableRow className="bg-muted/50 font-semibold">
+                                <TableCell>Total</TableCell>
+                                <TableCell className="text-right">
+                                  {formatCurrency(
+                                    entry.lines.reduce(
+                                      (sum, l) => sum + (l.debit || 0),
+                                      0
+                                    )
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {formatCurrency(
+                                    entry.lines.reduce(
+                                      (sum, l) => sum + (l.credit || 0),
+                                      0
+                                    )
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        ) : (
+                          <p className="text-sm italic text-muted-foreground">
+                            Sin líneas de detalle
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+              {/* PAGINACIÓN */}
               <PaginationControls
                 currentPage={currentPage}
                 itemsPerPage={itemsPerPage}
                 totalItems={journalEntries.length}
                 onPageChange={(page) => setCurrentPage(page)}
               />
-            </>
+            </div>
           )}
         </CardContent>
       </Card>

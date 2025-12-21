@@ -68,6 +68,7 @@ export function ProductForm({ productId, onCreate }: ProductFormProps) {
       barcode: null,
       categoryId: undefined,
       unitId: undefined,
+      salesAccountId: null,
       inventoryAccountId: null,
       costAccountId: null,
     },
@@ -310,6 +311,22 @@ export function ProductForm({ productId, onCreate }: ProductFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field>
                 <FieldLabel>Cuenta de Ingresos</FieldLabel>
+                <Controller
+                  name="salesAccountId"
+                  control={control}
+                  render={({ field }) => (
+                    <AccountSelect
+                      label="Seleccionar cuenta"
+                      accounts={accounts}
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel>Cuenta de Inventario</FieldLabel>
                 <Controller
                   name="inventoryAccountId"
                   control={control}

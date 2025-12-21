@@ -9,6 +9,11 @@ import { $Enums, DocumentPayment } from "@/prisma/generated/prisma";
 import { formatDate } from "@/utils/formatters";
 
 import { Prisma } from "@/prisma/generated/prisma";
+import {
+  createJournalEntryTx,
+  getJournalEntriesDocumentData,
+} from "../accounting/journal-entry";
+import { CreateJournalEntry } from "@/lib/validations/accounting/journal_entry";
 
 export const getDocuments = async (
   tenantId: string,
@@ -98,24 +103,49 @@ export const deleteDocument = async (
 };
 
 export const createDocument = async (
-  data: CreateDocument,
-  tenantId: string
+  tenantId: string,
+  data: CreateDocument
 ): Promise<{ success: boolean; data?: DocumentResponse; error?: string }> => {
   try {
-    const balance = data.total - (data.paidAmount || 0);
+    const result = await prisma.$transaction(async (tx) => {
+      // 1️⃣ Crear documento
+      const resultDocument = await createDocumentTx(tx, tenantId, data);
 
-    // Validar pagos solo para facturas de clientes
-    if (data.entityType === "CUSTOMER" && data.documentType === "INVOICE") {
-      const totalPayments =
-        data.documentPayments?.reduce((sum, p) => sum + p.amount, 0) || 0;
-
-      if (totalPayments !== data.total) {
-        return {
-          success: false,
-          error: "El total de pagos debe ser igual al total del documento",
-        };
+      if (!resultDocument.success || !resultDocument.data) {
+        throw new Error(resultDocument.error || "Error creando el documento");
       }
+
+      // 2️⃣ Obtener datos para asiento contable
+      const journalData = await getJournalEntriesDocumentData(
+        tx,
+        resultDocument.data.id
+      );
+
+      // 3️⃣ Crear asiento contable
+      const journal = await createJournalEntryTx(tx, tenantId, journalData);
+
+      return { document: resultDocument.data, journal };
+    });
+
+    return { success: true, data: result.document };
+  } catch (error: any) {
+    console.error(error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const createDocumentTx = async (
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  data: CreateDocument
+): Promise<{ success: boolean; data?: DocumentResponse; error?: string }> => {
+  try {
+    const resValidated = await validateDocument(data);
+    if (!resValidated.success) {
+      return { success: false, error: "Datos del documento inválidos" };
     }
+
+    const balance = data.total - (data.paidAmount || 0);
 
     // Valida que el detalle del documento no tenga campos vacios
     for (const item of data.items) {
@@ -132,88 +162,84 @@ export const createDocument = async (
       }
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Crear documento
-      const newDocument = await tx.document.create({
+    // 1. Crear documento
+    const newDocument = await tx.document.create({
+      data: {
+        tenantId,
+        entityType: data.entityType,
+        documentType: data.documentType as $Enums.DocumentType,
+        number: data.number || undefined,
+        issueDate: data.issueDate,
+        dueDate: data.dueDate || undefined,
+        status: data.status,
+        personId: data.personId,
+        subtotal: data.subtotal,
+        taxTotal: data.taxTotal,
+        discount: data.discount,
+        total: data.total,
+        paidAmount: data.paidAmount,
+        balance,
+        description: data.description || undefined,
+      },
+    });
+
+    // 2. Items
+    if (data.items?.length) {
+      await tx.documentItem.createMany({
+        data: data.items.map((item) => ({
+          ...item,
+          documentId: newDocument.id,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    // 3. Fiscal Info + actualizar secuencia
+    if (data.fiscalInfo) {
+      await tx.documentFiscalInfo.create({
         data: {
-          tenantId,
-          entityType: data.entityType,
-          documentType: data.documentType as $Enums.DocumentType,
-          number: data.number || undefined,
-          issueDate: data.issueDate,
-          dueDate: data.dueDate || undefined,
-          status: data.status,
-          personId: data.personId,
-          subtotal: data.subtotal,
-          taxTotal: data.taxTotal,
-          discount: data.discount,
-          total: data.total,
-          paidAmount: data.paidAmount,
-          balance,
-          description: data.description || undefined,
+          documentId: newDocument.id,
+          establishmentId: data.fiscalInfo.establishmentId,
+          emissionPointId: data.fiscalInfo.emissionPointId,
+          sequence: data.fiscalInfo.sequence,
+          environment: data.fiscalInfo.environment,
+          sriStatus: data.fiscalInfo.sriStatus,
         },
       });
 
-      // 2. Items
-      if (data.items?.length) {
-        await tx.documentItem.createMany({
-          data: data.items.map((item) => ({
-            ...item,
-            documentId: newDocument.id,
-          })),
-          skipDuplicates: true,
-        });
-      }
-
-      // 3. Fiscal Info + actualizar secuencia
-      if (data.fiscalInfo) {
-        await tx.documentFiscalInfo.create({
-          data: {
-            documentId: newDocument.id,
+      await tx.sequenceControl.update({
+        where: {
+          tenantId_establishmentId_emissionPointId_documentType: {
+            tenantId,
             establishmentId: data.fiscalInfo.establishmentId,
             emissionPointId: data.fiscalInfo.emissionPointId,
-            sequence: data.fiscalInfo.sequence,
-            environment: data.fiscalInfo.environment,
-            sriStatus: data.fiscalInfo.sriStatus,
+            documentType: data.documentType as $Enums.DocumentType,
           },
-        });
+        },
+        data: {
+          currentSequence: data.fiscalInfo.sequence + 1,
+        },
+      });
+    }
 
-        await tx.sequenceControl.update({
-          where: {
-            tenantId_establishmentId_emissionPointId_documentType: {
-              tenantId,
-              establishmentId: data.fiscalInfo.establishmentId,
-              emissionPointId: data.fiscalInfo.emissionPointId,
-              documentType: data.documentType as $Enums.DocumentType,
-            },
-          },
-          data: {
-            currentSequence: data.fiscalInfo.sequence + 1,
-          },
-        });
-      }
-
-      // 4. Payments
-      if (data.documentPayments?.length) {
-        await tx.documentPayment.createMany({
-          data: data.documentPayments.map((p) => ({
-            ...p,
-            documentId: newDocument.id,
-          })),
-          skipDuplicates: true,
-        });
-      }
-
-      return newDocument;
-    });
+    // 4. Payments
+    if (data.documentPayments?.length) {
+      await tx.documentPayment.createMany({
+        data: data.documentPayments.map((p) => ({
+          ...p,
+          documentId: newDocument.id,
+        })),
+        skipDuplicates: true,
+      });
+    }
 
     // Se formatea solo al final, fuera de la transacción
     const formattedDocument: DocumentResponse = {
-      ...result,
-      number: result.number || undefined,
-      dueDate: result.dueDate || undefined,
-      description: result.description || undefined,
-      documentType: result.documentType as $Enums.DocumentType,
+      ...newDocument,
+      number: newDocument.number || undefined,
+      dueDate: newDocument.dueDate || undefined,
+      description: newDocument.description || undefined,
+      documentType: newDocument.documentType as $Enums.DocumentType,
     };
 
     return { success: true, data: formattedDocument };
@@ -224,137 +250,164 @@ export const createDocument = async (
 };
 
 export const updateDocument = async (
+  tenantId: string,
   id: string,
   data: CreateDocument
 ): Promise<{ success: boolean; data?: DocumentResponse; error?: string }> => {
   try {
-    const balance = data.total - (data.paidAmount || 0);
-
-    // Validar pagos solo para facturas de clientes
-    if (data.entityType === "CUSTOMER" && data.documentType === "INVOICE") {
-      const totalPayments =
-        data.documentPayments?.reduce((sum, p) => sum + p.amount, 0) || 0;
-
-      if (totalPayments !== data.total) {
-        return {
-          success: false,
-          error: "El total de pagos debe ser igual al total del documento",
-        };
-      }
-    }
-
-    // Valida que el detalle del documento no tenga campos vacíos
-    for (const item of data.items) {
-      if (
-        !item.warehouseId ||
-        !item.productId ||
-        item.quantity <= 0 ||
-        item.unitPrice < 0
-      ) {
-        return {
-          success: false,
-          error: "El detalle del documento contiene campos vacíos o inválidos",
-        };
-      }
-    }
-
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Actualizar documento
-      const updatedDocument = await tx.document.update({
+      // 1️⃣ Actualizar documento
+      const resultDocument = await updateDocumentTx(tx, id, data);
+
+      if (!resultDocument.success || !resultDocument.data) {
+        throw new Error(
+          resultDocument.error || "Error actualizando el documento"
+        );
+      }
+
+      // 2️⃣ Obtener datos para asiento contable
+      const journalData = await getJournalEntriesDocumentData(
+        tx,
+        resultDocument.data.id
+      );
+
+      // Valida si el documento ya tiene un asiento contable asociado
+      const existingJournals = await tx.journalEntry.findMany({
         where: {
-          id,
-        },
-        data: {
-          entityType: data.entityType,
-          documentType: data.documentType as $Enums.DocumentType,
-          number: data.number || undefined,
-          issueDate: data.issueDate,
-          dueDate: data.dueDate || undefined,
-          status: data.status,
-          personId: data.personId,
-          subtotal: data.subtotal,
-          taxTotal: data.taxTotal,
-          discount: data.discount,
-          total: data.total,
-          paidAmount: data.paidAmount,
-          balance,
-          description: data.description || undefined,
+          sourceType: "DOCUMENT",
+          sourceId: resultDocument.data.id,
         },
       });
 
-      // 2. Reemplazar items
-      await tx.documentItem.deleteMany({
-        where: { documentId: id },
-      });
-
-      if (data.items?.length) {
-        await tx.documentItem.createMany({
-          data: data.items.map((item) => ({
-            ...item,
-            documentId: id,
-          })),
+      // Si ya existe un asiento, eliminarlo antes de crear uno nuevo
+      for (const journal of existingJournals) {
+        await tx.journalEntryLine.deleteMany({
+          where: { journalEntryId: journal.id },
+        });
+        await tx.journalEntry.delete({
+          where: { id: journal.id },
         });
       }
 
-      // 3. Fiscal Info (update o create)
-      if (data.fiscalInfo) {
-        const existingFiscal = await tx.documentFiscalInfo.findUnique({
-          where: { documentId: id },
-        });
+      // 3️⃣ Crear asiento contable
+      const journal = await createJournalEntryTx(tx, tenantId, journalData);
 
-        if (existingFiscal) {
-          await tx.documentFiscalInfo.update({
-            where: { documentId: id },
-            data: {
-              establishmentId: data.fiscalInfo.establishmentId,
-              emissionPointId: data.fiscalInfo.emissionPointId,
-              sequence: data.fiscalInfo.sequence,
-              environment: data.fiscalInfo.environment,
-              sriStatus: data.fiscalInfo.sriStatus,
-            },
-          });
-        } else {
-          await tx.documentFiscalInfo.create({
-            data: {
-              documentId: id,
-              establishmentId: data.fiscalInfo.establishmentId,
-              emissionPointId: data.fiscalInfo.emissionPointId,
-              sequence: data.fiscalInfo.sequence,
-              environment: data.fiscalInfo.environment,
-              sriStatus: data.fiscalInfo.sriStatus,
-            },
-          });
-        }
-      } else {
-        // Si ya no viene fiscalInfo, eliminarla
-        await tx.documentFiscalInfo.deleteMany({
-          where: { documentId: id },
-        });
-      }
-
-      // 4. Reemplazar payments
-      await tx.documentPayment.deleteMany({
-        where: { documentId: id },
-      });
-
-      if (data.documentPayments?.length) {
-        await tx.documentPayment.createMany({
-          data: data.documentPayments.map((p) => ({
-            ...p,
-            documentId: id,
-          })),
-        });
-      }
-
-      return updatedDocument;
+      return { document: resultDocument.data, journal };
     });
 
+    return { success: true, data: result.document };
+  } catch (error) {
+    console.error("Error updating document:", error);
+    return { success: false, error: "Error actualizando el documento" };
+  }
+};
+
+export const updateDocumentTx = async (
+  tx: Prisma.TransactionClient,
+  id: string,
+  data: CreateDocument
+): Promise<{ success: boolean; data?: DocumentResponse; error?: string }> => {
+  try {
+    const resValidated = await validateDocument(data);
+    if (!resValidated.success) {
+      return { success: false, error: "Datos del documento inválidos" };
+    }
+
+    const balance = data.total - (data.paidAmount || 0);
+
+    // 1. Actualizar documento
+    const updatedDocument = await tx.document.update({
+      where: {
+        id,
+      },
+      data: {
+        entityType: data.entityType,
+        documentType: data.documentType as $Enums.DocumentType,
+        number: data.number || undefined,
+        issueDate: data.issueDate,
+        dueDate: data.dueDate || undefined,
+        status: data.status,
+        personId: data.personId,
+        subtotal: data.subtotal,
+        taxTotal: data.taxTotal,
+        discount: data.discount,
+        total: data.total,
+        paidAmount: data.paidAmount,
+        balance,
+        description: data.description || undefined,
+      },
+    });
+
+    // 2. Reemplazar items
+    await tx.documentItem.deleteMany({
+      where: { documentId: id },
+    });
+
+    if (data.items?.length) {
+      await tx.documentItem.createMany({
+        data: data.items.map((item) => ({
+          ...item,
+          documentId: id,
+        })),
+      });
+    }
+
+    // 3. Fiscal Info (update o create)
+    if (data.fiscalInfo) {
+      const existingFiscal = await tx.documentFiscalInfo.findUnique({
+        where: { documentId: id },
+      });
+
+      if (existingFiscal) {
+        await tx.documentFiscalInfo.update({
+          where: { documentId: id },
+          data: {
+            establishmentId: data.fiscalInfo.establishmentId,
+            emissionPointId: data.fiscalInfo.emissionPointId,
+            sequence: data.fiscalInfo.sequence,
+            environment: data.fiscalInfo.environment,
+            sriStatus: data.fiscalInfo.sriStatus,
+          },
+        });
+      } else {
+        await tx.documentFiscalInfo.create({
+          data: {
+            documentId: id,
+            establishmentId: data.fiscalInfo.establishmentId,
+            emissionPointId: data.fiscalInfo.emissionPointId,
+            sequence: data.fiscalInfo.sequence,
+            environment: data.fiscalInfo.environment,
+            sriStatus: data.fiscalInfo.sriStatus,
+          },
+        });
+      }
+    } else {
+      // Si ya no viene fiscalInfo, eliminarla
+      await tx.documentFiscalInfo.deleteMany({
+        where: { documentId: id },
+      });
+    }
+
+    // 4. Reemplazar payments
+    await tx.documentPayment.deleteMany({
+      where: { documentId: id },
+    });
+
+    if (data.documentPayments?.length) {
+      await tx.documentPayment.createMany({
+        data: data.documentPayments.map((p) => ({
+          ...p,
+          documentId: id,
+        })),
+      });
+    }
+
     const formattedDocument: DocumentResponse = {
-      ...result,
-      number: result.number || undefined,
-      dueDate: result.dueDate || undefined,
-      description: result.description || undefined,
-      documentType: result.documentType as $Enums.DocumentType,
+      ...updatedDocument,
+      number: updatedDocument.number || undefined,
+      dueDate: updatedDocument.dueDate || undefined,
+      description: updatedDocument.description || undefined,
+      documentType: updatedDocument.documentType as $Enums.DocumentType,
     };
 
     return { success: true, data: formattedDocument };
@@ -648,4 +701,38 @@ export const updateInvoiceXmlFile = async (
     console.error("Error updating XML path for document:", error);
     return { success: false, error: "Error updating XML path for document" };
   }
+};
+
+export const validateDocument = async (
+  data: CreateDocument
+): Promise<{ success: boolean; error?: string }> => {
+  // Validar pagos solo para facturas de clientes
+  if (data.entityType === "CUSTOMER" && data.documentType === "INVOICE") {
+    const totalPayments =
+      data.documentPayments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+
+    if (totalPayments !== data.total) {
+      return {
+        success: false,
+        error: "El total de pagos debe ser igual al total del documento",
+      };
+    }
+  }
+
+  // Valida que el detalle del documento no tenga campos vacíos
+  for (const item of data.items) {
+    if (
+      !item.warehouseId ||
+      !item.productId ||
+      item.quantity <= 0 ||
+      item.unitPrice < 0
+    ) {
+      return {
+        success: false,
+        error: "El detalle del documento contiene campos vacíos o inválidos",
+      };
+    }
+  }
+
+  return { success: true };
 };

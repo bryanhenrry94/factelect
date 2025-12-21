@@ -185,8 +185,8 @@ export default function DocumentForm({
       if (!confirm) return;
 
       const res = modeEdit
-        ? await updateDocument(documentId!, data)
-        : await createDocument(data, tenant.id);
+        ? await updateDocument(tenant.id, documentId!, data)
+        : await createDocument(tenant.id, data);
 
       if (!res?.success) {
         setError(res?.error || "Error al guardar documento");
