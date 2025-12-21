@@ -2,20 +2,25 @@
 
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
-  Button,
-  Card,
-  CardContent,
-  MenuItem,
-  TextField,
-  Typography,
-  Box,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
-  TableHead,
-  TableRow,
-  TableCell,
   TableBody,
-} from "@mui/material";
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
 import { Wallet, Lock, Unlock, History } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useForm, Controller } from "react-hook-form";
@@ -59,7 +64,6 @@ export default function CashSessionPage() {
     },
   });
 
-  /** Fetch open session */
   const fetchSession = async () => {
     const tenantId = session?.user?.tenantId;
     const userId = session?.user?.id;
@@ -69,18 +73,15 @@ export default function CashSessionPage() {
     const result = await getOpenCashSession(tenantId, userId);
     if (result.success) {
       setCashSession(result.data || null);
-
-      // Reset valores de cierre cuando haya una sesión
       reset({
         cashBoxId: "",
         initialAmount: 0,
+        closingAmount: 0,
       });
     }
-
     setLoading(false);
   };
 
-  /** Fetch cash boxes */
   const fetchCashBoxes = async () => {
     const tenantId = session?.user?.tenantId;
     if (!tenantId) return;
@@ -89,14 +90,14 @@ export default function CashSessionPage() {
     if (result.success) {
       setCashBoxes(result.data || []);
       if (result.data?.length) {
-        const firstBoxId = result.data[0].id;
-        reset((prev) => ({ ...prev, boxId: firstBoxId }));
+        reset((prev) => ({ ...prev, cashBoxId: result.data![0].id }));
       }
     }
   };
 
   const fetchCashSessionHistory = async () => {
-    const result = await getAllCashSessions(session!.user.tenantId);
+    if (!session?.user?.tenantId) return;
+    const result = await getAllCashSessions(session.user.tenantId);
     if (result.success) {
       setCashSessionsHistory(result.data || []);
     }
@@ -109,9 +110,7 @@ export default function CashSessionPage() {
     fetchCashSessionHistory();
   }, [session?.user?.tenantId]);
 
-  // -----------------------------
-  // 🔓 ABRIR CAJA
-  // -----------------------------
+  // 🔓 Abrir caja
   const handleOpen = handleSubmit(async (data) => {
     const tenantId = session?.user?.tenantId;
     const userId = session?.user?.id;
@@ -132,9 +131,7 @@ export default function CashSessionPage() {
     setLoading(false);
   });
 
-  // -----------------------------
-  // 🔒 CERRAR CAJA
-  // -----------------------------
+  // 🔒 Cerrar caja
   const handleClose = handleSubmit(async (data) => {
     if (!cashSession) return;
 
@@ -156,214 +153,177 @@ export default function CashSessionPage() {
       title="Apertura y Cierre de Caja"
       description="Apertura y Cierre de Caja"
     >
-      {/* ======================= */}
-      {/*    ESTADO DE LA CAJA    */}
-      {/* ======================= */}
+      {/* Estado de la caja */}
       <Card>
-        <CardContent>
-          {/* ---------------------- */}
-          {/* CAJA ABIERTA */}
-          {/* ---------------------- */}
+        <CardContent className="space-y-4">
           {cashSession ? (
-            <Box>
-              <Typography
-                variant="h6"
-                fontWeight="bold"
-                display="flex"
-                gap={1}
-                alignItems="center"
-              >
-                <Unlock size={20} /> Caja Abierta
-              </Typography>
+            // =================
+            // CAJA ABIERTA
+            // =================
+            <div className="space-y-4">
+              <h3 className="flex items-center gap-2 text-lg font-semibold">
+                <Unlock className="h-5 w-5" /> Caja Abierta
+              </h3>
 
-              <Typography mt={2}>
+              <p>
                 Monto de apertura: <strong>${cashSession.initialAmount}</strong>
-              </Typography>
+              </p>
 
-              <Box mt={3}>
-                <Controller
-                  name="closingAmount"
-                  control={control}
-                  rules={{ required: "Ingrese el monto de cierre" }}
-                  render={({ field, fieldState }) => (
-                    <TextField
+              <Controller
+                name="closingAmount"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <div className="space-y-1">
+                    <Input
                       {...field}
                       type="number"
-                      label="Monto de cierre"
-                      size="small"
-                      fullWidth
+                      placeholder="Monto de cierre"
                       value={field.value || 0}
-                      onChange={(e) => {
-                        const text = e.target.value;
-
-                        // Mantén siempre string en el campo
-                        field.onChange(text);
-                      }}
+                      onChange={(e) => field.onChange(e.target.value)}
                       onBlur={() => {
                         const numeric = parseFloat(
                           field.value ? field.value.toString() : "0"
                         );
-
-                        // Al salir del input conviertes a number seguro
                         field.onChange(
                           isNaN(numeric) ? 0 : Number(numeric.toFixed(2))
                         );
                       }}
-                      inputProps={{ inputMode: "decimal" }}
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
                     />
-                  )}
-                />
-              </Box>
+                    {fieldState.error && (
+                      <p className="text-sm text-destructive">
+                        {fieldState.error.message}
+                      </p>
+                    )}
+                  </div>
+                )}
+              />
 
               <Button
-                variant="contained"
-                color="error"
-                fullWidth
-                sx={{ mt: 2 }}
+                variant="destructive"
+                className="w-full"
                 onClick={handleClose}
-                disabled={loading}
+                disabled={loading || isSubmitting}
               >
-                <Lock size={18} style={{ marginRight: 6 }} /> Cerrar Caja
+                <Lock className="mr-2 h-4 w-4" />
+                Cerrar Caja
               </Button>
-            </Box>
+            </div>
           ) : (
-            /* ---------------------- */
-            /* CAJA CERRADA */
-            /* ---------------------- */
-            <Box>
-              <Typography
-                variant="h6"
-                fontWeight="bold"
-                display="flex"
-                gap={1}
-                alignItems="center"
-              >
-                <Lock size={20} /> Caja Cerrada
-              </Typography>
+            // =================
+            // CAJA CERRADA
+            // =================
+            <div className="space-y-4">
+              <h3 className="flex items-center gap-2 text-lg font-semibold">
+                <Lock className="h-5 w-5" /> Caja Cerrada
+              </h3>
 
-              {/* Selección de Caja */}
-              <Box mt={2}>
-                <Controller
-                  name="cashBoxId"
-                  control={control}
-                  rules={{ required: "Seleccione una caja" }}
-                  render={({ field, fieldState }) => (
-                    <TextField
-                      {...field}
-                      select
-                      label="Caja"
-                      size="small"
-                      fullWidth
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
-                    >
-                      {cashBoxes.map((box) => (
-                        <MenuItem key={box.id} value={box.id}>
-                          {box.name}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  )}
-                />
+              <Controller
+                name="cashBoxId"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <div className="space-y-1">
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccione una caja" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cashBoxes.map((box) => (
+                          <SelectItem key={box.id} value={box.id}>
+                            {box.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {fieldState.error && (
+                      <p className="text-sm text-destructive">
+                        {fieldState.error.message}
+                      </p>
+                    )}
+                  </div>
+                )}
+              />
 
-                {/* Monto de apertura */}
-                <Controller
-                  name="initialAmount"
-                  control={control}
-                  rules={{ required: "Ingrese el monto inicial" }}
-                  render={({ field, fieldState }) => (
-                    <TextField
+              <Controller
+                name="initialAmount"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <div className="space-y-1">
+                    <Input
                       {...field}
                       type="number"
-                      label="Monto de apertura"
-                      size="small"
-                      fullWidth
-                      sx={{ mt: 2 }}
-                      onChange={(e) => {
-                        const text = e.target.value;
-
-                        // Mantén siempre string en el campo
-                        field.onChange(text);
-                      }}
+                      placeholder="Monto de apertura"
+                      onChange={(e) => field.onChange(e.target.value)}
                       onBlur={() => {
                         const numeric = parseFloat(
                           field.value ? field.value.toString() : "0"
                         );
-
-                        // Al salir del input conviertes a number seguro
                         field.onChange(
                           isNaN(numeric) ? 0 : Number(numeric.toFixed(2))
                         );
                       }}
-                      inputProps={{ inputMode: "decimal" }}
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
                     />
-                  )}
-                />
-              </Box>
+                    {fieldState.error && (
+                      <p className="text-sm text-destructive">
+                        {fieldState.error.message}
+                      </p>
+                    )}
+                  </div>
+                )}
+              />
 
               <Button
-                variant="contained"
-                fullWidth
-                sx={{ mt: 2 }}
+                className="w-full"
                 onClick={handleOpen}
-                disabled={loading}
+                disabled={loading || isSubmitting}
               >
-                <Wallet size={18} style={{ marginRight: 6 }} /> Abrir Caja
+                <Wallet className="mr-2 h-4 w-4" />
+                Abrir Caja
               </Button>
-            </Box>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Historial (placeholder) */}
-      <Card sx={{ mt: 3 }}>
-        <CardContent>
-          <Typography variant="h6" display="flex" gap={1} alignItems="center">
-            <History size={20} /> Historial
-          </Typography>
-
-          <Typography variant="body2" color="text.secondary" mt={1}>
+      {/* Historial */}
+      <Card className="mt-6">
+        <CardContent className="space-y-3">
+          <h3 className="flex items-center gap-2 text-lg font-semibold">
+            <History className="h-5 w-5" /> Historial
+          </h3>
+          <p className="text-sm text-muted-foreground">
             Historial de aperturas y cierres.
-          </Typography>
+          </p>
 
           <Table>
-            <TableHead>
+            <TableHeader>
               <TableRow>
-                <TableCell>Fecha de Apertura</TableCell>
-                <TableCell>Monto de Apertura</TableCell>
-                <TableCell>Fecha de Cierre</TableCell>
-                <TableCell>Monto de Cierre</TableCell>
-                <TableCell>Estado</TableCell>
+                <TableHead>Fecha de Apertura</TableHead>
+                <TableHead>Monto de Apertura</TableHead>
+                <TableHead>Fecha de Cierre</TableHead>
+                <TableHead>Monto de Cierre</TableHead>
+                <TableHead>Estado</TableHead>
               </TableRow>
-            </TableHead>
+            </TableHeader>
             <TableBody>
               {cashSessionsHistory.length > 0 ? (
-                cashSessionsHistory.map((session) => (
-                  <TableRow key={session.id}>
+                cashSessionsHistory.map((s) => (
+                  <TableRow key={s.id}>
                     <TableCell>
-                      {new Date(session.openedAt).toLocaleString()}
+                      {new Date(s.openedAt).toLocaleString()}
                     </TableCell>
-                    <TableCell>${session.initialAmount}</TableCell>
+                    <TableCell>${s.initialAmount}</TableCell>
                     <TableCell>
-                      {session.closedAt
-                        ? new Date(session.closedAt).toLocaleString()
-                        : "-"}
+                      {s.closedAt ? new Date(s.closedAt).toLocaleString() : "-"}
                     </TableCell>
                     <TableCell>
-                      {session.closingAmount
-                        ? `$${session.closingAmount}`
-                        : "-"}
+                      {s.closingAmount ? `$${s.closingAmount}` : "-"}
                     </TableCell>
-                    <TableCell>{session.status}</TableCell>
+                    <TableCell>{s.status}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} align="center">
+                  <TableCell colSpan={5} className="text-center">
                     No hay datos disponibles.
                   </TableCell>
                 </TableRow>

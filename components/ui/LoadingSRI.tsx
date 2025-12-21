@@ -1,47 +1,30 @@
 "use client";
 
 import React from "react";
-import { Dialog, CircularProgress, Typography, Box } from "@mui/material";
 
 interface LoadingSRIProps {
   open: boolean;
 }
 
 const LoadingSRI: React.FC<LoadingSRIProps> = ({ open }) => {
+  if (!open) return null;
+
   return (
-    <Dialog
-      open={open}
-      PaperProps={{
-        sx: {
-          borderRadius: 4,
-          px: 4,
-          py: 3,
-        },
-      }}
-    >
-      <Box
-        sx={{
-          textAlign: "center",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 2,
-        }}
-      >
-        <CircularProgress
-          color="primary"
-          size={60}
-          thickness={4}
-          sx={{ mb: 1 }}
-        />
-        <Typography variant="h6" fontWeight="500">
-          Enviando comprobante al SRI...
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Por favor espera unos segundos mientras se autoriza el comprobante.
-        </Typography>
-      </Box>
-    </Dialog>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl px-8 py-6 shadow-xl max-w-sm w-full">
+        <div className="flex flex-col items-center text-center gap-4">
+          {/* Spinner */}
+          <div className="h-14 w-14 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-1" />
+
+          <h2 className="text-lg font-medium text-gray-900">
+            Enviando comprobante al SRI...
+          </h2>
+          <p className="text-sm text-gray-500">
+            Por favor espera unos segundos mientras se autoriza el comprobante.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 };
 

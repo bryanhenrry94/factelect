@@ -13,11 +13,19 @@ import {
   createJournalEntryTx,
   getJournalEntriesDocumentData,
 } from "../accounting/journal-entry";
-import { CreateJournalEntry } from "@/lib/validations/accounting/journal_entry";
+
+export interface DocumentFilter {
+  tenantId: string;
+  search?: string;
+  personId?: string;
+  entityType?: $Enums.EntityType;
+  documentType?: $Enums.DocumentType;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
 
 export const getDocuments = async (
-  tenantId: string,
-  personId?: string
+  params: DocumentFilter
 ): Promise<{
   success: boolean;
   data?: DocumentResponse[];
@@ -25,9 +33,76 @@ export const getDocuments = async (
 }> => {
   try {
     const where: Prisma.DocumentWhereInput = {
-      tenantId,
-      ...(personId ? { personId } : {}),
+      tenantId: params.tenantId,
     };
+
+    if (params.personId) {
+      where.personId = params.personId;
+    }
+
+    if (params.entityType) {
+      where.entityType = params.entityType;
+    }
+
+    if (params.documentType) {
+      where.documentType = params.documentType;
+    }
+
+    if (params.dateFrom || params.dateTo) {
+      where.issueDate = {
+        ...(params.dateFrom ? { gte: params.dateFrom } : {}),
+        ...(params.dateTo ? { lte: params.dateTo } : {}),
+      };
+    }
+
+    if (params.search) {
+      const search = params.search.trim();
+
+      where.OR = [
+        {
+          number: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        {
+          description: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        {
+          person: {
+            OR: [
+              {
+                firstName: {
+                  contains: search,
+                  mode: "insensitive",
+                },
+              },
+              {
+                lastName: {
+                  contains: search,
+                  mode: "insensitive",
+                },
+              },
+              {
+                businessName: {
+                  contains: search,
+                  mode: "insensitive",
+                },
+              },
+              {
+                identification: {
+                  contains: search,
+                  mode: "insensitive",
+                },
+              },
+            ],
+          },
+        },
+      ];
+    }
 
     const documents = await prisma.document.findMany({
       where,
@@ -39,6 +114,9 @@ export const getDocuments = async (
             emissionPoint: true,
           },
         },
+      },
+      orderBy: {
+        issueDate: "desc",
       },
     });
 

@@ -6,11 +6,11 @@ import { createDocumentPaymentSchema } from "./document-payment";
 export const entityTypeEnum = z.enum(["CUSTOMER", "SUPPLIER"]);
 export const documentTypeEnum = z.enum([
   "INVOICE",
-  "BILL",
-  "RECEIPT",
-  "PAYMENT",
-  "COLLECTION",
-  "OTHER",
+  "PURCHASE",
+  "CREDIT_NOTE",
+  "DEBIT_NOTE",
+  "WITHHOLDING",
+  "REMISSION_GUIDE",
 ]);
 
 export const documentStatusEnum = z.enum(["DRAFT", "CONFIRMED", "CANCELED"]);

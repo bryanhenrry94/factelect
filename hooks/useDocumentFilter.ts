@@ -1,24 +1,17 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export function useTypeFilter(paramName: string = "type") {
+export function useDocumentFilter(paramName: string = "documentType") {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const initialValue = searchParams.get(paramName) ?? "none";
-  const [type, setType] = useState(initialValue);
+  const [documentType, setDocumentType] = useState(initialValue);
 
-  // ✅ URL → state
-  useEffect(() => {
-    const current = searchParams.get(paramName) ?? "none";
-    setType((prev) => (prev === current ? prev : current));
-  }, [searchParams, paramName]);
-
-  // ✅ state → URL (debounced)
   useEffect(() => {
     const id = setTimeout(() => {
       const current = searchParams.get(paramName) ?? "none";
-      const next = type;
+      const next = documentType;
 
       if (current === next || (current === "" && next === "none")) return;
 
@@ -31,7 +24,7 @@ export function useTypeFilter(paramName: string = "type") {
     }, 400);
 
     return () => clearTimeout(id);
-  }, [type, searchParams, paramName, router]);
+  }, [documentType, paramName, router]);
 
-  return { type, setType };
+  return { documentType, setDocumentType };
 }

@@ -35,12 +35,11 @@ export const getTotalAmountByMonth = async (
     const invoices = await prisma.document.findMany({
       where: {
         tenantId,
+        entityType: "CUSTOMER",
+        documentType: "INVOICE",
         issueDate: {
           gte: startDate,
           lte: endDate,
-        },
-        status: {
-          in: ["CONFIRMED"], // Only count valid invoices
         },
       },
       select: {
@@ -48,6 +47,8 @@ export const getTotalAmountByMonth = async (
         total: true,
       },
     });
+
+    console.log("Invoices fetched:", invoices);
 
     // Helper function to get week number of month (0-based)
     const getWeekOfMonth = (date: Date): number => {
@@ -105,12 +106,11 @@ export const getYearlyBreakup = async (
     const currentYearInvoices = await prisma.document.findMany({
       where: {
         tenantId,
+        entityType: "CUSTOMER",
+        documentType: "INVOICE",
         issueDate: {
           gte: new Date(year, 0, 1),
           lte: new Date(year, 11, 31),
-        },
-        status: {
-          in: ["CONFIRMED"],
         },
       },
       select: {
@@ -191,12 +191,11 @@ export const getMonthlyEarnings = async (
     const currentMonthInvoices = await prisma.document.findMany({
       where: {
         tenantId,
+        entityType: "CUSTOMER",
+        documentType: "INVOICE",
         issueDate: {
           gte: new Date(year, month - 1, 1),
           lte: new Date(year, month, 0),
-        },
-        status: {
-          in: ["CONFIRMED"],
         },
       },
       select: {
@@ -307,12 +306,11 @@ export const getMonthlySalesData = async (
     const invoices = await prisma.document.findMany({
       where: {
         tenantId,
+        entityType: "CUSTOMER",
+        documentType: "INVOICE",
         issueDate: {
           gte: new Date(year, 0, 1),
           lte: new Date(year, 11, 31),
-        },
-        status: {
-          in: ["CONFIRMED"],
         },
       },
       select: {

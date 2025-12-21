@@ -1,25 +1,24 @@
 "use client";
 
 import { useForm, useFieldArray } from "react-hook-form";
+import { CashBox } from "@/lib/validations/cash/cash_box";
+import { CashSession } from "@/lib/validations/cash/cash_session";
+import { CashMovement } from "@/lib/validations/cash/cash_movement";
+
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  TextField,
-  Button,
-  Divider,
-  Alert,
   Table,
   TableBody,
   TableCell,
   TableHead,
+  TableHeader,
   TableRow,
-} from "@mui/material";
-import { CashBox } from "@/lib/validations/cash/cash_box";
-import { CashSession } from "@/lib/validations/cash/cash_session";
-import { CashMovement } from "@/lib/validations/cash/cash_movement";
+} from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
 
 type FormValues = {
   cashCounts: { denomination: number; quantity: number }[];
@@ -27,15 +26,12 @@ type FormValues = {
 };
 
 export const ECUADOR_DENOMINATIONS = [
-  // Monedas
   { label: "1¢", value: 0.01 },
   { label: "5¢", value: 0.05 },
   { label: "10¢", value: 0.1 },
   { label: "25¢", value: 0.25 },
   { label: "50¢", value: 0.5 },
   { label: "$1", value: 1.0 },
-
-  // Billetes
   { label: "$1", value: 1 },
   { label: "$5", value: 5 },
   { label: "$10", value: 10 },
@@ -109,165 +105,140 @@ export const CashReconciliationForm: React.FC<CashReconciliationFormProps> = ({
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" fontWeight="bold">
-        Arqueo de Caja
-      </Typography>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-bold">Arqueo de Caja</h2>
+        <p className="text-sm text-muted-foreground">
+          Caja: {cashBox?.name} — Sesión #{session?.id}
+        </p>
+      </div>
 
-      <Typography variant="subtitle1" color="text.secondary">
-        Caja: {cashBox?.name} — Sesión #{session?.id}
-      </Typography>
+      <Separator />
 
-      <Divider sx={{ my: 3 }} />
+      {/* Información General + Resumen */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {/* Información */}
+        <Card>
+          <CardContent className="space-y-2 pt-6">
+            <p className="font-semibold">Información General</p>
+            <p className="text-sm">Cajero: {session?.userId}</p>
+            <p className="text-sm">
+              Fecha Apertura:{" "}
+              {session?.openedAt
+                ? new Date(session.openedAt).toLocaleString()
+                : ""}
+            </p>
+            <p className="text-sm">Monto Inicial: ${session?.initialAmount}</p>
+          </CardContent>
+        </Card>
 
-      {/* --------------------------------------------
-          Información General
-      --------------------------------------------- */}
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 4 }}>
+        {/* Resumen */}
+        <div className="md:col-span-2 grid grid-cols-3 gap-4">
           <Card>
-            <CardContent>
-              <Typography fontWeight="bold">Información General</Typography>
-
-              <Typography variant="body2">Cajero: {session?.userId}</Typography>
-
-              <Typography variant="body2">
-                Fecha Apertura:{" "}
-                {session?.openedAt
-                  ? new Date(session.openedAt).toLocaleString()
-                  : ""}
-              </Typography>
-
-              <Typography variant="body2">
-                Monto Inicial: ${session?.initialAmount}
-              </Typography>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground">Ingresos</p>
+              <p className="text-xl font-semibold">${totalIngresos}</p>
             </CardContent>
           </Card>
-        </Grid>
 
-        {/* --------------------------------------------
-          Resumen
-        --------------------------------------------- */}
-        <Grid size={{ xs: 12, md: 8 }}>
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 4 }}>
-              <Card>
-                <CardContent>
-                  <Typography variant="body2">Ingresos</Typography>
-                  <Typography variant="h6">${totalIngresos}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground">Egresos</p>
+              <p className="text-xl font-semibold">${totalEgresos}</p>
+            </CardContent>
+          </Card>
 
-            <Grid size={{ xs: 4 }}>
-              <Card>
-                <CardContent>
-                  <Typography variant="body2">Egresos</Typography>
-                  <Typography variant="h6">${totalEgresos}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground">Saldo Teórico</p>
+              <p className="text-xl font-semibold">${saldoTeorico}</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-            <Grid size={{ xs: 4 }}>
-              <Card>
-                <CardContent>
-                  <Typography variant="body2">Saldo Teórico</Typography>
-                  <Typography variant="h6">${saldoTeorico}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Grid>
-      </Grid>
+      <Separator />
 
-      <Divider sx={{ my: 4 }} />
+      {/* Conteo Físico */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold">Conteo Físico</h3>
 
-      {/* --------------------------------------------
-          Conteo Físico
-      --------------------------------------------- */}
-      <Typography variant="h6" mb={2}>
-        Conteo Físico
-      </Typography>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Denominación</TableHead>
+              <TableHead>Cantidad</TableHead>
+              <TableHead>Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {fields.map((field, index) => {
+              const qty = watch(`cashCounts.${index}.quantity`) || 0;
+              const total = qty * field.denomination;
 
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Denominación</TableCell>
-            <TableCell>Cantidad</TableCell>
-            <TableCell>Total</TableCell>
-          </TableRow>
-        </TableHead>
+              return (
+                <TableRow key={field.id}>
+                  <TableCell>${field.denomination}</TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min={0}
+                      className="w-24"
+                      {...register(`cashCounts.${index}.quantity`, {
+                        valueAsNumber: true,
+                      })}
+                    />
+                  </TableCell>
+                  <TableCell>${total.toFixed(2)}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
 
-        <TableBody>
-          {fields.map((field, index) => {
-            const qty = watch(`cashCounts.${index}.quantity`) || 0;
-            const total = qty * field.denomination;
-
-            return (
-              <TableRow key={field.id}>
-                <TableCell>${field.denomination}</TableCell>
-
-                <TableCell>
-                  <TextField
-                    size="small"
-                    type="number"
-                    inputProps={{ min: 0 }}
-                    {...register(`cashCounts.${index}.quantity`, {
-                      valueAsNumber: true,
-                    })}
-                  />
-                </TableCell>
-
-                <TableCell>${total.toFixed(2)}</TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-
-      <Box mt={3}>
-        <Typography variant="h6">
+        <p className="text-lg font-semibold">
           Total Contado: ${totalContado.toFixed(2)}
-        </Typography>
-      </Box>
+        </p>
+      </div>
 
-      {/* --------------------------------------------
-          Diferencias
-      --------------------------------------------- */}
-      <Box mt={3}>
+      {/* Diferencias */}
+      <div>
         {diferencia === 0 ? (
-          <Alert severity="success">Todo coincide. No hay diferencias.</Alert>
+          <Alert>
+            <AlertTitle>Todo correcto</AlertTitle>
+            <AlertDescription>
+              Todo coincide. No hay diferencias.
+            </AlertDescription>
+          </Alert>
         ) : (
-          <Alert severity="warning">
-            Diferencia detectada: {diferencia > 0 ? "+" : ""}
-            {diferencia.toFixed(2)}
+          <Alert variant="destructive">
+            <AlertTitle>Diferencia detectada</AlertTitle>
+            <AlertDescription>
+              {diferencia > 0 ? "+" : ""}
+              {diferencia.toFixed(2)}
+            </AlertDescription>
           </Alert>
         )}
-      </Box>
+      </div>
 
-      {/* --------------------------------------------
-          Observaciones
-      --------------------------------------------- */}
-      <Box mt={4}>
-        <TextField
-          fullWidth
-          multiline
+      {/* Observaciones */}
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Observaciones</p>
+        <Textarea
           rows={3}
-          label="Observaciones"
+          placeholder="Observaciones del arqueo..."
           {...register("observations")}
         />
-      </Box>
+      </div>
 
-      {/* --------------------------------------------
-          Acciones
-      --------------------------------------------- */}
-      <Box display="flex" justifyContent="flex-end" gap={2} mt={4}>
-        <Button variant="outlined">Cancelar</Button>
-
-        <Button variant="contained" onClick={handleSubmit(onSubmit)}>
-          Guardar Arqueo
+      {/* Acciones */}
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" type="button">
+          Cancelar
         </Button>
-      </Box>
-    </Box>
+        <Button onClick={handleSubmit(onSubmit)}>Guardar Arqueo</Button>
+      </div>
+    </div>
   );
 };

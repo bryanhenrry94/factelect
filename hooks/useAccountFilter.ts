@@ -6,12 +6,12 @@ export function useAccountFilter(paramName: string = "account") {
   const router = useRouter();
 
   const initialValue = searchParams.get(paramName) ?? "";
-  const [account, setAccount] = useState(initialValue);
+  const [account, setAccount] = useState<string | null>(initialValue);
 
   useEffect(() => {
     const id = setTimeout(() => {
       const current = searchParams.get(paramName) ?? "";
-      const next = account.trim();
+      const next = account?.trim() ?? "";
 
       // 🚫 no hacer replace si no hay cambio real
       if (current === next) return;

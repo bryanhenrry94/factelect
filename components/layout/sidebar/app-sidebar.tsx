@@ -82,7 +82,7 @@ const data = {
       items: [
         {
           title: "Ventas",
-          url: "/documentos",
+          url: "/documentos?type=CUSTOMER&documentType=INVOICE",
         },
         {
           title: "Estado de Cuenta",
@@ -101,7 +101,7 @@ const data = {
       items: [
         {
           title: "Compras",
-          url: "/documentos",
+          url: "/documentos?type=SUPPLIER&documentType=INVOICE",
         },
         {
           title: "Estado de Cuenta",

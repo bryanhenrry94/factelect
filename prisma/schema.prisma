@@ -878,7 +878,7 @@ model JournalEntry {
   tenantId     String             @map("tenant_id")
   date         DateTime
   description  String?
-  type         EntryType                             @default(ENTRY)
+  type         EntryType                              @default(ENTRY)
 
   // 🔹 Nuevo: qué tipo de evento lo generó
   sourceType   JournalSourceType  @map("source_type")
@@ -1083,13 +1083,14 @@ enum AccountType {
 }
 
 enum DocumentType {
-  INVOICE // Factura
-  BILL // Gasto / Cuenta por pagar
-  RECEIPT // Recibo
-  PAYMENT // Pago
-  COLLECTION // Cobro
-  OTHER
+  INVOICE          // Factura
+  PURCHASE         // Liquidación de compra
+  CREDIT_NOTE      // Nota de crédito
+  DEBIT_NOTE       // Nota de débito
+  WITHHOLDING      // Comprobante de retención
+  REMISSION_GUIDE  // Guía de remisión
 }
+
 
 enum EntryType {
   PURCHASE           // Compra

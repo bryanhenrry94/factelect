@@ -1,13 +1,17 @@
+"use client";
+
 import React, { memo, useEffect } from "react";
+import { TableRow, TableCell } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import {
-  TableRow,
-  TableCell,
-  TextField,
-  MenuItem,
-  IconButton,
-  Stack,
-} from "@mui/material";
-import { PlusCircle, Delete } from "lucide-react";
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { PlusCircle, Trash2 } from "lucide-react";
 import { Controller, useFormContext } from "react-hook-form";
 import { taxOptions } from "@/constants/tax";
 import { getProductById } from "@/actions";
@@ -32,36 +36,20 @@ interface CustomRowProps {
   remove: (index: number) => void;
 }
 
-/**
- * ✅ OPTIMIZACIONES:
- * - `memo` evita re-render si las props no cambian.
- * - Usa `useState` local para controlar valores de inputs.
- * - Actualiza el array padre solo cuando es necesario.
- */
 const CustomRow: React.FC<CustomRowProps> = memo(
-  ({ field, index, warehouses, products, remove }) => {
-    const {
-      control,
-      formState: { errors },
-      watch,
-      setValue,
-    } = useFormContext(); // <- accedemos al contexto del formulario
-
-    // const items = watch("items");
-    // console.log("items: ", items);
+  ({ index, warehouses, products, remove }) => {
+    const { control, watch, setValue } = useFormContext();
 
     const handleChangeProduct = async (productId: string) => {
-      const productResponse = await getProductById(productId);
-      if (productResponse.success && productResponse.data) {
-        const product = productResponse.data;
-
+      const res = await getProductById(productId);
+      if (res.success && res.data) {
+        const product = res.data;
         setValue(`items.${index}.unitPrice`, product.price);
         setValue(`items.${index}.tax`, product.tax);
         setValue(`items.${index}.quantity`, 1);
       }
     };
 
-    // Calcular totales automáticamente con react-hook-form watch
     const quantity = watch(`items.${index}.quantity`) ?? 0;
     const unitPrice = watch(`items.${index}.unitPrice`) ?? 0;
     const discountRate = watch(`items.${index}.discountRate`) ?? 0;
@@ -74,10 +62,8 @@ const CustomRow: React.FC<CustomRowProps> = memo(
     const totalWithTax =
       subtotalAfterDiscount + subtotalAfterDiscount * taxRate;
 
-    // Actualizar los valores calculados en el formulario
     useEffect(() => {
       setValue(`items.${index}.taxAmount`, subtotalAfterDiscount * taxRate);
-      setValue(`items.${index}.discountRate`, discountRate);
       setValue(`items.${index}.discountAmount`, discountAmount);
       setValue(`items.${index}.subtotal`, subtotalAfterDiscount);
       setValue(`items.${index}.total`, totalWithTax);
@@ -91,175 +77,163 @@ const CustomRow: React.FC<CustomRowProps> = memo(
     ]);
 
     return (
-      <TableRow
-        hover
-        sx={{
-          "& td": { py: 1 },
-        }}
-      >
-        <TableCell sx={{ minWidth: 160, width: "12%" }}>
+      <TableRow>
+        {/* Warehouse */}
+        <TableCell className="min-w-[160px]">
           <Controller
             control={control}
             name={`items.${index}.warehouseId`}
             render={({ field }) => (
-              <TextField
-                fullWidth
-                size="small"
-                select
-                value={field.value || ""}
-                onChange={(e) => {
-                  field.onChange(e);
-                  handleChangeProduct(e.target.value);
-                }}
-              >
-                {warehouses?.map((warehouse) => (
-                  <MenuItem key={warehouse.id} value={warehouse.id}>
-                    {warehouse.name}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <Select value={field.value || ""} onValueChange={field.onChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Bodega" />
+                </SelectTrigger>
+                <SelectContent>
+                  {warehouses.map((w) => (
+                    <SelectItem key={w.id} value={w.id}>
+                      {w.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           />
         </TableCell>
-        <TableCell sx={{ minWidth: 230, width: "22%" }}>
-          <Stack direction="row" gap={2}>
+
+        {/* Product */}
+        <TableCell className="min-w-[230px]">
+          <div className="flex items-center gap-2">
             <Controller
               control={control}
               name={`items.${index}.productId`}
               render={({ field }) => (
-                <TextField
-                  fullWidth
-                  size="small"
-                  select
+                <Select
                   value={field.value || ""}
-                  onChange={(e) => {
-                    field.onChange(e);
-                    handleChangeProduct(e.target.value);
+                  onValueChange={(val) => {
+                    field.onChange(val);
+                    handleChangeProduct(val);
                   }}
                 >
-                  {products.map((product) => (
-                    <MenuItem key={product.id} value={product.id}>
-                      {product.description}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Producto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.description}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             />
-
-            <IconButton onClick={() => {}} color="primary">
-              <PlusCircle />
-            </IconButton>
-          </Stack>
+            <Button type="button" size="icon" variant="ghost">
+              <PlusCircle className="h-5 w-5" />
+            </Button>
+          </div>
         </TableCell>
-        <TableCell sx={{ minWidth: 80, width: "7%" }}>
+
+        {/* Quantity */}
+        <TableCell className="min-w-[80px]">
           <Controller
             control={control}
             name={`items.${index}.quantity`}
             render={({ field }) => (
-              <TextField
+              <Input
                 type="number"
-                fullWidth
-                size="small"
+                min={0}
+                step="0.01"
                 value={field.value ?? 1}
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  field.onChange(isNaN(value) ? 0 : value);
-                }}
-                slotProps={{
-                  htmlInput: {
-                    min: 0,
-                    step: "0.01", // permite decimales
-                  },
-                }}
+                onChange={(e) =>
+                  field.onChange(parseFloat(e.target.value) || 0)
+                }
               />
             )}
           />
         </TableCell>
-        <TableCell sx={{ minWidth: 100, width: "9%" }}>
+
+        {/* Unit Price */}
+        <TableCell className="min-w-[100px]">
           <Controller
             control={control}
             name={`items.${index}.unitPrice`}
             render={({ field }) => (
-              <TextField
+              <Input
                 type="number"
-                fullWidth
-                size="small"
+                min={0}
+                step="0.01"
                 value={field.value ?? 0}
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  field.onChange(isNaN(value) ? 0 : value);
-                }}
-                slotProps={{
-                  htmlInput: {
-                    min: 0,
-                    step: "0.01", // permite decimales
-                  },
-                }}
+                onChange={(e) =>
+                  field.onChange(parseFloat(e.target.value) || 0)
+                }
               />
             )}
           />
         </TableCell>
-        <TableCell sx={{ minWidth: 95, width: "8%" }}>
+
+        {/* Tax */}
+        <TableCell className="min-w-[95px]">
           <Controller
             control={control}
             name={`items.${index}.tax`}
             render={({ field }) => (
-              <TextField
-                fullWidth
-                size="small"
-                select
-                value={field.value || ""}
-                onChange={field.onChange}
-              >
-                {taxOptions.map(({ label, value, code }) => (
-                  <MenuItem key={code} value={value}>
-                    {label}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <Select value={field.value || ""} onValueChange={field.onChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="IVA" />
+                </SelectTrigger>
+                <SelectContent>
+                  {taxOptions.map(({ label, value, code }) => (
+                    <SelectItem key={code} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           />
         </TableCell>
-        <TableCell sx={{ minWidth: 95, width: "8%" }}>
+
+        {/* Discount */}
+        <TableCell className="min-w-[95px]">
           <Controller
             control={control}
             name={`items.${index}.discountRate`}
             render={({ field }) => (
-              <TextField
+              <Input
                 type="number"
-                fullWidth
-                size="small"
+                min={0}
+                max={100}
+                step="0.01"
                 value={field.value ?? 0}
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  field.onChange(isNaN(value) ? 0 : value);
-                }}
-                slotProps={{
-                  htmlInput: {
-                    min: 0,
-                    max: 100,
-                    step: "0.01",
-                  },
-                }}
+                onChange={(e) =>
+                  field.onChange(parseFloat(e.target.value) || 0)
+                }
               />
             )}
           />
         </TableCell>
-        <TableCell
-          align="right"
-          sx={{ minWidth: 100, width: "10%", fontWeight: 600 }}
-        >{`$${(discountAmount ?? 0).toFixed(2)}`}</TableCell>
-        <TableCell>{`$${totalWithTax.toFixed(2)}`}</TableCell>
-        <TableCell
-          sx={{
-            minWidth: 60,
-            width: "6%",
-            textAlign: "center",
-          }}
-        >
-          <IconButton color="error" onClick={() => remove(index)}>
-            <Delete />
-          </IconButton>
+
+        {/* Discount Amount */}
+        <TableCell className="text-right font-semibold min-w-[100px]">
+          ${discountAmount.toFixed(2)}
+        </TableCell>
+
+        {/* Total */}
+        <TableCell className="min-w-[100px]">
+          ${totalWithTax.toFixed(2)}
+        </TableCell>
+
+        {/* Actions */}
+        <TableCell className="text-center min-w-[60px]">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-destructive"
+            onClick={() => remove(index)}
+          >
+            <Trash2 className="h-5 w-5" />
+          </Button>
         </TableCell>
       </TableRow>
     );

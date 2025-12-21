@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { DocumentResponse } from "@/lib/validations";
 import { deleteDocument, getDocuments, getPersonsByTenant } from "@/actions";
@@ -35,29 +34,45 @@ import { useDateRangeFilter } from "@/hooks/useDateRangeFilter";
 import { usePersonFilter } from "@/hooks/usePersonFilter";
 import { useTypeFilter } from "@/hooks/useTypeFilter";
 import { PersonInput } from "@/lib/validations/person";
+import { useDocumentFilter } from "@/hooks/useDocumentFilter";
+import { getDocumentTypeLabel } from "@/utils/document";
+import { $Enums } from "@/prisma/generated/prisma";
 
 export default function DocumentsPage() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [documents, setDocuments] = useState<DocumentResponse[]>([]);
   const [persons, setPersons] = useState<PersonInput[]>([]);
+  const params = useSearchParams();
+  console.log("Search params:", params.get("type"));
+
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
+  // Filters
   const { search, setSearch } = useSearchFilter();
   const { dateFrom, setDateFrom, dateTo, setDateTo } = useDateRangeFilter();
   const { person, setPerson } = usePersonFilter();
   const { type, setType } = useTypeFilter();
-
-  useEffect(() => {
-    if (!session?.user?.tenantId) return;
-
-    loadData();
-    getPersons();
-  }, [session?.user?.tenantId]);
+  const { documentType, setDocumentType } = useDocumentFilter();
 
   const loadData = async () => {
-    const response = await getDocuments(session?.user?.tenantId || "");
+    const params = {
+      tenantId: session?.user?.tenantId || "",
+      search: search || undefined,
+      personId: person !== "none" ? person : undefined,
+      entityType:
+        type !== "none" ? (type as "CUSTOMER" | "SUPPLIER") : undefined,
+      documentType:
+        documentType !== "none"
+          ? (documentType as $Enums.DocumentType)
+          : undefined,
+      dateFrom: dateFrom ? new Date(dateFrom) : undefined,
+      dateTo: dateTo ? new Date(dateTo) : undefined,
+    };
+
+    const response = await getDocuments(params);
 
     if (response.success && response.data) {
       setDocuments(response.data);
@@ -100,27 +115,30 @@ export default function DocumentsPage() {
     router.push(`/documentos/${id}/editar`);
   };
 
-  const paginatedDocuments = documents.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
   const handleAdd = () => {
     router.push("/documentos/nuevo");
   };
 
-  const getDocumentTypeLabel = (type: string) => {
-    switch (type) {
-      case "INVOICE":
-        return "FAC";
-      case "CREDIT_NOTE":
-        return "NC";
-      case "DEBIT_NOTE":
-        return "ND";
-      default:
-        return type;
-    }
-  };
+  useEffect(() => {
+    if (!session?.user?.tenantId) return;
+
+    getPersons();
+  }, [session?.user?.tenantId]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+
+    loadData();
+  }, [
+    status,
+    session?.user?.tenantId,
+    search,
+    dateFrom,
+    dateTo,
+    person,
+    type,
+    documentType,
+  ]);
 
   return (
     <div className="space-y-6">
@@ -150,7 +168,6 @@ export default function DocumentsPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </Field>
-
             {/* Tipo */}
             <Field>
               <FieldLabel>Tipo</FieldLabel>
@@ -160,8 +177,32 @@ export default function DocumentsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Todos</SelectItem>
-                  <SelectItem value="INCOME">Cobro</SelectItem>
-                  <SelectItem value="EXPENSE">Pago</SelectItem>
+                  <SelectItem value="CUSTOMER">Cliente</SelectItem>
+                  <SelectItem value="SUPPLIER">Proveedor</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            {/* Tipo Documento */}
+            <Field>
+              <FieldLabel>Tipo Documento</FieldLabel>
+              <Select value={documentType} onValueChange={setDocumentType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo de transacción" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Todos</SelectItem>
+                  <SelectItem value="INVOICE">Factura</SelectItem>
+                  <SelectItem value="PURCHASE">
+                    Liquidación de compra
+                  </SelectItem>
+                  <SelectItem value="CREDIT_NOTE">Nota de crédito</SelectItem>
+                  <SelectItem value="DEBIT_NOTE">Nota de débito</SelectItem>
+                  <SelectItem value="WITHHOLDING">
+                    Comprobante de retención
+                  </SelectItem>
+                  <SelectItem value="REMISSION_GUIDE">
+                    Guía de remisión
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -241,57 +282,68 @@ export default function DocumentsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedDocuments.map((document) => (
-                    <TableRow key={document.id}>
-                      <TableCell>
-                        {formatDate(document.issueDate.toString())}
-                      </TableCell>
-                      <TableCell>
-                        <div>
+                  {documents
+                    .slice(
+                      (currentPage - 1) * itemsPerPage,
+                      currentPage * itemsPerPage
+                    )
+                    .map((document) => (
+                      <TableRow key={document.id}>
+                        <TableCell>
+                          {formatDate(document.issueDate.toString())}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-normal text-sm">
+                              {document?.person?.fullname || "N/A"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {document.person?.identification || "N/A"}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
                           <div className="font-normal text-sm">
-                            {document?.person?.fullname || "N/A"}
+                            {getDocumentTypeLabel(document.documentType)} -{" "}
+                            {document.documentNumber}
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {document.person?.identification || "N/A"}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-normal text-sm">
-                          {getDocumentTypeLabel(document.documentType)} -{" "}
-                          {document.documentNumber}
-                        </div>
-                      </TableCell>
-                      {/* <TableCell>
+                        </TableCell>
+                        {/* <TableCell>
                         {document.dueDate
                           ? formatDate(document.dueDate?.toString())
                           : "-"}
                       </TableCell> */}
-                      <TableCell>{formatCurrency(document.subtotal)}</TableCell>
-                      <TableCell>{formatCurrency(document.taxTotal)}</TableCell>
-                      <TableCell>{formatCurrency(document.total)}</TableCell>
-                      <TableCell>
-                        {formatCurrency(document.paidAmount)}
-                      </TableCell>
-                      <TableCell>{formatCurrency(document.balance)}</TableCell>
-                      <TableCell>{document.status}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <button
-                          className="p-1 hover:bg-muted rounded"
-                          onClick={() => handleEdit(document.id)}
-                        >
-                          <Edit size={18} />
-                        </button>
+                        <TableCell>
+                          {formatCurrency(document.subtotal)}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(document.taxTotal)}
+                        </TableCell>
+                        <TableCell>{formatCurrency(document.total)}</TableCell>
+                        <TableCell>
+                          {formatCurrency(document.paidAmount)}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(document.balance)}
+                        </TableCell>
+                        <TableCell>{document.status}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <button
+                            className="p-1 hover:bg-muted rounded"
+                            onClick={() => handleEdit(document.id)}
+                          >
+                            <Edit size={18} />
+                          </button>
 
-                        <button
-                          className="p-1 hover:bg-destructive/20 rounded"
-                          onClick={() => handleDelete(document.id)}
-                        >
-                          <Delete size={18} />
-                        </button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          <button
+                            className="p-1 hover:bg-destructive/20 rounded"
+                            onClick={() => handleDelete(document.id)}
+                          >
+                            <Delete size={18} />
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                 </TableBody>
               </Table>
               <PaginationControls

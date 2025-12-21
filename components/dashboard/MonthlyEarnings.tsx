@@ -2,13 +2,14 @@
 
 import dynamic from "next/dynamic";
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
-import { useTheme } from "@mui/material/styles";
-import { Stack, Typography, Avatar, Fab } from "@mui/material";
-import DashboardCard from "@/components/shared/DashboardCard";
-import { ArrowDown, ArrowUpLeft, Currency } from "lucide-react";
+
 import { useEffect, useState } from "react";
-import { getMonthlyEarnings } from "@/actions/dashboard";
+import { ArrowDown, ArrowUpLeft, Currency } from "lucide-react";
 import { useSession } from "next-auth/react";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { getMonthlyEarnings } from "@/actions/dashboard";
 
 interface EarningsData {
   currentMonth: {
@@ -26,32 +27,32 @@ interface EarningsData {
 
 const MonthlyEarnings = () => {
   const [earningsData, setEarningsData] = useState<EarningsData | null>(null);
-
   const { data: session } = useSession();
-
-  const theme = useTheme();
-  const secondary = theme.palette.secondary.main;
-  const secondarylight = "#f5fcff";
-  const successlight = "#E6FFFA";
-  const errorlight = "#fdede8";
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!session?.user.tenantId) return;
+
       const data = await getMonthlyEarnings(
         new Date().getFullYear(),
         new Date().getMonth() + 1,
-        session?.user.tenantId || ""
+        session.user.tenantId
       );
+
       setEarningsData(data);
     };
-    fetchData();
-  }, []);
 
-  const optionscolumnchart: any = {
+    fetchData();
+  }, [session?.user.tenantId]);
+
+  const total = earningsData?.currentMonth.total || 0;
+  const growth = earningsData?.growthPercentage || 0;
+  const trend = earningsData?.trend || "up";
+
+  const options: any = {
     chart: {
       type: "area",
-      fontFamily: "'Plus Jakarta Sans', sans-serif;",
-      foreColor: "#adb0bb",
+      fontFamily: "inherit",
       toolbar: { show: false },
       height: 60,
       sparkline: { enabled: true },
@@ -59,81 +60,81 @@ const MonthlyEarnings = () => {
     },
     stroke: { curve: "smooth", width: 2 },
     fill: {
-      colors: [secondarylight],
       type: "solid",
-      opacity: 0.05,
+      opacity: 0.08,
     },
     markers: { size: 0 },
     tooltip: {
-      theme: theme.palette.mode === "dark" ? "dark" : "light",
+      theme: "light",
     },
   };
 
-  const seriescolumnchart: any = [
+  const series: any = [
     {
       name: "Ingresos",
-      color: secondary,
       data: earningsData?.history?.map((h) => h.total) || [],
     },
   ];
 
-  const total = earningsData?.currentMonth.total || 0;
-  const growth = earningsData?.growthPercentage || 0;
-  const trend = earningsData?.trend || "up";
-
   return (
-    <DashboardCard
-      title="Ingresos Mensuales"
-      action={
-        <Fab color="secondary" size="medium" sx={{ color: "#ffffff" }}>
-          <Currency width={24} />
-        </Fab>
-      }
-      footer={
-        <Chart
-          options={optionscolumnchart}
-          series={seriescolumnchart}
-          type="area"
-          height={60}
-          width={"100%"}
-        />
-      }
-    >
-      <>
-        <Typography variant="h3" fontWeight="700" mt="-20px">
-          ${total.toLocaleString("es-EC")}
-        </Typography>
+    <Card className="flex h-full flex-col">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-base font-semibold">
+          Ingresos Mensuales
+        </CardTitle>
 
-        <Stack direction="row" spacing={1} my={1} alignItems="center">
-          <Avatar
-            sx={{
-              bgcolor: trend === "up" ? successlight : errorlight,
-              width: 27,
-              height: 27,
-            }}
-          >
-            {trend === "up" ? (
-              <ArrowUpLeft width={20} color="#39B69A" />
-            ) : (
-              <ArrowDown width={20} color="#FA896B" />
-            )}
-          </Avatar>
+        <Button size="icon" variant="secondary" className="rounded-full">
+          <Currency className="h-5 w-5" />
+        </Button>
+      </CardHeader>
 
-          <Typography
-            variant="subtitle2"
-            fontWeight="600"
-            color={trend === "up" ? "#39B69A" : "#FA896B"}
-          >
-            {trend === "up" ? "+" : "-"}
-            {growth.toFixed(1)}%
-          </Typography>
+      <CardContent className="flex flex-1 flex-col justify-between">
+        <div>
+          <div className="mt-1 text-3xl font-bold">
+            ${total.toLocaleString("es-EC")}
+          </div>
 
-          <Typography variant="subtitle2" color="textSecondary">
-            vs. año anterior
-          </Typography>
-        </Stack>
-      </>
-    </DashboardCard>
+          <div className="mt-2 flex items-center gap-2">
+            <div
+              className={`flex h-7 w-7 items-center justify-center rounded-full ${
+                trend === "up"
+                  ? "bg-emerald-100 text-emerald-600"
+                  : "bg-red-100 text-red-500"
+              }`}
+            >
+              {trend === "up" ? (
+                <ArrowUpLeft className="h-4 w-4" />
+              ) : (
+                <ArrowDown className="h-4 w-4" />
+              )}
+            </div>
+
+            <span
+              className={`text-sm font-semibold ${
+                trend === "up" ? "text-emerald-600" : "text-red-500"
+              }`}
+            >
+              {trend === "up" ? "+" : "-"}
+              {growth.toFixed(1)}%
+            </span>
+
+            <span className="text-sm text-muted-foreground">
+              vs. año anterior
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <Chart
+            options={options}
+            series={series}
+            type="area"
+            height={60}
+            width="100%"
+          />
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

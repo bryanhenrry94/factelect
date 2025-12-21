@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
 
@@ -47,10 +47,10 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useAccountFilter } from "@/hooks/useAccountFilter";
 import { ChartOfAccount } from "@/lib/validations";
 import { getAccounts } from "@/actions/accounting/chart-of-account";
+import { AccountSelect } from "@/components/AccountSelected";
 
 export default function AsientosContablesPage() {
   const router = useRouter();
-  const params = useSearchParams();
   const { data: session } = useSession();
 
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
@@ -165,6 +165,16 @@ export default function AsientosContablesPage() {
                 placeholder="Buscar por descripción..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+              />
+            </Field>
+            {/* Cuenta Contable */}
+            <Field>
+              <FieldLabel>Cuenta Contable</FieldLabel>
+              <AccountSelect
+                label="Seleccionar cuenta"
+                accounts={accounts}
+                value={account}
+                onChange={(value) => setAccount(value)}
               />
             </Field>
             {/* Tipo */}
@@ -297,7 +307,9 @@ export default function AsientosContablesPage() {
                               {entry.lines.map((line, idx) => (
                                 <TableRow key={line.id || idx}>
                                   <TableCell className="font-medium">
-                                    {line.account?.name || "-"}
+                                    {line.account?.code && line.account?.name
+                                      ? `${line.account.code} ${line.account.name}`
+                                      : "-"}
                                   </TableCell>
                                   <TableCell className="text-right">
                                     {line.debit

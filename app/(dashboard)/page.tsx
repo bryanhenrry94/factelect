@@ -1,6 +1,7 @@
 "use client";
-import { Grid, Box } from "@mui/material";
+
 import PageContainer from "@/components/container/PageContainer";
+
 // components
 import SalesOverview from "@/components/dashboard/SalesOverview";
 import YearlyBreakup from "@/components/dashboard/YearlyBreakup";
@@ -10,36 +11,27 @@ import MonthlySalesTrend from "@/components/dashboard/MonthlySalesTrend";
 const Dashboard = () => {
   return (
     <PageContainer title="Dashboard" description="this is Dashboard">
-      <Box>
-        <Grid container spacing={3}>
-          <Grid
-            size={{
-              xs: 12,
-              lg: 8,
-            }}
-          >
+      <div className="w-full">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          {/* Izquierda: 8/12 */}
+          <div className="lg:col-span-8">
             <SalesOverview />
-          </Grid>
-          <Grid
-            size={{
-              xs: 12,
-              lg: 4,
-            }}
-          >
-            <Grid container spacing={3}>
-              <Grid size={12}>
-                <YearlyBreakup />
-              </Grid>
-              <Grid size={12}>
-                <MonthlyEarnings />
-              </Grid>
-            </Grid>
-          </Grid>
-          <Grid size={12}>
+          </div>
+
+          {/* Derecha: 4/12 */}
+          <div className="lg:col-span-4">
+            <div className="grid grid-cols-1 gap-6">
+              <YearlyBreakup />
+              <MonthlyEarnings />
+            </div>
+          </div>
+
+          {/* Abajo: 12/12 */}
+          <div className="lg:col-span-12">
             <MonthlySalesTrend />
-          </Grid>
-        </Grid>
-      </Box>
+          </div>
+        </div>
+      </div>
     </PageContainer>
   );
 };

@@ -8,7 +8,6 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useTheme } from "next-themes";
 import dynamic from "next/dynamic";
 import DashboardCard from "@/components/shared/DashboardCard";
 import { getCategoriesForMonth, getLastMonths } from "@/utils/dashboard";
@@ -18,8 +17,6 @@ import { useSession } from "next-auth/react";
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 const SalesOverview: React.FC = () => {
-  const { theme } = useTheme();
-
   const { data: session } = useSession();
 
   const [month, setMonth] = useState<number | null>(null);
@@ -30,6 +27,8 @@ const SalesOverview: React.FC = () => {
 
   // 🎯 Cargar datos del mes seleccionado
   const fetchMonthlyData = useCallback(async (selectedMonth: number) => {
+    if (!session?.user.tenantId) return;
+
     setLoading(true);
     const currentYear = new Date().getFullYear();
 
@@ -41,7 +40,7 @@ const SalesOverview: React.FC = () => {
     const weeklySalesData = await getTotalAmountByMonth(
       currentYear,
       selectedMonth,
-      session?.user.tenantId || ""
+      session.user.tenantId
     );
     setWeeklySales(weeklySalesData || []);
     setLoading(false);

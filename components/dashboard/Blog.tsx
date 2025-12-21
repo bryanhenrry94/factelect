@@ -1,16 +1,15 @@
+"use client";
+
 import Link from "next/link";
+import Image from "next/image";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
-  CardContent,
-  Typography,
-  Grid,
-  Rating,
   Tooltip,
-  Fab,
-  Avatar,
-} from "@mui/material";
-import { Stack } from "@mui/material";
-import BlankCard from "@/components/shared/BlankCard";
-import { Baseline } from "lucide-react";
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Star, Baseline } from "lucide-react";
 
 const ecoCard = [
   {
@@ -47,68 +46,69 @@ const ecoCard = [
   },
 ];
 
+const RatingStars = ({ value }: { value: number }) => (
+  <div className="flex gap-0.5">
+    {Array.from({ length: 5 }).map((_, i) => (
+      <Star
+        key={i}
+        className={`h-4 w-4 ${
+          i < value
+            ? "fill-yellow-400 text-yellow-400"
+            : "text-muted-foreground"
+        }`}
+      />
+    ))}
+  </div>
+);
+
 const Blog = () => {
   return (
-    <Grid container spacing={3}>
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
       {ecoCard.map((product, index) => (
-        <Grid
-          key={index}
-          size={{
-            xs: 12,
-            md: 4,
-            lg: 3,
-          }}
-        >
-          <BlankCard>
-            <Typography component={Link} href="/">
-              <Avatar
+        <Card key={index} className="relative overflow-hidden">
+          {/* Imagen */}
+          <Link href="/" className="block">
+            <div className="relative h-[250px] w-full">
+              <Image
                 src={product.photo}
-                variant="square"
-                sx={{
-                  height: 250,
-                  width: "100%",
-                }}
+                alt={product.title}
+                fill
+                className="object-cover"
               />
-            </Typography>
-            <Tooltip title="Add To Cart">
-              <Fab
-                size="small"
-                color="primary"
-                sx={{ bottom: "75px", right: "15px", position: "absolute" }}
+            </div>
+          </Link>
+
+          {/* Botón flotante */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                className="absolute right-4 top-[210px] rounded-full"
               >
-                <Baseline size="16" />
-              </Fab>
-            </Tooltip>
-            <CardContent sx={{ p: 3, pt: 2 }}>
-              <Typography variant="h6">{product.title}</Typography>
-              <Stack
-                direction="row"
-                alignItems="center"
-                justifyContent="space-between"
-                mt={1}
-              >
-                <Stack direction="row" alignItems="center">
-                  <Typography variant="h6">${product.price}</Typography>
-                  <Typography
-                    color="textSecondary"
-                    ml={1}
-                    sx={{ textDecoration: "line-through" }}
-                  >
-                    ${product.salesPrice}
-                  </Typography>
-                </Stack>
-                <Rating
-                  name="read-only"
-                  size="small"
-                  value={product.rating}
-                  readOnly
-                />
-              </Stack>
-            </CardContent>
-          </BlankCard>
-        </Grid>
+                <Baseline className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Add To Cart</TooltipContent>
+          </Tooltip>
+
+          {/* Contenido */}
+          <CardContent className="space-y-2 pt-3">
+            <h3 className="text-base font-semibold">{product.title}</h3>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold">${product.price}</span>
+                <span className="text-sm text-muted-foreground line-through">
+                  ${product.salesPrice}
+                </span>
+              </div>
+
+              <RatingStars value={product.rating} />
+            </div>
+          </CardContent>
+        </Card>
       ))}
-    </Grid>
+    </div>
   );
 };
 

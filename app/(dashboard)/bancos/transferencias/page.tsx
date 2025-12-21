@@ -1,23 +1,21 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
 import { notifyError, notifyInfo } from "@/lib/notifications";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Dialog,
-  IconButton,
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TablePagination,
+  TableHeader,
   TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+
 import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { formatCurrency, formatDate, toInputDate } from "@/utils/formatters";
@@ -38,6 +36,8 @@ const now = new Date();
 const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
+const rowsPerPage = 5;
+
 const BankTransfersPage = () => {
   const { data: session } = useSession();
 
@@ -55,7 +55,6 @@ const BankTransfersPage = () => {
     useState<BankTransfer | null>(null);
 
   const [page, setPage] = useState(0);
-  const rowsPerPage = 5;
 
   const fetchBankTransfer = async () => {
     const tenantId = session?.user?.tenantId;
@@ -75,12 +74,11 @@ const BankTransfersPage = () => {
       }
 
       setBankTransfers(response.data || []);
-    } catch (error) {
+    } catch {
       notifyError("Error al cargar las transferencias");
     }
   };
 
-  // Ejecuta la carga
   useEffect(() => {
     fetchBankTransfer();
   }, [session?.user?.tenantId, search, dateFrom, dateTo]);
@@ -105,153 +103,151 @@ const BankTransfersPage = () => {
     } else notifyError("Error al eliminar la transferencia");
   };
 
+  const paginated = bankTransfers.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
   return (
     <PageContainer
       title="Transferencias Bancarias"
       description="Gestiona tus transferencias bancarias"
     >
       {/* Filtros */}
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 2,
-          flexWrap: "wrap",
-        }}
-      >
-        <Box sx={{ flexGrow: 1, display: "flex", gap: 2, flexWrap: "wrap" }}>
-          <TextField
-            label="Buscar"
-            size="small"
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-1 flex-wrap gap-3">
+          <Input
+            placeholder="Buscar"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className="h-9 w-64"
           />
 
-          <TextField
-            label="Desde"
+          <Input
             type="date"
-            size="small"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            InputLabelProps={{ shrink: true }}
+            className="h-9 w-40"
           />
 
-          <TextField
-            label="Hasta"
+          <Input
             type="date"
-            size="small"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            InputLabelProps={{ shrink: true }}
+            className="h-9 w-40"
           />
-        </Box>
+        </div>
 
-        <Button
-          variant="contained"
-          startIcon={<Plus />}
-          onClick={() => setOpen(true)}
-          size="small"
-        >
+        <Button size="sm" onClick={() => setOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
           Nueva Transferencia
         </Button>
-      </Box>
+      </div>
 
       {/* Tabla */}
-      <Card sx={{ mt: 3 }}>
-        <CardContent>
+      <Card className="mt-4">
+        <CardContent className="p-0">
           {bankTransfers.length === 0 ? (
-            <Box textAlign="center" py={6}>
-              <ShoppingBag />
-              <Typography variant="h6" mt={2}>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <ShoppingBag className="h-10 w-10 text-muted-foreground" />
+              <h3 className="mt-3 text-lg font-semibold">
                 No hay transferencias aún
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
+              </h3>
+              <p className="text-sm text-muted-foreground">
                 Agrega la primera transferencia bancaria
-              </Typography>
-            </Box>
+              </p>
+            </div>
           ) : (
             <>
               <Table>
-                <TableHead>
+                <TableHeader>
                   <TableRow>
-                    <TableCell>
-                      <strong>Cuenta Origen</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Cuenta Destino</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Fecha</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Monto</strong>
-                    </TableCell>
-                    <TableCell align="right">
-                      <strong>Acciones</strong>
-                    </TableCell>
+                    <TableHead>Cuenta Origen</TableHead>
+                    <TableHead>Cuenta Destino</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Monto</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
 
                 <TableBody>
-                  {bankTransfers
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((m) => (
-                      <TableRow key={m.id} hover>
-                        <TableCell>{m.fromAccount?.name || ""}</TableCell>
-                        <TableCell>{m.toAccount?.name || ""}</TableCell>
-                        <TableCell>{formatDate(toInputDate(m.date))}</TableCell>
-                        <TableCell>{formatCurrency(m.amount)}</TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            color="primary"
+                  {paginated.map((m) => (
+                    <TableRow key={m.id}>
+                      <TableCell>{m.fromAccount?.name || ""}</TableCell>
+                      <TableCell>{m.toAccount?.name || ""}</TableCell>
+                      <TableCell>{formatDate(toInputDate(m.date))}</TableCell>
+                      <TableCell>{formatCurrency(m.amount)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleEdit(m)}
                           >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            color="error"
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
                             onClick={() => handleDelete(m.id)}
                           >
-                            <Delete />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                            <Delete className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
 
-              <TablePagination
-                component="div"
-                count={bankTransfers.length}
-                page={page}
-                onPageChange={(_, newPage) => setPage(newPage)}
-                rowsPerPage={rowsPerPage}
-                rowsPerPageOptions={[5]}
-              />
+              {/* Paginación simple */}
+              <div className="flex items-center justify-between px-4 py-2 text-sm">
+                <span className="text-muted-foreground">
+                  {page * rowsPerPage + 1}–
+                  {Math.min((page + 1) * rowsPerPage, bankTransfers.length)} de{" "}
+                  {bankTransfers.length}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === 0}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={(page + 1) * rowsPerPage >= bankTransfers.length}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Siguiente
+                  </Button>
+                </div>
+              </div>
             </>
           )}
         </CardContent>
       </Card>
 
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <BankTransferForm
-          onSave={() => {
-            fetchBankTransfer();
-            setOpen(false);
-            setBankTransferSelected(null);
-          }}
-          onCancel={() => {
-            setOpen(false);
-            setBankTransferSelected(null);
-          }}
-          bankTransferSelected={bankTransferSelected}
-        />
+      {/* Modal */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-3xl">
+          <BankTransferForm
+            onSave={() => {
+              fetchBankTransfer();
+              setOpen(false);
+              setBankTransferSelected(null);
+            }}
+            onCancel={() => {
+              setOpen(false);
+              setBankTransferSelected(null);
+            }}
+            bankTransferSelected={bankTransferSelected}
+          />
+        </DialogContent>
       </Dialog>
     </PageContainer>
   );

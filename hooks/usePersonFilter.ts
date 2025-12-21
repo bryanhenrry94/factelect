@@ -8,6 +8,13 @@ export function usePersonFilter(paramName: string = "person") {
   const initialValue = searchParams.get(paramName) ?? "none";
   const [person, setPerson] = useState(initialValue);
 
+  // ✅ URL → state
+  useEffect(() => {
+    const current = searchParams.get(paramName) ?? "none";
+    setPerson((prev) => (prev === current ? prev : current));
+  }, [searchParams, paramName]);
+
+  // ✅ state → URL (debounced)
   useEffect(() => {
     const id = setTimeout(() => {
       const current = searchParams.get(paramName) ?? "none";
@@ -24,7 +31,7 @@ export function usePersonFilter(paramName: string = "person") {
     }, 400);
 
     return () => clearTimeout(id);
-  }, [person, paramName, router]);
+  }, [person, searchParams, paramName, router]);
 
   return { person, setPerson };
 }

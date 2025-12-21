@@ -13,8 +13,7 @@ import {
 import Link from "next/link";
 import { SlashIcon } from "lucide-react";
 import PersonForm from "@/components/person/person-form";
-import { CardContent } from "@mui/material";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 
 export default function PersonNewPage() {

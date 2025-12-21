@@ -1,14 +1,15 @@
+"use client";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Typography,
-  Box,
   Table,
   TableBody,
   TableCell,
   TableHead,
+  TableHeader,
   TableRow,
-  Chip,
-} from "@mui/material";
-import DashboardCard from "@/components/shared/DashboardCard";
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 const products = [
   {
@@ -17,7 +18,6 @@ const products = [
     post: "Web Designer",
     pname: "Elite Admin",
     priority: "Low",
-    pbg: "primary.main",
     budget: "3.9",
   },
   {
@@ -26,7 +26,6 @@ const products = [
     post: "Project Manager",
     pname: "Real Homes WP Theme",
     priority: "Medium",
-    pbg: "secondary.main",
     budget: "24.5",
   },
   {
@@ -35,7 +34,6 @@ const products = [
     post: "Project Manager",
     pname: "MedicalPro WP Theme",
     priority: "High",
-    pbg: "error.main",
     budget: "12.8",
   },
   {
@@ -44,115 +42,75 @@ const products = [
     post: "Frontend Engineer",
     pname: "Hosting Press HTML",
     priority: "Critical",
-    pbg: "success.main",
     budget: "2.4",
   },
 ];
 
+const priorityStyles: Record<string, string> = {
+  Low: "bg-blue-500",
+  Medium: "bg-yellow-500",
+  High: "bg-red-500",
+  Critical: "bg-green-500",
+};
+
 const ProductPerformance = () => {
   return (
-    <DashboardCard title="Product Performance">
-      <Box sx={{ overflow: "auto", width: { xs: "280px", sm: "auto" } }}>
-        <Table
-          aria-label="simple table"
-          sx={{
-            whiteSpace: "nowrap",
-            mt: 2,
-          }}
-        >
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                <Typography variant="subtitle2" fontWeight={600}>
-                  Id
-                </Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="subtitle2" fontWeight={600}>
-                  Assigned
-                </Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="subtitle2" fontWeight={600}>
-                  Name
-                </Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="subtitle2" fontWeight={600}>
-                  Priority
-                </Typography>
-              </TableCell>
-              <TableCell align="right">
-                <Typography variant="subtitle2" fontWeight={600}>
-                  Budget
-                </Typography>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {products.map((product) => (
-              <TableRow key={product.name}>
-                <TableCell>
-                  <Typography
-                    sx={{
-                      fontSize: "15px",
-                      fontWeight: "500",
-                    }}
-                  >
-                    {product.id}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Box>
-                      <Typography variant="subtitle2" fontWeight={600}>
-                        {product.name}
-                      </Typography>
-                      <Typography
-                        color="textSecondary"
-                        sx={{
-                          fontSize: "13px",
-                        }}
-                      >
-                        {product.post}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Typography
-                    color="textSecondary"
-                    variant="subtitle2"
-                    fontWeight={400}
-                  >
-                    {product.pname}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    sx={{
-                      px: "4px",
-                      backgroundColor: product.pbg,
-                      color: "#fff",
-                    }}
-                    size="small"
-                    label={product.priority}
-                  ></Chip>
-                </TableCell>
-                <TableCell align="right">
-                  <Typography variant="h6">${product.budget}k</Typography>
-                </TableCell>
+    <Card>
+      <CardHeader>
+        <CardTitle>Product Performance</CardTitle>
+      </CardHeader>
+
+      <CardContent>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Id</TableHead>
+                <TableHead>Assigned</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead className="text-right">Budget</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Box>
-    </DashboardCard>
+            </TableHeader>
+
+            <TableBody>
+              {products.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell className="font-medium">{product.id}</TableCell>
+
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-semibold">{product.name}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {product.post}
+                      </span>
+                    </div>
+                  </TableCell>
+
+                  <TableCell className="text-muted-foreground">
+                    {product.pname}
+                  </TableCell>
+
+                  <TableCell>
+                    <Badge
+                      className={`text-white ${
+                        priorityStyles[product.priority]
+                      }`}
+                    >
+                      {product.priority}
+                    </Badge>
+                  </TableCell>
+
+                  <TableCell className="text-right font-semibold">
+                    ${product.budget}k
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

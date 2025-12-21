@@ -1,52 +1,42 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import DashboardCard from "../shared/DashboardCard";
-import { getMonthNamesUpToCurrent } from "@/utils/dashboard";
-import { useTheme } from "@mui/material/styles";
-import { getMonthlySalesData } from "@/actions/dashboard";
 import { useSession } from "next-auth/react";
 
-// 👇 Importa el chart dinámicamente (solo en el cliente)
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getMonthNamesUpToCurrent } from "@/utils/dashboard";
+import { getMonthlySalesData } from "@/actions/dashboard";
+
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
 
 const MonthlySalesTrend: React.FC = () => {
-  const theme = useTheme();
-
   const { data: session } = useSession();
-
-  const [monthlySalesData, setMonthlySalesData] = React.useState<number[]>([]);
+  const [monthlySalesData, setMonthlySalesData] = useState<number[]>([]);
   const categories = getMonthNamesUpToCurrent();
 
   useEffect(() => {
     const fetchMonthlySalesData = async () => {
+      if (!session?.user.tenantId) return;
       const year = new Date().getFullYear();
 
-      const salesData = await getMonthlySalesData(
-        year,
-        session?.user.tenantId || ""
-      );
+      const salesData = await getMonthlySalesData(year, session.user.tenantId);
       setMonthlySalesData(salesData);
     };
 
     fetchMonthlySalesData();
-  }, []);
-
-  // 🎨 Configuración del gráfico
-  const primary = theme.palette.primary.main;
-  const secondary = theme.palette.primary.light;
+  }, [session?.user.tenantId]);
 
   const options: ApexCharts.ApexOptions = {
     chart: {
       type: "line",
-      foreColor: "#64748B",
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      foreColor: "#64748B", // slate-500
+      fontFamily: "inherit",
       toolbar: { show: false },
     },
-    colors: [primary, secondary],
+    colors: ["#3b82f6", "#93c5fd"], // blue-500, blue-300
     stroke: {
       curve: "smooth",
       width: 3,
@@ -63,7 +53,7 @@ const MonthlySalesTrend: React.FC = () => {
     },
     dataLabels: { enabled: false },
     xaxis: {
-      categories: categories,
+      categories,
       axisBorder: { show: false },
       axisTicks: { show: false },
       labels: {
@@ -79,7 +69,7 @@ const MonthlySalesTrend: React.FC = () => {
       },
     },
     tooltip: {
-      theme: "dark",
+      theme: "light",
       y: {
         formatter: (val) => `$${val.toLocaleString()}`,
       },
@@ -94,14 +84,22 @@ const MonthlySalesTrend: React.FC = () => {
   ];
 
   return (
-    <DashboardCard title="Tendencia de ventas mensuales">
-      <ReactApexChart
-        options={options}
-        series={series}
-        type="line"
-        height={350}
-      />
-    </DashboardCard>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base font-semibold">
+          Tendencia de ventas mensuales
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent>
+        <ReactApexChart
+          options={options}
+          series={series}
+          type="line"
+          height={350}
+        />
+      </CardContent>
+    </Card>
   );
 };
 

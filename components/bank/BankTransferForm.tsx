@@ -1,3 +1,5 @@
+"use client";
+
 import { getAllBankAccounts } from "@/actions/bank/bank-account";
 import {
   createBankTransfer,
@@ -11,20 +13,22 @@ import {
   createBankTransferSchema,
 } from "@/lib/validations/bank/bank_transfer";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Box,
-  Button,
-  DialogContent,
-  DialogTitle,
-  MenuItem,
-  TextField,
-  Typography,
-  Divider,
-} from "@mui/material";
 import { ArrowRight } from "lucide-react";
 import { useSession } from "next-auth/react";
 import React, { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DialogTitle, DialogContent } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 
 const initialState: BankTransfer = {
   id: "",
@@ -59,10 +63,13 @@ export const BankTransferForm: React.FC<BankTransferFormProps> = ({
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
+    watch,
   } = useForm<CreateBankTransfer>({
     resolver: zodResolver(createBankTransferSchema),
     defaultValues: initialState,
   });
+
+  const fromAccountId = watch("fromAccountId");
 
   /** Cargar cuentas bancarias */
   useEffect(() => {
@@ -78,7 +85,6 @@ export const BankTransferForm: React.FC<BankTransferFormProps> = ({
 
   /** Cargar / resetear formulario */
   useEffect(() => {
-    console.log("bankTransferSelected", bankTransferSelected);
     reset(bankTransferSelected || initialState);
   }, [bankTransferSelected, reset]);
 
@@ -112,175 +118,158 @@ export const BankTransferForm: React.FC<BankTransferFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <DialogTitle sx={{ fontWeight: 600 }}>
+      <DialogTitle className="font-semibold">
         {bankTransferSelected
           ? "Editar Traspaso Bancario"
           : "Nuevo Traspaso Bancario"}
       </DialogTitle>
 
-      <DialogContent>
-        {/* INTRO */}
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+      <DialogContent className="space-y-4">
+        {/* Intro */}
+        <p className="text-sm text-muted-foreground">
           {bankTransferSelected
             ? "Actualiza la información del traspaso entre cuentas."
             : "Registra un movimiento de fondos entre tus cuentas bancarias."}
-        </Typography>
+        </p>
 
-        {/* SECCIÓN DE CUENTAS */}
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-          Cuentas
-        </Typography>
+        {/* Cuentas */}
+        <div>
+          <p className="mb-2 text-sm font-semibold">Cuentas</p>
 
-        <Box
-          sx={{
-            p: 2,
-            borderRadius: 2,
-            border: "1px solid",
-            borderColor: "divider",
-            mb: 3,
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            justifyContent: "space-between",
-            bgcolor: "background.paper",
-          }}
-        >
-          {/* Cuenta Origen */}
-          <Box>
-            <Typography fontSize={13} sx={{ mb: 0.5 }}>
-              Cuenta Origen
-            </Typography>
-            <Controller
-              name="fromAccountId"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  select
-                  fullWidth
-                  error={!!errors.fromAccountId}
-                  helperText={errors.fromAccountId?.message}
-                  sx={{ width: { xs: "100%", sm: 300 } }}
-                >
-                  {bankAccounts.map((acc) => (
-                    <MenuItem key={acc.id} value={acc.id}>
-                      {acc.bankName} – {acc.accountNumber}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              )}
-            />
-          </Box>
+          <div className="flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+            {/* Cuenta Origen */}
+            <div className="w-full sm:w-[300px] space-y-1">
+              <p className="text-xs text-muted-foreground">Cuenta Origen</p>
+              <Controller
+                name="fromAccountId"
+                control={control}
+                render={({ field }) => (
+                  <>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccione cuenta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {bankAccounts.map((acc) => (
+                          <SelectItem key={acc.id} value={acc.id}>
+                            {acc.bankName} – {acc.accountNumber}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.fromAccountId && (
+                      <p className="text-sm text-destructive">
+                        {errors.fromAccountId.message}
+                      </p>
+                    )}
+                  </>
+                )}
+              />
+            </div>
 
-          {/* Flecha */}
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              py: 3,
-            }}
-          >
-            <ArrowRight size={22} color="#888" />
-          </Box>
+            {/* Flecha */}
+            <div className="flex justify-center py-2 sm:py-0">
+              <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            </div>
 
-          {/* Cuenta Destino */}
-          <Box>
-            <Typography fontSize={13} sx={{ mb: 0.5 }}>
-              Cuenta Destino
-            </Typography>
-            <Controller
-              name="toAccountId"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  select
-                  fullWidth
-                  error={!!errors.toAccountId}
-                  helperText={errors.toAccountId?.message}
-                  sx={{ width: { xs: "100%", sm: 300 } }}
-                >
-                  {bankAccounts
-                    .filter(
-                      (acc) => acc.id !== control._formValues.fromAccountId
-                    )
-                    .map((acc) => (
-                      <MenuItem key={acc.id} value={acc.id}>
-                        {acc.bankName} – {acc.accountNumber}
-                      </MenuItem>
-                    ))}
-                </TextField>
-              )}
-            />
-          </Box>
-        </Box>
+            {/* Cuenta Destino */}
+            <div className="w-full sm:w-[300px] space-y-1">
+              <p className="text-xs text-muted-foreground">Cuenta Destino</p>
+              <Controller
+                name="toAccountId"
+                control={control}
+                render={({ field }) => (
+                  <>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccione cuenta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {bankAccounts
+                          .filter((acc) => acc.id !== fromAccountId)
+                          .map((acc) => (
+                            <SelectItem key={acc.id} value={acc.id}>
+                              {acc.bankName} – {acc.accountNumber}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.toAccountId && (
+                      <p className="text-sm text-destructive">
+                        {errors.toAccountId.message}
+                      </p>
+                    )}
+                  </>
+                )}
+              />
+            </div>
+          </div>
+        </div>
 
-        {/* MONTO */}
+        {/* Monto */}
         <Controller
           name="amount"
           control={control}
           render={({ field }) => (
-            <TextField
-              {...field}
-              label="Monto"
-              fullWidth
-              margin="dense"
-              value={field.value ?? 1}
-              onChange={(e) => {
-                const text = e.target.value;
-
-                // Mantén siempre string en el campo
-                field.onChange(text);
-              }}
-              onBlur={() => {
-                const numeric = parseFloat(
-                  field.value ? field.value.toString() : "0"
-                );
-
-                // Al salir del input conviertes a number seguro
-                field.onChange(isNaN(numeric) ? 0 : Number(numeric.toFixed(2)));
-              }}
-              inputProps={{ inputMode: "decimal" }}
-              type="number"
-              error={!!errors.amount}
-              helperText={errors.amount?.message}
-            />
+            <div className="space-y-1">
+              <Input
+                {...field}
+                type="number"
+                placeholder="Monto"
+                value={field.value ?? 0}
+                onChange={(e) => field.onChange(e.target.value)}
+                onBlur={() => {
+                  const numeric = parseFloat(
+                    field.value ? field.value.toString() : "0"
+                  );
+                  field.onChange(
+                    isNaN(numeric) ? 0 : Number(numeric.toFixed(2))
+                  );
+                }}
+              />
+              {errors.amount && (
+                <p className="text-sm text-destructive">
+                  {errors.amount.message}
+                </p>
+              )}
+            </div>
           )}
         />
 
+        {/* Fecha */}
         <Controller
           name="date"
           control={control}
           render={({ field }) => (
-            <TextField
-              {...field}
-              type="date"
-              fullWidth
-              label="Fecha"
-              margin="dense"
-              value={
-                field.value
-                  ? new Date(field.value).toISOString().split("T")[0]
-                  : ""
-              }
-              onChange={(e) => field.onChange(new Date(e.target.value))}
-            />
+            <div className="space-y-1">
+              <Input
+                type="date"
+                value={
+                  field.value
+                    ? new Date(field.value).toISOString().split("T")[0]
+                    : ""
+                }
+                onChange={(e) => field.onChange(new Date(e.target.value))}
+              />
+            </div>
           )}
         />
 
-        {/* BOTONES */}
-        <Divider sx={{ my: 2 }} />
+        <Separator />
 
-        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-          <Button onClick={onCancel}>Cancelar</Button>
-          <Button variant="contained" type="submit" disabled={isSubmitting}>
+        {/* Botones */}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={onCancel}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting
               ? "Procesando..."
               : bankTransferSelected
               ? "Actualizar"
               : "Registrar Traspaso"}
           </Button>
-        </Box>
+        </div>
       </DialogContent>
     </form>
   );
