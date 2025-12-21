@@ -52,7 +52,12 @@ const CustomRow: React.FC<CustomRowProps> = memo(({ field, index, remove }) => {
 
     const fetchDocuments = async () => {
       try {
-        const response = await getDocuments(session.user.tenantId, personId);
+        const params = {
+          tenantId: session.user.tenantId,
+          personId: personId || "",
+        };
+
+        const response = await getDocuments(params);
 
         if (!response.success || !response.data) {
           setDocuments([]);

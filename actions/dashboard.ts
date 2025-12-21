@@ -48,8 +48,6 @@ export const getTotalAmountByMonth = async (
       },
     });
 
-    console.log("Invoices fetched:", invoices);
-
     // Helper function to get week number of month (0-based)
     const getWeekOfMonth = (date: Date): number => {
       const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);

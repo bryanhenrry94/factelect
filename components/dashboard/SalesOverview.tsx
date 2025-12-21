@@ -129,7 +129,9 @@ const SalesOverview: React.FC = () => {
             handleChange({ target: { value: Number(val) } })
           }
         >
-          <SelectTrigger className="w-[120px] rounded-md bg-background" />
+          <SelectTrigger className="w-[200px] rounded-md bg-background">
+            {months.find((m) => m.value === month)?.label || "Selecciona mes"}
+          </SelectTrigger>
           <SelectContent>
             {months.map((m) => (
               <SelectItem key={m.value} value={m.value.toString()}>
