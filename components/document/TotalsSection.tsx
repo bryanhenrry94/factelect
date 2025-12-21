@@ -46,6 +46,8 @@ export default function InvoiceTotalsSection() {
   // SYNC TOTAL TO FORM
   // -------------------------
   useEffect(() => {
+    setValue("subtotal", subtotal15 + subtotal5 + subtotal0);
+    setValue("taxTotal", iva15 + iva5 + ice);
     setValue("total", total);
   }, [total, setValue]);
 

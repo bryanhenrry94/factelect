@@ -56,7 +56,11 @@ export function AccountSelect({
           <CommandInput placeholder="Buscar cuenta..." />
           <CommandList>
             <CommandEmpty>No hay resultados</CommandEmpty>
-
+            <CommandItem value="none" onSelect={() => onChange(null)}>
+              <span className="text-sm text-muted-foreground">
+                Selecciona una cuenta
+              </span>
+            </CommandItem>
             {accounts.map((a) => (
               <CommandItem
                 key={a.id}

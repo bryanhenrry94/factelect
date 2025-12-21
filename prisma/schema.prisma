@@ -185,6 +185,8 @@ model Product {
   costAccountId            String?                   @map("cost_account_id")
   costAccount              ChartOfAccount?           @relation("ProductCostAccount", fields: [costAccountId], references: [id])
 
+  status                   ProductStatus                                          @default(ACTIVE) // ACTIVE | INACTIVE
+
   documentItems            DocumentItem[]
   stocks                   Stock[]
   warehouseTransferItem    WarehouseTransferItem[]
@@ -955,6 +957,11 @@ model BankTransaction {
   matched     Boolean                           @default(false)
 
   @@map("bank_transaction")
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
 }
 
 enum UserRole {

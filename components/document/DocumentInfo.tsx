@@ -53,11 +53,9 @@ export default function DocumentInfo({ persons, modeEdit }: DocumentInfoProps) {
   );
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* ===================== DATOS GENERALES ===================== */}
       <div>
-        <h4 className="text-sm font-medium mb-3">Información del documento</h4>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Fecha */}
           <FormField
@@ -141,9 +139,7 @@ export default function DocumentInfo({ persons, modeEdit }: DocumentInfoProps) {
       </div>
 
       {/* ===================== PERSONA ===================== */}
-      <div>
-        <h4 className="text-sm font-medium mb-3">Persona asociada</h4>
-
+      <div className="mt-4">
         <FormField
           control={control}
           name="personId"
@@ -168,7 +164,8 @@ export default function DocumentInfo({ persons, modeEdit }: DocumentInfoProps) {
                             <span className="text-muted-foreground mr-1">
                               [{selectedPerson.identification}]
                             </span>
-                            {selectedPerson.firstName} {selectedPerson.lastName}
+                            {selectedPerson.businessName ||
+                              `${selectedPerson.firstName} ${selectedPerson.lastName}`}
                           </span>
                         ) : (
                           "Selecciona una persona"
@@ -192,9 +189,9 @@ export default function DocumentInfo({ persons, modeEdit }: DocumentInfoProps) {
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                person.firstName === field.value ||
+                                person.businessName === field.value ||
+                                  person.firstName === field.value ||
                                   person.lastName === field.value ||
-                                  person.businessName === field.value ||
                                   person.identification === field.value
                                   ? "opacity-100"
                                   : "opacity-0"
@@ -202,7 +199,8 @@ export default function DocumentInfo({ persons, modeEdit }: DocumentInfoProps) {
                             />
                             <div className="flex flex-col">
                               <span>
-                                {person.firstName} {person.lastName}
+                                {person.businessName ||
+                                  `${person.firstName} ${person.lastName}`}
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 {person.identification}
@@ -232,9 +230,7 @@ export default function DocumentInfo({ persons, modeEdit }: DocumentInfoProps) {
       </div>
 
       {/* ===================== INFO FISCAL ===================== */}
-      <div>
-        <h4 className="text-sm font-medium mb-3">Información fiscal</h4>
-
+      <div className="mt-4">
         <DocumentFiscalInfo
           modeEdit={modeEdit}
           documentType={watch("documentType") || "INVOICE"}

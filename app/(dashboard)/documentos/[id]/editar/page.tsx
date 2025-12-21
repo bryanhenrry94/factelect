@@ -24,14 +24,6 @@ import { PersonInput } from "@/lib/validations/person";
 import { Product } from "@/lib/validations";
 import { Warehouse } from "@/lib/validations/inventory/warehouse";
 
-/* shadcn */
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
 import Link from "next/link";
 import { SlashIcon } from "lucide-react";
 

@@ -118,6 +118,7 @@ const data = {
       url: "/transacciones",
       icon: CreditCard,
       items: [
+        { title: "Documentos", url: "/documentos" },
         { title: "Todas las Transacciones", url: "/transacciones" },
         { title: "Cobros", url: "/transacciones?tipo=cobro" },
         { title: "Pagos", url: "/transacciones?tipo=pago" },

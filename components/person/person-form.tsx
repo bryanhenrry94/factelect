@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { useRouter } from "next/navigation";
+import { AccountSelect } from "../AccountSelected";
 
 interface PersonFormProps {
   open?: boolean;
@@ -318,24 +319,12 @@ export default function PersonForm({
               name="accountPayableId"
               control={control}
               render={({ field }) => (
-                <Select
-                  value={field.value ?? "none"}
-                  onValueChange={(val) =>
-                    field.onChange(val === "none" ? null : val)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Ninguna</SelectItem>
-                    {accounts.map((acc) => (
-                      <SelectItem key={acc.id} value={acc.id}>
-                        {acc.code} — {acc.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <AccountSelect
+                  label="Seleccionar cuenta"
+                  accounts={accounts}
+                  value={field.value ?? null}
+                  onChange={field.onChange}
+                />
               )}
             />
           </Field>
@@ -347,24 +336,12 @@ export default function PersonForm({
               name="accountReceivableId"
               control={control}
               render={({ field }) => (
-                <Select
-                  value={field.value ?? "none"}
-                  onValueChange={(val) =>
-                    field.onChange(val === "none" ? null : val)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Ninguna</SelectItem>
-                    {accounts.map((acc) => (
-                      <SelectItem key={acc.id} value={acc.id}>
-                        {acc.code} — {acc.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <AccountSelect
+                  label="Seleccionar cuenta"
+                  accounts={accounts}
+                  value={field.value ?? null}
+                  onChange={field.onChange}
+                />
               )}
             />
           </Field>

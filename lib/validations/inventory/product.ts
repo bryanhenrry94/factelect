@@ -21,6 +21,7 @@ export const productSchema = z.object({
   categoryId: z.string().min(1, "La categoría es obligatoria"),
   inventoryAccountId: z.string().optional().nullable(),
   costAccountId: z.string().optional().nullable(),
+  status: z.enum(["ACTIVE", "INACTIVE"]),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

@@ -26,6 +26,9 @@ import {
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useSearchFilter } from "@/hooks/useSearchFilter";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { Badge } from "@/components/ui/badge";
+import { Unit } from "@/lib/validations/unit";
+import { getUnits } from "@/actions/unit";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -33,8 +36,8 @@ export default function ProductsPage() {
   const tenantId = session?.user?.tenantId || "";
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(false);
-
   const { search, setSearch } = useSearchFilter();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -53,9 +56,23 @@ export default function ProductsPage() {
     }
   }, [tenantId, search]);
 
+  const loadUnits = useCallback(async () => {
+    if (!tenantId) return;
+
+    setLoading(true);
+    try {
+      const res = await getUnits(tenantId);
+      if (res.success) setUnits(res.data || []);
+      else notifyError(res.error || "Error cargando unidades");
+    } finally {
+      setLoading(false);
+    }
+  }, [tenantId]);
+
   useEffect(() => {
     loadProducts();
-  }, [loadProducts]);
+    loadUnits();
+  }, [loadProducts, loadUnits]);
 
   /* ❌ Delete */
   const handleDelete = async (id: string) => {
@@ -124,7 +141,9 @@ export default function ProductsPage() {
                   <TableRow>
                     <TableHead>Código</TableHead>
                     <TableHead>Descripción</TableHead>
+                    <TableHead>Unidad</TableHead>
                     <TableHead className="text-right">Precio</TableHead>
+                    <TableHead className="text-center">Estado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -139,8 +158,20 @@ export default function ProductsPage() {
                       <TableRow key={p.id}>
                         <TableCell className="font-medium">{p.code}</TableCell>
                         <TableCell>{p.description}</TableCell>
+                        <TableCell>
+                          {units.find((u) => u.id === p.unitId)?.name || ""}
+                        </TableCell>
                         <TableCell className="text-right">
                           ${p.price.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge
+                            variant={
+                              p.status === "ACTIVE" ? "default" : "destructive"
+                            }
+                          >
+                            {p.status === "ACTIVE" ? "Activo" : "Inactivo"}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-right space-x-1">
                           <Button

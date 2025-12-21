@@ -32,7 +32,7 @@ export const getNextSequenceDocumentNumber = async (
     if (documentType === "INVOICE") {
       return {
         success: true,
-        nextSequence: sequenceControl.currentSequence + 1,
+        nextSequence: sequenceControl.currentSequence,
       };
     }
 

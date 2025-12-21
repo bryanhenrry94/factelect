@@ -59,6 +59,7 @@ export function ProductForm({ productId, onCreate }: ProductFormProps) {
   } = useForm<CreateProduct>({
     resolver: zodResolver(createProductSchema),
     defaultValues: {
+      status: "ACTIVE",
       type: "SERVICE",
       code: "",
       description: "",
@@ -136,6 +137,25 @@ export function ProductForm({ productId, onCreate }: ProductFormProps) {
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Status */}
+            <Field>
+              <FieldLabel>Estado</FieldLabel>
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ACTIVE">Activo</SelectItem>
+                      <SelectItem value="INACTIVE">Inactivo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </Field>
             {/* Tipo */}
             <Field>
               <FieldLabel>Tipo</FieldLabel>
@@ -289,7 +309,7 @@ export function ProductForm({ productId, onCreate }: ProductFormProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field>
-                <FieldLabel>Cuenta de Inventario</FieldLabel>
+                <FieldLabel>Cuenta de Ingresos</FieldLabel>
                 <Controller
                   name="inventoryAccountId"
                   control={control}

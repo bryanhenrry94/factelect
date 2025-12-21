@@ -233,7 +233,7 @@ export default function DocumentForm({
                 : "Complete la información para crear un nuevo documento."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-6 space-y-4">
+          <CardContent>
             {errors && Object.keys(errors).length > 0 && (
               <Alert variant="destructive">
                 <AlertTitle>Errores en el formulario</AlertTitle>

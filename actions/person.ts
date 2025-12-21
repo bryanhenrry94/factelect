@@ -115,6 +115,12 @@ export async function getPersonsByTenant(
       ...person,
       identificationType:
         person.identificationType as $Enums.IdentificationType,
+      businessName: person.businessName || "",
+      firstName: person.firstName || "",
+      lastName: person.lastName || "",
+      email: person.email || "",
+      phone: person.phone || "",
+      address: person.address || "",
       createdAt: person.createdAt,
       updatedAt: person.updatedAt,
     }));
