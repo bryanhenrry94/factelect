@@ -7,7 +7,7 @@ import { formatCurrency, formatDate } from "@/utils/formatters";
 import { DocumentResponse } from "@/lib/validations";
 import { deleteDocument, getDocuments, getPersonsByTenant } from "@/actions";
 import { notifyError, notifyInfo } from "@/lib/notifications";
-import { Plus, Files, Delete, Edit } from "lucide-react";
+import { Plus, Files, Delete, Edit, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -277,7 +277,7 @@ export default function DocumentsPage() {
                     <TableHead>Total</TableHead>
                     <TableHead>Pagos</TableHead>
                     <TableHead>Saldo</TableHead>
-                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-center">Autorizado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -326,7 +326,10 @@ export default function DocumentsPage() {
                         <TableCell>
                           {formatCurrency(document.balance)}
                         </TableCell>
-                        <TableCell>{document.status}</TableCell>
+                        <TableCell className="text-center">
+                          {document.documentFiscalInfo?.sriStatus ===
+                            "AUTHORIZED" && <Check size={16} />}
+                        </TableCell>
                         <TableCell className="text-right space-x-2">
                           <button
                             className="p-1 hover:bg-muted rounded"

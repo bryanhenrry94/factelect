@@ -15,3 +15,13 @@ export const formatDate = (dateString: string): string => {
 };
 
 export const toInputDate = (d: Date) => d.toISOString().split("T")[0];
+
+const toNumber = (val: any, def = 0): number => {
+  if (val === null || val === undefined) return def;
+  const n = typeof val === "number" ? val : Number(val);
+  return isNaN(n) ? def : n;
+};
+
+const toFixed2 = (val: any): string => {
+  return toNumber(val).toFixed(2);
+};

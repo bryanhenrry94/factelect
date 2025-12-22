@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import {
   CreateDocument,
+  CreateDocumentTax,
   DocumentItem,
   DocumentResponse,
 } from "@/lib/validations";
@@ -272,6 +273,56 @@ export const createDocumentTx = async (
       });
     }
 
+    // registra impuestos si vienen
+    if (data.taxTotal > 0 && data.items?.length) {
+      // Crear impuestos agrupados si existen
+      const taxMap: Record<string, CreateDocumentTax> = {};
+
+      data.items.forEach((item) => {
+        if (!item.tax || item.tax === "NO_IVA") return;
+
+        // Mapea tu enum interno a códigos SRI
+        const taxCodeMap: Record<
+          string,
+          { code: string; percentage_code: string }
+        > = {
+          IVA_0: { code: "2", percentage_code: "0" },
+          IVA_5: { code: "2", percentage_code: "5" },
+          IVA_12: { code: "2", percentage_code: "2" },
+          IVA_14: { code: "2", percentage_code: "3" },
+          IVA_15: { code: "2", percentage_code: "4" },
+          EXENTO_IVA: { code: "2", percentage_code: "6" },
+        };
+
+        const sriTax = taxCodeMap[item.tax];
+        if (!sriTax) return;
+
+        const key = `${sriTax.code}-${sriTax.percentage_code}`;
+
+        if (!taxMap[key]) {
+          taxMap[key] = {
+            code: sriTax.code,
+            percentage_code: sriTax.percentage_code,
+            base: 0,
+            amount: 0,
+            documentId: newDocument.id, // ya lo puedes poner aquí
+          };
+        }
+
+        taxMap[key].base += Number(item.subtotal || 0);
+        taxMap[key].amount += Number(item.taxAmount || 0);
+      });
+
+      const taxesToCreate = Object.values(taxMap);
+
+      if (taxesToCreate.length) {
+        await tx.documentTax.createMany({
+          data: taxesToCreate,
+          skipDuplicates: true,
+        });
+      }
+    }
+
     // 3. Fiscal Info + actualizar secuencia
     if (data.fiscalInfo) {
       await tx.documentFiscalInfo.create({
@@ -428,6 +479,60 @@ export const updateDocumentTx = async (
           documentId: id,
         })),
       });
+    }
+
+    // registra impuestos si vienen
+    if (data.taxTotal > 0 && data.items?.length) {
+      await tx.documentTax.deleteMany({
+        where: { documentId: id },
+      });
+
+      // Crear impuestos agrupados si existen
+      const taxMap: Record<string, CreateDocumentTax> = {};
+
+      data.items.forEach((item) => {
+        if (!item.tax || item.tax === "NO_IVA") return;
+
+        // Mapea tu enum interno a códigos SRI
+        const taxCodeMap: Record<
+          string,
+          { code: string; percentage_code: string }
+        > = {
+          IVA_0: { code: "2", percentage_code: "0" },
+          IVA_5: { code: "2", percentage_code: "5" },
+          IVA_12: { code: "2", percentage_code: "2" },
+          IVA_14: { code: "2", percentage_code: "3" },
+          IVA_15: { code: "2", percentage_code: "4" },
+          EXENTO_IVA: { code: "2", percentage_code: "6" },
+        };
+
+        const sriTax = taxCodeMap[item.tax];
+        if (!sriTax) return;
+
+        const key = `${sriTax.code}-${sriTax.percentage_code}`;
+
+        if (!taxMap[key]) {
+          taxMap[key] = {
+            code: sriTax.code,
+            percentage_code: sriTax.percentage_code,
+            base: 0,
+            amount: 0,
+            documentId: updatedDocument.id, // ya lo puedes poner aquí
+          };
+        }
+
+        taxMap[key].base += Number(item.subtotal || 0);
+        taxMap[key].amount += Number(item.taxAmount || 0);
+      });
+
+      const taxesToCreate = Object.values(taxMap);
+
+      if (taxesToCreate.length) {
+        await tx.documentTax.createMany({
+          data: taxesToCreate,
+          skipDuplicates: true,
+        });
+      }
     }
 
     // 3. Fiscal Info (update o create)
@@ -677,18 +782,18 @@ export const getInvoiceDataForPDF = async (
     }));
 
     const subtotal15 =
-      impuestos.find((tax) => tax.codigoPorcentaje === "5")?.baseImponible || 0;
+      impuestos.find((tax) => tax.codigoPorcentaje === "4")?.baseImponible || 0;
     const subtotal5 =
-      impuestos.find((tax) => tax.codigoPorcentaje === "6")?.baseImponible || 0;
+      impuestos.find((tax) => tax.codigoPorcentaje === "5")?.baseImponible || 0;
     const subtotal0 =
       impuestos.find((tax) => tax.codigoPorcentaje === "0")?.baseImponible || 0;
     const subtotalNoObjetoIVA =
       impuestos.find((tax) => tax.codigoPorcentaje === "7")?.baseImponible || 0;
 
     const iva15 =
-      impuestos.find((tax) => tax.codigoPorcentaje === "5")?.valor || 0;
+      impuestos.find((tax) => tax.codigoPorcentaje === "4")?.valor || 0;
     const iva5 =
-      impuestos.find((tax) => tax.codigoPorcentaje === "6")?.valor || 0;
+      impuestos.find((tax) => tax.codigoPorcentaje === "5")?.valor || 0;
 
     const importeTotal = document.total;
 
@@ -753,6 +858,12 @@ export const getInvoiceDataForPDF = async (
         importeTotal: importeTotal,
         pagos: pagos,
       },
+      infoAdicional: [
+        {
+          nombre: "Descripción",
+          valor: document.description || "",
+        },
+      ],
       detalles: detalles,
       totals: totals,
     };

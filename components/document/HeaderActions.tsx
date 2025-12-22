@@ -52,37 +52,49 @@ export default function HeaderActions({
           {modeEdit ? "Actualizar" : "Guardar"}
         </Button>
 
-        {/* SEND TO SRI */}
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleSendToSRI}
-          disabled={sendingSRI || !isDraft || disableByTotal}
-        >
-          <Send className="mr-2 h-4 w-4" />
-          {sendingSRI ? "Enviando..." : "Enviar al SRI"}
-        </Button>
+        {modeEdit && (
+          <>
+            {/* SEND TO SRI */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSendToSRI}
+              disabled={sendingSRI || !isDraft || disableByTotal}
+            >
+              <Send className="mr-2 h-4 w-4" />
+              {sendingSRI ? "Enviando..." : "Enviar al SRI"}
+            </Button>
 
-        {/* REGISTER PAYMENT */}
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => handlePaymentRegister!()}
-        >
-          <DollarSign />
-          Registrar Pago
-        </Button>
+            {/* REGISTER PAYMENT */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handlePaymentRegister!()}
+            >
+              <DollarSign />
+              Registrar Pago
+            </Button>
 
-        {/* DOWNLOADS */}
-        <Button type="button" variant="secondary" onClick={handleDownloadXML}>
-          <File className="mr-2 h-4 w-4" />
-          XML
-        </Button>
+            {/* DOWNLOADS */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDownloadXML}
+            >
+              <File className="mr-2 h-4 w-4" />
+              XML
+            </Button>
 
-        <Button type="button" variant="secondary" onClick={handleDownloadPDF}>
-          <File className="mr-2 h-4 w-4" />
-          Ride
-        </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDownloadPDF}
+            >
+              <File className="mr-2 h-4 w-4" />
+              Ride
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

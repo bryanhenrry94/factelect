@@ -143,16 +143,7 @@ export default function PersonForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <FieldSet>
-        <FieldLegend>
-          {personId ? "Editar Persona" : "Agregar Nueva Persona"}
-        </FieldLegend>
-        <FieldDescription>
-          {personId
-            ? "Actualiza la información de la persona."
-            : "Agrega una nueva persona a tu base de datos."}
-        </FieldDescription>
-
+      <FieldSet>        
         {/* ======================= */}
         {/*        DATOS BASE       */}
         {/* ======================= */}

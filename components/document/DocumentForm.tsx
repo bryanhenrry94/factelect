@@ -39,12 +39,16 @@ import {
   createDocument,
   getDocument,
   getDocumentItems,
+  getInvoiceDataForPDF,
+  sendToSRI,
   updateDocument,
 } from "@/actions";
 import { getDocumentFiscalInfo } from "@/actions/document/document-fiscal-info";
 import { getDocumentPayments } from "@/actions/document/document-payment";
 import { $Enums } from "@/prisma/generated/prisma";
 import { ConfirmDialog } from "../ConfirmDialog";
+import InvoicePDF from "../pdf/InvoicePDF";
+import { pdf } from "@react-pdf/renderer";
 
 const initialItemsState: CreateDocumentItem[] = [
   {
@@ -69,7 +73,7 @@ const initialFiscalInfoState: CreateDocumentFiscalInfo = {
   accessKey: "",
   authorization: "",
   authorizationDate: new Date(),
-  sriStatus: "PENDING",
+  sriStatus: "DRAFT",
   environment: "TEST",
   generatedXmlUrl: "",
   authorizedXmlUrl: "",
@@ -206,6 +210,57 @@ export default function DocumentForm({
     router.push(`/transacciones/nueva?documento=${documentId}`);
   };
 
+  const handleSendToSRI = async () => {
+    try {
+      const confirm = await ConfirmDialog.confirm(
+        "Confirmación",
+        "¿Está seguro de que desea enviar este documento al SRI?"
+      );
+      if (!confirm) return;
+
+      // Lógica para enviar el documento al SRI
+      const response = await sendToSRI(documentId!, tenant!.id);
+
+      if (response.success) {
+        notifyInfo("Documento enviado al SRI correctamente");
+        loadDocument(); // Recargar el documento para actualizar su estado
+      } else {
+        notifyError(
+          `Error al enviar el documento al SRI: ${response.error || ""}`
+        );
+      }
+    } catch (error) {
+      notifyError("Ocurrió un error inesperado al enviar el documento al SRI.");
+    }
+  };
+
+  const handleDownloadXML = () => {
+    // Lógica para descargar el XML
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      const response = await getInvoiceDataForPDF(documentId!);
+
+      if (!response.success || !response.data) {
+        throw new Error("No se pudo obtener la información de la factura");
+      }
+
+      // 👉 Generar el documento PDF
+      const blob = await pdf(<InvoicePDF factura={response.data} />).toBlob();
+
+      // 👉 Descargar en el navegador
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `RIDE-${response.data.secuencial || "factura"}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error al descargar PDF:", error);
+    }
+  };
+
   return (
     <FormProvider {...methods}>
       {/* {JSON.stringify(errors)} */}
@@ -213,6 +268,9 @@ export default function DocumentForm({
         <HeaderActions
           modeEdit={modeEdit}
           handlePaymentRegister={handlePaymentRegister}
+          handleSendToSRI={handleSendToSRI}
+          handleDownloadXML={handleDownloadXML}
+          handleDownloadPDF={handleDownloadPDF}
         />
 
         {error && (

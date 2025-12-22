@@ -1,10 +1,12 @@
 import { z } from "zod";
 
 export const SRIStatusEnum = z.enum([
-  "PENDING",
-  "SENT",
-  "AUTHORIZED",
-  "REJECTED",
+  "DRAFT", // Aún no firmado / no enviado
+  "SENT", // Enviado a recepción SRI
+  "RECEIVED", // SRI lo recibió (RECIBIDA)
+  "IN_PROCESS", // Esperando autorización
+  "AUTHORIZED", // Autorizada
+  "REJECTED", // Rechazada
 ]);
 export const SRIEnvironmentEnum = z.enum(["TEST", "PRODUCTION"]);
 

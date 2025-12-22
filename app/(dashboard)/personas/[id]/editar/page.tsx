@@ -13,7 +13,13 @@ import {
 import Link from "next/link";
 import { SlashIcon } from "lucide-react";
 import PersonForm from "@/components/person/person-form";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useParams, useRouter } from "next/navigation";
 
 export default function PersonNewPage() {
@@ -48,16 +54,20 @@ export default function PersonNewPage() {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="mt-4">
-        <Card>
-          <CardContent>
-            <PersonForm
-              personId={id as string}
-              tenantId={session?.user?.tenantId ?? ""}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Editar Persona</CardTitle>
+          <CardDescription>
+            Actualiza la información de la persona.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PersonForm
+            personId={id as string}
+            tenantId={session?.user?.tenantId ?? ""}
+          />
+        </CardContent>
+      </Card>
     </PageContainer>
   );
 }

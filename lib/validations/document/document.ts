@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { createDocumentItemSchema } from "./document-item";
-import { createDocumentFiscalInfoSchema } from "./document-fiscal-info";
+import {
+  createDocumentFiscalInfoSchema,
+  DocumentFiscalInfoSchema,
+} from "./document-fiscal-info";
 import { createDocumentPaymentSchema } from "./document-payment";
 
 export const entityTypeEnum = z.enum(["CUSTOMER", "SUPPLIER"]);
@@ -71,12 +74,7 @@ export const documentResponseSchema = documentSchema.extend({
       identification: z.string().optional(),
     })
     .optional(),
-  documentFiscalInfo: z
-    .object({
-      id: z.string(),
-      sequence: z.number(),
-    })
-    .optional(),
+  documentFiscalInfo: DocumentFiscalInfoSchema.optional(),
   documentNumber: z.string().optional(),
 });
 

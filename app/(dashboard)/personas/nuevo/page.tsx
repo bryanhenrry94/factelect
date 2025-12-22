@@ -13,7 +13,13 @@ import {
 import Link from "next/link";
 import { SlashIcon } from "lucide-react";
 import PersonForm from "@/components/person/person-form";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 
 export default function PersonNewPage() {
@@ -52,6 +58,12 @@ export default function PersonNewPage() {
 
       <div className="mt-4">
         <Card>
+          <CardHeader>
+            <CardTitle>Agregar Nueva Persona</CardTitle>
+            <CardDescription>
+              Agrega una nueva persona a tu base de datos.
+            </CardDescription>
+          </CardHeader>
           <CardContent>
             <PersonForm tenantId={session?.user?.tenantId ?? ""} />
           </CardContent>

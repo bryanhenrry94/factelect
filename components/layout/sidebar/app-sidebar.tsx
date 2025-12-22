@@ -231,6 +231,11 @@ const data = {
       icon: Building,
     },
     {
+      name: "Facturación Electrónica",
+      url: "/configuracion/facturacion-electronica",
+      icon: Building,
+    },
+    {
       name: "Perfil",
       url: "/configuracion/perfil",
       icon: PieChart,

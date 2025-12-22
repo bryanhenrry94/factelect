@@ -125,10 +125,20 @@ export default function DocumentInfo({ persons, modeEdit }: DocumentInfoProps) {
                       <SelectValue placeholder="Tipo de documento" />
                     </SelectTrigger>
                   </FormControl>
+
                   <SelectContent>
                     <SelectItem value="INVOICE">Factura</SelectItem>
+                    <SelectItem value="PURCHASE">
+                      Liquidación de compra
+                    </SelectItem>
                     <SelectItem value="CREDIT_NOTE">Nota de crédito</SelectItem>
                     <SelectItem value="DEBIT_NOTE">Nota de débito</SelectItem>
+                    <SelectItem value="WITHHOLDING">
+                      Comprobante de retención
+                    </SelectItem>
+                    <SelectItem value="REMISSION_GUIDE">
+                      Guía de remisión
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

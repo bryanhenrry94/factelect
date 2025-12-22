@@ -457,9 +457,9 @@ model DocumentTax {
 }
 
 model DocumentFiscalInfo {
-  id                String                                                             @id @default(cuid())
+  id                String                                                                           @id @default(cuid())
 
-  documentId        String         @map("document_id")                                 @unique
+  documentId        String         @map("document_id")                                               @unique
   document          Document       @relation(fields: [documentId], references: [id])
 
   establishmentId   String         @map("establishment_id") // 001
@@ -472,11 +472,17 @@ model DocumentFiscalInfo {
   authorization     String?        @map("authorization") // Número de autorización
   authorizationDate DateTime?      @map("authorization_date") // Fecha de autorización
 
-  sriStatus         SRIStatus      @map("sri_status")                                  @default(PENDING)
-  environment       SRIEnvironment                                                     @default(TEST) // 1 pruebas, 2 producción
+  sriStatus         SRIStatus      @map("sri_status")                                                @default(DRAFT) // Estado del documento en el SRI
+  environment       SRIEnvironment                                                                   @default(TEST) // 1 pruebas, 2 producción
 
   generatedXmlUrl   String?        @map("generated_xml_url") // URL al XML firmado
+  generatedXmlPath  String?        @map("generated_xml_path") // Ruta al XML firmado en el servidor
+
   authorizedXmlUrl  String?        @map("authorized_xml_url") // URL XML autorizado
+  authorizedXmlPath String?        @map("authorized_xml_path") // Ruta XML autorizado en el servidor
+
+  rawResponse       String?        @map("raw_response") // Respuesta cruda del SRI
+
   pdfUrl            String?        @map("pdf_url") // URL del PDF RIDE
 
   @@map("document_fiscal_info")
@@ -1025,11 +1031,14 @@ enum EntityType {
 }
 
 enum SRIStatus {
-  PENDING // Lista para enviar
-  SENT // XML enviado
-  AUTHORIZED // Autorizada
-  REJECTED // Rechazada por SRI
+  DRAFT        // Aún no firmado / no enviado
+  SENT         // Enviado a recepción SRI
+  RECEIVED     // SRI lo recibió (RECIBIDA)
+  IN_PROCESS   // Esperando autorización
+  AUTHORIZED   // Autorizada
+  REJECTED     // Rechazada
 }
+
 
 enum SRIEnvironment {
   TEST

@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   grayBox: {
-    backgroundColor: "#E9E9E9",
+    border: "1px solid #D3D3D3",
     padding: 8,
     borderRadius: 4,
     marginBottom: 5,
@@ -46,14 +46,14 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#E9E9E9",
+    border: "1px solid #D3D3D3",
     padding: 6,
     borderTopLeftRadius: 4,
     borderTopRightRadius: 4,
   },
   tableRow: {
     flexDirection: "row",
-    backgroundColor: "#F8F8F8",
+    // border: "1px solid #D3D3D3",
     padding: 6,
     borderBottomWidth: 1,
     borderBottomColor: "#FFFFFF",
@@ -61,13 +61,13 @@ const styles = StyleSheet.create({
   tableCell: { fontSize: 9, paddingHorizontal: 3 },
   totalRow: { flexDirection: "row" },
   totalLabel: {
-    backgroundColor: "#F6F6F4",
+    border: "1px solid #D3D3D3",
     padding: 6,
     width: 140,
     fontSize: 10,
   },
   totalValue: {
-    backgroundColor: "#E9E9E9",
+    border: "1px solid #D3D3D3",
     padding: 6,
     flex: 1,
     fontSize: 10,
@@ -110,6 +110,11 @@ interface Total {
   value: number;
 }
 
+interface InfoAdicional {
+  nombre: string;
+  valor: string;
+}
+
 interface Factura {
   emisor: {
     logoUrl: string;
@@ -150,6 +155,7 @@ interface Factura {
     pagos: Pago[];
   };
   detalles: Detalle[];
+  infoAdicional: InfoAdicional[];
   totals: Total[];
 }
 
@@ -161,9 +167,9 @@ const formatMoney = (n: number) =>
   `$${n.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
 
 const InvoicePDF: React.FC<InvoicePDFProps> = ({ factura }) => {
-  // const barcodeImage = generateBarcodeBase64(
-  //   factura.infoTributaria.claveAcceso
-  // );
+  const barcodeImage = generateBarcodeBase64(
+    factura.infoTributaria.claveAcceso
+  );
 
   return (
     <Document>
@@ -191,7 +197,7 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({ factura }) => {
 
           {/* Información tributaria */}
           <View style={{ width: "49%" }}>
-            <View style={[styles.grayBox, { marginBottom: 5 }]}>
+            <View style={[{ marginBottom: 5 }]}>
               <Text style={styles.title}>FACTURA</Text>
               <Text style={{ textAlign: "center" }}>
                 No.{factura.infoTributaria.estab}-
@@ -213,7 +219,7 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({ factura }) => {
               <Text style={[styles.label, { marginTop: 5 }]}>
                 Clave de Acceso:
               </Text>
-              {/* <Image src={barcodeImage} style={styles.barcode} /> */}
+              <Image src={barcodeImage} style={styles.barcode} />
               <Text style={{ fontSize: 9 }}>
                 {factura.infoTributaria.claveAcceso}
               </Text>
@@ -302,10 +308,17 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({ factura }) => {
         {/* Totales y formas de pago */}
         <View style={[styles.rowBetween, styles.section]}>
           {/* Información adicional */}
-          <View style={{ width: "49%" }}>
+          <View style={{ width: "60%" }}>
             <View style={styles.grayBox}>
               <Text style={styles.label}>Información Adicional:</Text>
-              <Text>-</Text>
+              {factura.infoAdicional.map((item, index) => (
+                <View key={index} style={styles.tableRow}>
+                  <Text style={{ width: 100 }}>{item.nombre}</Text>
+                  <Text style={{ flex: 1, textAlign: "right" }}>
+                    {item.valor}
+                  </Text>
+                </View>
+              ))}
             </View>
             <View style={styles.grayBox}>
               <Text style={styles.label}>Formas de Pago:</Text>
@@ -322,7 +335,7 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({ factura }) => {
           </View>
 
           {/* Totales */}
-          <View style={{ width: "49%" }}>
+          <View style={{ width: "38%" }}>
             {factura.totals.map((total, i) => (
               <View key={i} style={styles.totalRow}>
                 <Text style={styles.totalLabel}>{total.label}:</Text>

@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { AccountSelect } from "../AccountSelected";
 
 const initialState: CreateCashBox = {
   name: "",
@@ -161,25 +162,12 @@ export const CashBoxForm: React.FC<CashBoxFormProps> = ({
           name="accountId"
           control={control}
           render={({ field }) => (
-            <Select
-              value={field.value ?? undefined}
-              onValueChange={(value) => field.onChange(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona una cuenta" />
-              </SelectTrigger>
-
-              <SelectContent>
-                {accounts.map((account) => (
-                  <SelectItem
-                    key={account.id}
-                    value={account.id} // ✅ nunca vacío
-                  >
-                    {account.code} - {account.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <AccountSelect
+              label="Cuenta Contable"
+              value={field.value ?? null}
+              accounts={accounts}
+              onChange={(value) => field.onChange(value)}
+            />
           )}
         />
         {errors.accountId && (
