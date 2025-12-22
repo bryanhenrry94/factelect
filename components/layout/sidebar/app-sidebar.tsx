@@ -17,6 +17,7 @@ import {
   BarChart3,
   User,
   Building,
+  Settings,
 } from "lucide-react";
 
 import { NavMain } from "@/components/layout/sidebar/nav-main";
@@ -233,7 +234,7 @@ const data = {
     {
       name: "Facturación Electrónica",
       url: "/configuracion/facturacion-electronica",
-      icon: Building,
+      icon: Settings,
     },
     {
       name: "Perfil",
