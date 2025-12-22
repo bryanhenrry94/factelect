@@ -417,7 +417,9 @@ export default function TransactionForm({
                     <SelectContent>
                       {persons.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          {p.firstName} {p.lastName}
+                          {p.businessName
+                            ? p.businessName
+                            : `${p.firstName} ${p.lastName}`}
                         </SelectItem>
                       ))}
                     </SelectContent>

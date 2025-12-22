@@ -11,37 +11,45 @@ export const createTransaction = async (
   tenantId: string
 ): Promise<{ success: boolean; error?: string; data?: TransactionInput }> => {
   try {
-    // valida que el detalle tenga un monto mayor a cero
     if (!data.personId) {
-      return {
-        success: false,
-        error: "Debe seleccionar una persona para la transacción.",
-      };
+      return { success: false, error: "Debe seleccionar una persona." };
     }
 
-    if (data.documents && data.documents.length > 0) {
-      const totalAmount = data.documents.reduce(
-        (sum, doc) => sum + doc.amount,
+    if (!data.amount || data.amount <= 0) {
+      return { success: false, error: "El monto debe ser mayor a cero." };
+    }
+
+    // Validar documentos
+    if (data.documents?.length) {
+      const totalDocs = data.documents.reduce(
+        (s, d) => s + Number(d.amount),
         0
       );
-      if (totalAmount <= 0) {
+
+      if (totalDocs <= 0) {
         return {
           success: false,
-          error: "El monto total de los documentos debe ser mayor a cero.",
+          error: "El monto aplicado a documentos debe ser mayor a cero.",
         };
       }
 
-      // monto no puede ser mayor al saldo pendiente de los documentos
+      if (Number(totalDocs) !== Number(data.amount)) {
+        return {
+          success: false,
+          error: "El monto de la transacción no coincide con los documentos.",
+        };
+      }
+
       for (const doc of data.documents) {
         const document = await prisma.document.findUnique({
           where: { id: doc.documentId },
           select: { balance: true },
         });
 
-        if (document && doc.amount > document.balance) {
+        if (!document || Number(doc.amount) > Number(document.balance)) {
           return {
             success: false,
-            error: `El monto aplicado no puede ser mayor al saldo pendiente.`,
+            error: "El monto aplicado supera el saldo pendiente del documento.",
           };
         }
       }
@@ -50,9 +58,9 @@ export const createTransaction = async (
     const parsedData = createTransactionSchema.parse(data);
 
     const result = await prisma.$transaction(async (tx) => {
-      /* -------------------------------------------------
-       * 1. Crear Transacción
-       * ------------------------------------------------- */
+      /* ===========================
+       * 1. Crear transacción
+       * =========================== */
       const transaction = await tx.transaction.create({
         data: {
           personId: parsedData.personId,
@@ -70,12 +78,14 @@ export const createTransaction = async (
         },
       });
 
-      /* -------------------------------------------------
-       * 2. Aplicar pagos a documentos
-       * ------------------------------------------------- */
+      const isIncome = parsedData.type === "INCOME";
+      const amount = Number(parsedData.amount);
+
+      /* ===========================
+       * 2. Aplicar a documentos
+       * =========================== */
       if (parsedData.documents?.length) {
         for (const doc of parsedData.documents) {
-          // Relación transacción-documento
           await tx.transactionDocument.create({
             data: {
               transactionId: transaction.id,
@@ -85,51 +95,38 @@ export const createTransaction = async (
             },
           });
 
-          // Documento actual
           const document = await tx.document.findUnique({
             where: { id: doc.documentId },
-            select: {
-              total: true,
-              paidAmount: true,
-            },
+            select: { total: true, paidAmount: true },
           });
 
-          if (!document) {
-            throw new Error("Documento no encontrado");
-          }
+          if (!document) throw new Error("Documento no encontrado");
 
-          const newPaidAmount =
-            Number(document.paidAmount || 0) + Number(doc.amount);
-
-          const newBalance = Number(document.total) - newPaidAmount;
+          const paid = Number(document.paidAmount || 0) + Number(doc.amount);
+          const balance = Number(document.total) - paid;
 
           await tx.document.update({
             where: { id: doc.documentId },
             data: {
-              paidAmount: newPaidAmount,
-              balance: Math.max(newBalance, 0),
+              paidAmount: paid,
+              balance: Math.max(balance, 0),
             },
           });
         }
       }
 
-      /* -------------------------------------------------
-       * 3. Generar movimiento Caja / Banco
-       * ------------------------------------------------- */
-      const isIncome = parsedData.type === "INCOME";
-      const isExpense = parsedData.type === "EXPENSE";
-
+      /* ===========================
+       * 3. Movimiento Caja
+       * =========================== */
       if (parsedData.method === "CASH") {
-        if (!parsedData.cashBoxId) {
-          throw new Error("Caja no especificada");
-        }
+        if (!parsedData.cashBoxId) throw new Error("Caja no especificada");
 
         await tx.cashMovement.create({
           data: {
             cashBoxId: parsedData.cashBoxId,
             transactionId: transaction.id,
             type: isIncome ? "IN" : "OUT",
-            amount: parsedData.amount,
+            amount,
             description: parsedData.description ?? "",
             issueDate: parsedData.issueDate,
             tenantId,
@@ -137,20 +134,85 @@ export const createTransaction = async (
         });
       }
 
+      /* ===========================
+       * 4. Movimiento Banco + Contabilidad
+       * =========================== */
       if (parsedData.method === "TRANSFER") {
-        if (!parsedData.bankAccountId) {
+        if (!parsedData.bankAccountId)
           throw new Error("Cuenta bancaria no especificada");
-        }
+
+        const person = await tx.person.findUnique({
+          where: { id: parsedData.personId },
+        });
+        if (!person) throw new Error("Persona no encontrada");
+
+        const counterAccountId = isIncome
+          ? person.accountReceivableId
+          : person.accountPayableId;
+
+        if (!counterAccountId)
+          throw new Error("Cuenta contable de la persona no configurada");
 
         const bankMov = await tx.bankMovement.create({
           data: {
             bankAccountId: parsedData.bankAccountId,
             transactionId: transaction.id,
             type: isIncome ? "CREDIT" : "DEBIT",
-            amount: parsedData.amount,
+            amount,
             description: parsedData.description ?? "",
             date: parsedData.issueDate,
             tenantId,
+          },
+        });
+
+        const bankMovDet = await tx.bankMovementDetail.create({
+          data: {
+            tenantId,
+            bankMovementId: bankMov.id,
+            description: parsedData.description ?? "",
+            costCenterId: null,
+            accountId: counterAccountId,
+            amount,
+          },
+        });
+
+        const journal = await tx.journalEntry.create({
+          data: {
+            tenantId,
+            date: parsedData.issueDate,
+            description: parsedData.description ?? "",
+            sourceType: "BANK_MOVEMENT",
+            sourceId: bankMov.id,
+            type: parsedData.type,
+          },
+        });
+
+        const bankAccount = await tx.bankAccount.findUnique({
+          where: { id: parsedData.bankAccountId },
+        });
+        if (!bankAccount)
+          throw new Error("Cuenta bancaria no encontrada para la transacción");
+
+        /* Asientos contables */
+        // 🏦 Banco
+        await tx.journalEntryLine.create({
+          data: {
+            tenantId,
+            journalEntryId: journal.id,
+            accountId: bankAccount.accountId!,
+            debit: isIncome ? amount : 0,
+            credit: isIncome ? 0 : amount,
+          },
+        });
+
+        // 👤 Cliente / Proveedor
+        await tx.journalEntryLine.create({
+          data: {
+            tenantId,
+            journalEntryId: journal.id,
+            accountId: counterAccountId,
+            debit: isIncome ? 0 : amount,
+            credit: isIncome ? amount : 0,
           },
         });
       }
@@ -165,9 +227,12 @@ export const createTransaction = async (
         documents: parsedData.documents || [],
       },
     };
-  } catch (error) {
-    console.error("Error creating transaction:", error);
-    return { success: false, error: "Error creating transaction" };
+  } catch (error: any) {
+    console.error("❌ Error creating transaction:", error);
+    return {
+      success: false,
+      error: error.message || "Error al crear la transacción",
+    };
   }
 };
 

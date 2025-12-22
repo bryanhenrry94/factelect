@@ -86,10 +86,6 @@ const data = {
           url: "/documentos?type=CUSTOMER&documentType=INVOICE",
         },
         {
-          title: "Estado de Cuenta",
-          url: "/estado-cuenta-clientes",
-        },
-        {
           title: "Proformas",
           url: "/proformas",
         },
@@ -103,10 +99,6 @@ const data = {
         {
           title: "Compras",
           url: "/documentos?type=SUPPLIER&documentType=INVOICE",
-        },
-        {
-          title: "Estado de Cuenta",
-          url: "/estado-cuenta-proveedores",
         },
         {
           title: "Ordenes de Compra",
