@@ -226,7 +226,7 @@ export function InventoryMovementForm({
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Bodega" />
+                  <SelectValue placeholder="Almacén" />
                 </SelectTrigger>
                 <SelectContent>
                   {warehouses.map((w) => (

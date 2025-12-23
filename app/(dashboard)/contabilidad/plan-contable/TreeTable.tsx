@@ -125,8 +125,8 @@ export function TreeTable({
 
     return (
       <Fragment key={node.id}>
-        <TableRow>
-          <TableCell className="w-10">
+        <TableRow className="py-1 h-8">
+          <TableCell className="w-10 py-1">
             {hasChildren ? (
               <Button
                 variant="ghost"
@@ -144,7 +144,7 @@ export function TreeTable({
             )}
           </TableCell>
 
-          <TableCell>
+          <TableCell className="py-1">
             <div
               className="font-mono"
               style={{ paddingLeft: `${level * 16}px` }}
@@ -153,9 +153,9 @@ export function TreeTable({
             </div>
           </TableCell>
 
-          <TableCell>{node.name}</TableCell>
+          <TableCell className="py-1">{node.name}</TableCell>
 
-          <TableCell className="text-right">
+          <TableCell className="text-right py-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">

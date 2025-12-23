@@ -226,7 +226,14 @@ export const registerAccount = async (
           documentType: $Enums.DocumentType.INVOICE,
           establishmentId: establishment.id,
           emissionPointId: emissionPoint.id,
-          currentSequence: 0,
+          currentSequence: 1,
+        },
+      });
+
+      await tx.warehouse.create({
+        data: {
+          name: "Almacén Principal",
+          tenantId: tenant.id,
         },
       });
 

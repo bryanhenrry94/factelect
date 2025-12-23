@@ -181,7 +181,7 @@ export default function MovimientosInventarioPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Fecha</TableHead>
-                    <TableHead>Bodega</TableHead>
+                    <TableHead>Almacén</TableHead>
                     <TableHead>Descripción</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>

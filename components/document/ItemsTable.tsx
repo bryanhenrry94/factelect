@@ -91,7 +91,7 @@ export default function InvoiceItemsTable({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="w-[160px]">Bodega</TableHead>
+              <TableHead className="w-[160px]">Almacén</TableHead>
               <TableHead className="w-[260px]">Item</TableHead>
               <TableHead className="w-[90px] text-center">Cantidad</TableHead>
               <TableHead className="w-[110px] text-center">Precio</TableHead>
@@ -121,7 +121,7 @@ export default function InvoiceItemsTable({
 
               return (
                 <TableRow key={field.id} className="hover:bg-muted/30">
-                  {/* Bodega */}
+                  {/* Almacén */}
                   <TableCell>
                     <Controller
                       control={control}
@@ -132,7 +132,7 @@ export default function InvoiceItemsTable({
                           onValueChange={field.onChange}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Bodega" />
+                            <SelectValue placeholder="Almacén" />
                           </SelectTrigger>
                           <SelectContent>
                             {warehouses.map((w) => (

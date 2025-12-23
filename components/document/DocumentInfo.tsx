@@ -52,6 +52,13 @@ export default function DocumentInfo({ persons, modeEdit }: DocumentInfoProps) {
     [persons, selectedPersonId]
   );
 
+  const handleAddPerson = () => {
+    // abre una nueva pagina /personas/nuevo
+    return () => {
+      window.open("/personas/nuevo", "_blank");
+    };
+  };
+
   return (
     <div>
       {/* ===================== DATOS GENERALES ===================== */}
@@ -228,6 +235,7 @@ export default function DocumentInfo({ persons, modeEdit }: DocumentInfoProps) {
                   variant="outline"
                   size="icon"
                   title="Crear persona"
+                  onClick={handleAddPerson()}
                 >
                   <UserPlus className="h-4 w-4" />
                 </Button>

@@ -99,7 +99,7 @@ export const createInventoryMovement = async (
         if (data.type === "OUT") {
           if (!existing) {
             throw new Error(
-              `Stock no encontrado para producto ${it.productId} en la bodega`
+              `Stock no encontrado para producto ${it.productId} en el almacén`
             );
           }
           // usa avgCost; si no existe avgCost, puedes decidir fallback (p.ej. product.cost)
@@ -210,7 +210,7 @@ export const createInventoryMovement = async (
           const avg = data.type === "IN" ? Number(itemCost) : null; // si OUT sin stock: considera error
           if (data.type === "OUT") {
             throw new Error(
-              `Stock no encontrado para producto ${it.productId} en la bodega`
+              `Stock no encontrado para producto ${it.productId} en el almacén`
             );
           }
           await tx.stock.create({
@@ -308,7 +308,7 @@ export const updateInventoryMovement = async (
       ];
 
       for (const productId of affectedProductIds) {
-        // Obtener todos los movimientos históricos del producto en la bodega
+        // Obtener todos los movimientos históricos del producto en el almacén
         const movements = await tx.inventoryMovement.findMany({
           where: {
             warehouseId: header.warehouseId,
@@ -394,7 +394,7 @@ export const deleteInventoryMovement = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // 1️⃣ Obtener movimiento antes de eliminar (para saber productos, bodega, fecha)
+      // 1️⃣ Obtener movimiento antes de eliminar (para saber productos, almacén, fecha)
       const movement = await tx.inventoryMovement.findUnique({
         where: { id },
         include: {

@@ -188,7 +188,7 @@ model Product {
   costAccountId            String?                   @map("cost_account_id")
   costAccount              ChartOfAccount?           @relation("ProductCostAccount", fields: [costAccountId], references: [id])
 
-  status                   ProductStatus                                          @default(ACTIVE) // ACTIVE | INACTIVE
+  status                   Status                                                 @default(ACTIVE) // ACTIVE | INACTIVE
 
   documentItems            DocumentItem[]
   stocks                   Stock[]
@@ -324,12 +324,18 @@ model InventoryAdjustmentItem {
 }
 
 model Warehouse {
-  id                       String                                           @id @default(cuid())
+  id                       String                                                 @id @default(cuid())
   tenantId                 String                    @map("tenant_id")
   tenant                   Tenant                    @relation(fields: [tenantId], references: [id])
   name                     String
+
+  accountInventoryId       String?                   @map("account_inventory_id")
+  accountInventory         ChartOfAccount?           @relation("WarehouseInventoryAccount", fields: [accountInventoryId], references: [id])
+
   costCenterId             String?                   @map("cost_center_id")
   costCenter               CostCenter?               @relation(fields: [costCenterId], references: [id])
+
+  status                   Status                                                 @default(ACTIVE)
 
   stocks                   Stock[]
   movements                InventoryMovement[]
@@ -687,15 +693,16 @@ model BankTransfer {
 model CashBox {
   id            String                             @id @default(cuid())
   name          String
-  location      String
-  createdAt     DateTime        @map("created_at") @default(now())
-  updatedAt     DateTime        @map("updated_at") @updatedAt
 
   accountId     String?
   account       ChartOfAccount? @relation(fields: [accountId], references: [id])
 
   tenantId      String          @map("tenant_id")
   tenant        Tenant          @relation(fields: [tenantId], references: [id])
+
+  status        Status                             @default(ACTIVE)
+  createdAt     DateTime        @map("created_at") @default(now())
+  updatedAt     DateTime        @map("updated_at") @updatedAt
 
   cashMovements CashMovement[]
   cashSession   CashSession[]
@@ -849,29 +856,30 @@ model ChartOfAccountTemplate {
 }
 
 model ChartOfAccount {
-  id                 String                                 @id @default(uuid())
-  tenantId           String               @map("tenant_id")
-  code               String
-  name               String
-  accountType        AccountType
-  parentId           String?              @map("parent_id")
-  parent             ChartOfAccount?      @relation("AccountHierarchy", fields: [parentId], references: [id])
-  children           ChartOfAccount[]     @relation("AccountHierarchy")
+  id                         String                                 @id @default(uuid())
+  tenantId                   String               @map("tenant_id")
+  code                       String
+  name                       String
+  accountType                AccountType
+  parentId                   String?              @map("parent_id")
+  parent                     ChartOfAccount?      @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children                   ChartOfAccount[]     @relation("AccountHierarchy")
 
-  ledgerEntries      JournalEntryLine[]
+  ledgerEntries              JournalEntryLine[]
 
   // NUEVOS → relaciones inversas necesarias
-  personsReceivable  Person[]             @relation("person_account_receivable")
-  personsPayable     Person[]             @relation("person_account_payable")
-  productsSales      Product[]            @relation("ProductSalesAccount")
-  productsInventory  Product[]            @relation("ProductInventoryAccount")
-  productsCost       Product[]            @relation("ProductCostAccount")
+  accountInventoryWarehouses Warehouse[]          @relation("WarehouseInventoryAccount")
+  personsReceivable          Person[]             @relation("person_account_receivable")
+  personsPayable             Person[]             @relation("person_account_payable")
+  productsSales              Product[]            @relation("ProductSalesAccount")
+  productsInventory          Product[]            @relation("ProductInventoryAccount")
+  productsCost               Product[]            @relation("ProductCostAccount")
 
-  bankAccounts       BankAccount[]
-  cashBox            CashBox[]
-  cashMovement       CashMovement[]
-  bankTransaction    BankTransaction[]
-  bankMovementDetail BankMovementDetail[]
+  bankAccounts               BankAccount[]
+  cashBox                    CashBox[]
+  cashMovement               CashMovement[]
+  bankTransaction            BankTransaction[]
+  bankMovementDetail         BankMovementDetail[]
 
   @@map("chart_of_account")
 }
@@ -972,7 +980,7 @@ model BankTransaction {
   @@map("bank_transaction")
 }
 
-enum ProductStatus {
+enum Status {
   ACTIVE
   INACTIVE
 }
@@ -1038,7 +1046,6 @@ enum SRIStatus {
   AUTHORIZED   // Autorizada
   REJECTED     // Rechazada
 }
-
 
 enum SRIEnvironment {
   TEST

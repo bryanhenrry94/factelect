@@ -78,6 +78,7 @@ export default function InvoicePDFPage() {
       { label: "IVA 15%", value: 30 },
       { label: "Valor Total", value: 230 },
     ],
+    infoAdicional: [{ nombre: "Email", valor: "test@acme.com" }],
   };
 
   return (

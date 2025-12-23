@@ -169,8 +169,8 @@ const data = {
           url: "/inventario/unidades",
         },
         {
-          title: "Bodegas",
-          url: "/inventario/bodegas",
+          title: "Almacenes",
+          url: "/inventario/almacenes",
         },
         {
           title: "Movimientos",

@@ -24,20 +24,22 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { AccountSelect } from "../AccountSelected";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { AccountSelect } from "../AccountSelected";
+} from "../ui/select";
 
 const initialState: CreateCashBox = {
   name: "",
-  location: "",
   accountId: undefined,
+  status: "ACTIVE",
 };
 
 interface CashBoxFormProps {
@@ -127,6 +129,32 @@ export const CashBoxForm: React.FC<CashBoxFormProps> = ({
         </DialogDescription>
       </DialogHeader>
 
+      {/* Estado */}
+      <div className="space-y-1">
+        <Label>Estado</Label>
+        <Controller
+          name="status"
+          control={control}
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccione un estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Estado</SelectLabel>
+                  <SelectItem value="ACTIVE">Activo</SelectItem>
+                  <SelectItem value="INACTIVE">Inactivo</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {errors.status && (
+          <p className="text-sm text-destructive">{errors.status.message}</p>
+        )}
+      </div>
+
       {/* Nombre */}
       <div className="space-y-1">
         <Label>Nombre</Label>
@@ -139,19 +167,6 @@ export const CashBoxForm: React.FC<CashBoxFormProps> = ({
         />
         {errors.name && (
           <p className="text-sm text-destructive">{errors.name.message}</p>
-        )}
-      </div>
-
-      {/* Ubicación */}
-      <div className="space-y-1">
-        <Label>Ubicación</Label>
-        <Controller
-          name="location"
-          control={control}
-          render={({ field }) => <Input {...field} placeholder="Ubicación" />}
-        />
-        {errors.location && (
-          <p className="text-sm text-destructive">{errors.location.message}</p>
         )}
       </div>
 

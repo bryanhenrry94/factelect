@@ -30,6 +30,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { getAccounts } from "@/actions/accounting/chart-of-account";
 import { ChartOfAccount } from "@/lib/validations";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Badge } from "@/components/ui/badge";
 
 export default function CashBoxPage() {
   const { data: session } = useSession();
@@ -127,9 +128,9 @@ export default function CashBoxPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nombre</TableHead>
-                    <TableHead>Ubicación</TableHead>
                     <TableHead>Fecha</TableHead>
                     <TableHead>Cuenta Contable</TableHead>
+                    <TableHead>Estado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -143,7 +144,6 @@ export default function CashBoxPage() {
                     .map((m) => (
                       <TableRow key={m.id}>
                         <TableCell>{m.name || "-"}</TableCell>
-                        <TableCell>{m.location || "-"}</TableCell>
                         <TableCell>
                           {formatDate(toInputDate(m.createdAt))}
                         </TableCell>
@@ -151,6 +151,15 @@ export default function CashBoxPage() {
                           {accounts.find(
                             (account) => account.id === m.accountId
                           )?.name || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              m.status === "ACTIVE" ? "default" : "secondary"
+                            }
+                          >
+                            {m.status === "ACTIVE" ? "Activo" : "Inactivo"}
+                          </Badge>{" "}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">

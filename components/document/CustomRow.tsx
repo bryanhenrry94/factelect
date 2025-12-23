@@ -86,7 +86,7 @@ const CustomRow: React.FC<CustomRowProps> = memo(
             render={({ field }) => (
               <Select value={field.value || ""} onValueChange={field.onChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Bodega" />
+                  <SelectValue placeholder="Almacén" />
                 </SelectTrigger>
                 <SelectContent>
                   {warehouses.map((w) => (

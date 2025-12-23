@@ -3,11 +3,11 @@ import { z } from "zod";
 export const CashBoxSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "El nombre es obligatorio"),
-  location: z.string().min(1, "La ubicación es obligatoria"),
   createdAt: z.date(),
   updatedAt: z.date(),
   accountId: z.string().nullable().optional(),
   tenantId: z.string(),
+  status: z.enum(["ACTIVE", "INACTIVE"]),
 });
 
 export const createCashBoxSchema = CashBoxSchema.omit({

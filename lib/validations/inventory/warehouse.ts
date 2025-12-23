@@ -4,7 +4,9 @@ export const warehouseSchema = z.object({
   id: z.string(),
   tenantId: z.string(),
   name: z.string(),
+  accountInventoryId: z.string().nullable().optional(),
   costCenterId: z.string().nullable().optional(),
+  status: z.enum(["ACTIVE", "INACTIVE"]),
 });
 
 export const createWarehouseSchema = warehouseSchema.omit({
