@@ -15,6 +15,7 @@ export const PersonRoleEnum = z.enum(["CLIENT", "SUPPLIER", "SELLER"]);
 export const personSchema = z
   .object({
     id: z.cuid(),
+    tenantId: z.cuid(),
     personKind: PersonKindEnum, // "Natural" | "Legal"
     identificationType: IdentificationTypeEnum,
     identification: z.string().min(1, "La identificación es obligatoria"),
@@ -31,9 +32,10 @@ export const personSchema = z
     roles: z.array(PersonRoleEnum).min(1, "Debe seleccionar al menos un rol"),
     accountReceivableId: z.string().optional().nullable(),
     accountPayableId: z.string().optional().nullable(),
+
+    isActive: z.boolean(),
     createdAt: z.date().optional(),
     updatedAt: z.date().optional(),
-    tenantId: z.cuid(),
   })
   .superRefine((data, ctx) => {
     console.log("Validating person data:", data);

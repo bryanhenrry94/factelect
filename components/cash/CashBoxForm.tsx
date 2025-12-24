@@ -35,11 +35,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../ui/form";
+import { Switch } from "../ui/switch";
 
 const initialState: CreateCashBox = {
   name: "",
   accountId: undefined,
-  status: "ACTIVE",
+  isActive: true,
 };
 
 interface CashBoxFormProps {
@@ -130,30 +138,21 @@ export const CashBoxForm: React.FC<CashBoxFormProps> = ({
       </DialogHeader>
 
       {/* Estado */}
-      <div className="space-y-1">
-        <Label>Estado</Label>
-        <Controller
-          name="status"
-          control={control}
-          render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccione un estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Estado</SelectLabel>
-                  <SelectItem value="ACTIVE">Activo</SelectItem>
-                  <SelectItem value="INACTIVE">Inactivo</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          )}
-        />
-        {errors.status && (
-          <p className="text-sm text-destructive">{errors.status.message}</p>
+
+      {/* Estado */}
+      <FormField
+        control={control}
+        name="isActive"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Activo</FormLabel>
+            <FormControl className="flex items-center space-x-2">
+              <Switch checked={field.value} onCheckedChange={field.onChange} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
         )}
-      </div>
+      />
 
       {/* Nombre */}
       <div className="space-y-1">

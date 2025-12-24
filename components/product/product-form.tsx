@@ -35,6 +35,15 @@ import { notifyError, notifyInfo } from "@/lib/notifications";
 import { AccountSelect } from "../AccountSelected";
 import { Field, FieldGroup, FieldLabel } from "../ui/field";
 import { useRouter } from "next/navigation";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../ui/form";
+import { Switch } from "../ui/switch";
 
 interface ProductFormProps {
   productId?: string | null;
@@ -50,16 +59,10 @@ export function ProductForm({ productId, onCreate }: ProductFormProps) {
   const [units, setUnits] = useState<Unit[]>([]);
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-    watch,
-    formState: { isSubmitting },
-  } = useForm<CreateProduct>({
+  const form = useForm<CreateProduct>({
     resolver: zodResolver(createProductSchema),
     defaultValues: {
-      status: "ACTIVE",
+      isActive: true,
       type: "SERVICE",
       code: "",
       description: "",
@@ -73,6 +76,14 @@ export function ProductForm({ productId, onCreate }: ProductFormProps) {
       costAccountId: null,
     },
   });
+
+  const {
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { isSubmitting },
+  } = form;
 
   /* ---------------- data ---------------- */
   useEffect(() => {
@@ -136,240 +147,240 @@ export function ProductForm({ productId, onCreate }: ProductFormProps) {
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Status */}
-            <Field>
-              <FieldLabel>Estado</FieldLabel>
-              <Controller
-                name="status"
+        <Form {...form}>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Estado */}
+              <FormField
                 control={control}
+                name="isActive"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ACTIVE">Activo</SelectItem>
-                      <SelectItem value="INACTIVE">Inactivo</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormItem>
+                    <FormLabel>Activo</FormLabel>
+                    <FormControl className="flex items-center space-x-2">
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
               />
-            </Field>
-            {/* Tipo */}
-            <Field>
-              <FieldLabel>Tipo</FieldLabel>
-              <Controller
-                name="type"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PRODUCT">Producto</SelectItem>
-                      <SelectItem value="SERVICE">Servicio</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </Field>
-
-            {/* Código */}
-            <Field>
-              <FieldLabel>Código</FieldLabel>
-              <Controller
-                name="code"
-                control={control}
-                render={({ field }) => <Input {...field} />}
-              />
-            </Field>
-
-            {type === "PRODUCT" && (
+              {/* Tipo */}
               <Field>
-                <FieldLabel>Código de barras</FieldLabel>
+                <FieldLabel>Tipo</FieldLabel>
                 <Controller
-                  name="barcode"
+                  name="type"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PRODUCT">Producto</SelectItem>
+                        <SelectItem value="SERVICE">Servicio</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+
+              {/* Código */}
+              <Field>
+                <FieldLabel>Código</FieldLabel>
+                <Controller
+                  name="code"
+                  control={control}
+                  render={({ field }) => <Input {...field} />}
+                />
+              </Field>
+
+              {type === "PRODUCT" && (
+                <Field>
+                  <FieldLabel>Código de barras</FieldLabel>
+                  <Controller
+                    name="barcode"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value || null)}
+                      />
+                    )}
+                  />
+                </Field>
+              )}
+
+              {/* Descripción */}
+              <Field className="md:col-span-2">
+                <FieldLabel>Descripción</FieldLabel>
+                <Controller
+                  name="description"
+                  control={control}
+                  render={({ field }) => <Input {...field} />}
+                />
+              </Field>
+
+              {/* Precio */}
+              <Field>
+                <FieldLabel>Precio</FieldLabel>
+                <Controller
+                  name="price"
                   control={control}
                   render={({ field }) => (
                     <Input
-                      value={field.value ?? ""}
-                      onChange={(e) => field.onChange(e.target.value || null)}
+                      type="number"
+                      step="0.01"
+                      value={field.value ?? 0}
+                      onChange={(e) => field.onChange(+e.target.value || 0)}
                     />
                   )}
                 />
               </Field>
-            )}
 
-            {/* Descripción */}
-            <Field className="md:col-span-2">
-              <FieldLabel>Descripción</FieldLabel>
-              <Controller
-                name="description"
-                control={control}
-                render={({ field }) => <Input {...field} />}
-              />
-            </Field>
+              {/* IVA */}
+              <Field>
+                <FieldLabel>IVA</FieldLabel>
+                <Controller
+                  name="tax"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {taxOptions.map((t) => (
+                          <SelectItem key={t.code} value={t.value}>
+                            {t.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
 
-            {/* Precio */}
-            <Field>
-              <FieldLabel>Precio</FieldLabel>
-              <Controller
-                name="price"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={field.value ?? 0}
-                    onChange={(e) => field.onChange(+e.target.value || 0)}
+              {/* Categoría */}
+              <Field>
+                <FieldLabel>Categoría</FieldLabel>
+                <Controller
+                  name="categoryId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+
+              {/* Unidad */}
+              <Field>
+                <FieldLabel>Unidad</FieldLabel>
+                <Controller
+                  name="unitId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+            </FieldGroup>
+
+            <Separator />
+
+            {/* Contabilidad */}
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-muted-foreground">
+                Contabilidad
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel>Cuenta de Ingresos</FieldLabel>
+                  <Controller
+                    name="salesAccountId"
+                    control={control}
+                    render={({ field }) => (
+                      <AccountSelect
+                        label="Seleccionar cuenta"
+                        accounts={accounts}
+                        value={field.value ?? null}
+                        onChange={field.onChange}
+                      />
+                    )}
                   />
-                )}
-              />
-            </Field>
+                </Field>
 
-            {/* IVA */}
-            <Field>
-              <FieldLabel>IVA</FieldLabel>
-              <Controller
-                name="tax"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {taxOptions.map((t) => (
-                        <SelectItem key={t.code} value={t.value}>
-                          {t.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </Field>
+                <Field>
+                  <FieldLabel>Cuenta de Inventario</FieldLabel>
+                  <Controller
+                    name="inventoryAccountId"
+                    control={control}
+                    render={({ field }) => (
+                      <AccountSelect
+                        label="Seleccionar cuenta"
+                        accounts={accounts}
+                        value={field.value ?? null}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                </Field>
 
-            {/* Categoría */}
-            <Field>
-              <FieldLabel>Categoría</FieldLabel>
-              <Controller
-                name="categoryId"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </Field>
-
-            {/* Unidad */}
-            <Field>
-              <FieldLabel>Unidad</FieldLabel>
-              <Controller
-                name="unitId"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {units.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </Field>
-          </FieldGroup>
-
-          <Separator />
-
-          {/* Contabilidad */}
-          <div className="space-y-4">
-            <p className="text-sm font-medium text-muted-foreground">
-              Contabilidad
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field>
-                <FieldLabel>Cuenta de Ingresos</FieldLabel>
-                <Controller
-                  name="salesAccountId"
-                  control={control}
-                  render={({ field }) => (
-                    <AccountSelect
-                      label="Seleccionar cuenta"
-                      accounts={accounts}
-                      value={field.value ?? null}
-                      onChange={field.onChange}
-                    />
-                  )}
-                />
-              </Field>
-
-              <Field>
-                <FieldLabel>Cuenta de Inventario</FieldLabel>
-                <Controller
-                  name="inventoryAccountId"
-                  control={control}
-                  render={({ field }) => (
-                    <AccountSelect
-                      label="Seleccionar cuenta"
-                      accounts={accounts}
-                      value={field.value ?? null}
-                      onChange={field.onChange}
-                    />
-                  )}
-                />
-              </Field>
-
-              <Field>
-                <FieldLabel>Cuenta de Costos</FieldLabel>
-                <Controller
-                  name="costAccountId"
-                  control={control}
-                  render={({ field }) => (
-                    <AccountSelect
-                      label="Seleccionar cuenta"
-                      accounts={accounts}
-                      value={field.value ?? null}
-                      onChange={field.onChange}
-                    />
-                  )}
-                />
-              </Field>
+                <Field>
+                  <FieldLabel>Cuenta de Costos</FieldLabel>
+                  <Controller
+                    name="costAccountId"
+                    control={control}
+                    render={({ field }) => (
+                      <AccountSelect
+                        label="Seleccionar cuenta"
+                        accounts={accounts}
+                        value={field.value ?? null}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                </Field>
+              </div>
             </div>
-          </div>
 
-          {/* Actions */}
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting
-                ? "Guardando..."
-                : productId
-                ? "Actualizar"
-                : "Guardar"}
-            </Button>
-          </div>
-        </form>
+            {/* Actions */}
+            <div className="flex justify-end">
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Guardando..."
+                  : productId
+                  ? "Actualizar"
+                  : "Guardar"}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

@@ -105,7 +105,7 @@ export async function generateXmlSRI(invoiceId: string): Promise<{
         infoTributaria: {
           ambiente: sriConfig.environment === "TEST" ? "1" : "2",
           tipoEmision: "1",
-          razonSocial: document.tenant.name,
+          razonSocial: document.tenant.legalName,
           ruc: document.tenant.ruc,
           claveAcceso: accessKey,
           codDoc: sriDocumentTypes.INVOICE,

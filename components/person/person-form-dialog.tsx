@@ -1,6 +1,6 @@
 "use client";
 
-import { PersonInput } from "@/lib/validations/person";
+import { PersonInput } from "@/lib/validations/person/person";
 
 import {
   Dialog,

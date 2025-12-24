@@ -20,7 +20,7 @@ import { getPersonsByTenant, getAllProducts } from "@/actions";
 import { getWarehouses } from "@/actions/inventory/warehouse";
 
 import { PersonFilter } from "@/types";
-import { PersonInput } from "@/lib/validations/person";
+import { PersonInput } from "@/lib/validations/person/person";
 import { Product } from "@/lib/validations";
 import { Warehouse } from "@/lib/validations/inventory/warehouse";
 

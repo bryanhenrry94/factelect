@@ -12,7 +12,7 @@ import { notifyError, notifyInfo } from "@/lib/notifications";
 import {
   CreateEstablishment,
   Establishment,
-} from "@/lib/validations/establishment";
+} from "@/lib/validations/e-invoicing/establishment";
 
 /* shadcn */
 import {

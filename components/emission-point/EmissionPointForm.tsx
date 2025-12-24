@@ -73,97 +73,88 @@ export const EmissionPointForm = () => {
   };
 
   return (
-    <Card className="mt-6">
-      <CardHeader>
-        <CardTitle>Punto de Emisión</CardTitle>
-        <CardDescription>
-          Administra los puntos de emisión de tus establecimientos
-        </CardDescription>
-      </CardHeader>
+    <>
+      {/* Table */}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Establecimiento</TableHead>
+              <TableHead>Punto</TableHead>
+              <TableHead>Descripción</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead className="text-right">Acción</TableHead>
+            </TableRow>
+          </TableHeader>
 
-      <CardContent className="space-y-4">
-        {/* Table */}
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
+          <TableBody>
+            {emissionPoints.length === 0 ? (
               <TableRow>
-                <TableHead>Establecimiento</TableHead>
-                <TableHead>Punto</TableHead>
-                <TableHead>Descripción</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acción</TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {emissionPoints.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-sm">
-                    No hay puntos de emisión registrados.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                emissionPoints.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.establishment?.code ?? "-"}</TableCell>
-                    <TableCell>{item.code}</TableCell>
-                    <TableCell>{item.description}</TableCell>
-                    <TableCell>
-                      <Badge variant={item.isActive ? "default" : "secondary"}>
-                        {item.isActive ? "Activo" : "Inactivo"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditingEmissionPoint(item);
-                          setOpen(true);
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteEmissionPoint(item.id ?? "")}
-                      >
-                        <Delete className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-
-            <TableFooter>
-              <TableRow>
-                <TableCell colSpan={5} className="text-right">
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setEditingEmissionPoint(null);
-                      setOpen(true);
-                    }}
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Nuevo Punto de Emisión
-                  </Button>
+                <TableCell colSpan={5} className="text-center text-sm">
+                  No hay puntos de emisión registrados.
                 </TableCell>
               </TableRow>
-            </TableFooter>
-          </Table>
-        </div>
+            ) : (
+              emissionPoints.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>{item.establishment?.code ?? "-"}</TableCell>
+                  <TableCell>{item.code}</TableCell>
+                  <TableCell>{item.description}</TableCell>
+                  <TableCell>
+                    <Badge variant={item.isActive ? "default" : "secondary"}>
+                      {item.isActive ? "Activo" : "Inactivo"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setEditingEmissionPoint(item);
+                        setOpen(true);
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteEmissionPoint(item.id ?? "")}
+                    >
+                      <Delete className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
 
-        {/* Dialog */}
-        <EmissionPointDialog
-          open={open}
-          onClose={() => setOpen(false)}
-          onSuccess={fetchEmissionPoints}
-          editingData={editingEmissionPoint}
-        />
-      </CardContent>
-    </Card>
+          <TableFooter>
+            <TableRow>
+              <TableCell colSpan={5} className="text-right">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setEditingEmissionPoint(null);
+                    setOpen(true);
+                  }}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Nuevo Punto de Emisión
+                </Button>
+              </TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </div>
+
+      {/* Dialog */}
+      <EmissionPointDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        onSuccess={fetchEmissionPoints}
+        editingData={editingEmissionPoint}
+      />
+    </>
   );
 };

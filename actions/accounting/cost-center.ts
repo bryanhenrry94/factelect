@@ -17,6 +17,7 @@ export async function getCostCenters(
         name: search ? { contains: search, mode: "insensitive" } : undefined,
       },
     });
+
     return { success: true, data: costCenters };
   } catch (error) {
     console.error("Error fetching cost centers:", error);
@@ -48,6 +49,7 @@ export async function updateCostCenter(
       where: { id },
       data: input,
     });
+
     return { success: true, data: updatedCostCenter };
   } catch (error) {
     console.error("Error updating cost center:", error);

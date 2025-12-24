@@ -54,7 +54,7 @@ export const authOptions: AuthOptions = {
           name: user.name || undefined,
           email: user.email,
           tenantId: membership.tenantId,
-          tenantName: membership.tenant.name,
+          tenantName: membership.tenant.legalName,
           tenantSubdomain: membership.tenant.subdomain,
         };
       },

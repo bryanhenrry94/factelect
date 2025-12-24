@@ -52,6 +52,7 @@ const initialState: CostCenter = {
   tenantId: "",
   code: "",
   name: "",
+  isActive: true,
 };
 
 export default function CentrosCostoPage() {

@@ -166,11 +166,9 @@ export default function ProductsPage() {
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge
-                            variant={
-                              p.status === "ACTIVE" ? "default" : "destructive"
-                            }
+                            variant={p.isActive ? "default" : "destructive"}
                           >
-                            {p.status === "ACTIVE" ? "Activo" : "Inactivo"}
+                            {p.isActive ? "Activo" : "Inactivo"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right space-x-1">

@@ -24,7 +24,7 @@ import {
   updateTransaction,
 } from "@/actions";
 import { paymentMethodsIncome } from "@/utils/paymentMethods";
-import { PersonInput } from "@/lib/validations/person";
+import { PersonInput } from "@/lib/validations/person/person";
 import { PersonFilter } from "@/types/person";
 
 import { Input } from "@/components/ui/input";

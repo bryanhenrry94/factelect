@@ -13,7 +13,7 @@ import { ChartOfAccount } from "@/lib/validations";
 import {
   createPersonSchema,
   CreatePersonInput,
-} from "@/lib/validations/person";
+} from "@/lib/validations/person/person";
 
 import { getRoleLabel } from "@/utils/person";
 
@@ -39,6 +39,15 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { useRouter } from "next/navigation";
 import { AccountSelect } from "../AccountSelected";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../ui/form";
+import { Switch } from "../ui/switch";
 
 interface PersonFormProps {
   open?: boolean;
@@ -59,14 +68,7 @@ export default function PersonForm({
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    watch,
-    control,
-    formState: { errors, isSubmitting },
-  } = useForm<CreatePersonInput>({
+  const form = useForm<CreatePersonInput>({
     resolver: zodResolver(createPersonSchema),
     defaultValues: {
       personKind: "NATURAL",
@@ -84,6 +86,15 @@ export default function PersonForm({
       accountReceivableId: null,
     },
   });
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    control,
+    formState: { errors, isSubmitting },
+  } = form;
 
   useEffect(() => {
     if (personId) {
@@ -143,221 +154,241 @@ export default function PersonForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <FieldSet>        
-        {/* ======================= */}
-        {/*        DATOS BASE       */}
-        {/* ======================= */}
-        <FieldLegend>Datos Personales</FieldLegend>
+      <Form {...form}>
+        <FieldSet>
+          {/* ======================= */}
+          {/*        DATOS BASE       */}
+          {/* ======================= */}
+          <FieldLegend>Datos Personales</FieldLegend>
 
-        <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Tipo Persona */}
-          <Field>
-            <FieldLabel>Tipo de Persona</FieldLabel>
-            <Controller
-              name="personKind"
-              control={control}
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="NATURAL">NATURAL</SelectItem>
-                    <SelectItem value="LEGAL">JURÍDICA</SelectItem>
-                  </SelectContent>
-                </Select>
+          <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Tipo Persona */}
+            <Field>
+              <FieldLabel>Tipo de Persona</FieldLabel>
+              <Controller
+                name="personKind"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NATURAL">NATURAL</SelectItem>
+                      <SelectItem value="LEGAL">JURÍDICA</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.personKind && (
+                <p className="text-red-500 text-xs">
+                  {errors.personKind.message}
+                </p>
               )}
-            />
-            {errors.personKind && (
-              <p className="text-red-500 text-xs">
-                {errors.personKind.message}
-              </p>
-            )}
-          </Field>
+            </Field>
 
-          {/* Tipo Identificación */}
+            {/* Tipo Identificación */}
+            <Field>
+              <FieldLabel>Tipo de Identificación</FieldLabel>
+              <Controller
+                name="identificationType"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value || "NATURAL"}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {identificationOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.identificationType && (
+                <p className="text-red-500 text-xs">
+                  {errors.identificationType.message}
+                </p>
+              )}
+            </Field>
+
+            {/* Identificación */}
+            <Field>
+              <FieldLabel>Identificación</FieldLabel>
+              <Input {...register("identification")} />
+              {errors.identification && (
+                <p className="text-red-500 text-xs">
+                  {errors.identification.message}
+                </p>
+              )}
+            </Field>
+
+            {/* Condicional NATURAL vs LEGAL */}
+            {watch("personKind") === "LEGAL" ? (
+              <>
+                <Field>
+                  <FieldLabel>Razón Social</FieldLabel>
+                  <Input {...register("businessName")} />
+                </Field>
+
+                <Field>
+                  <FieldLabel>Nombre Comercial</FieldLabel>
+                  <Input {...register("commercialName")} />
+                </Field>
+              </>
+            ) : (
+              <>
+                <Field>
+                  <FieldLabel>Nombres</FieldLabel>
+                  <Input {...register("firstName")} />
+                </Field>
+
+                <Field>
+                  <FieldLabel>Apellidos</FieldLabel>
+                  <Input {...register("lastName")} />
+                </Field>
+              </>
+            )}
+
+            {/* Email */}
+            <Field>
+              <FieldLabel>Correo electrónico</FieldLabel>
+              <Input type="email" {...register("email")} />
+            </Field>
+
+            {/* Teléfono */}
+            <Field>
+              <FieldLabel>Teléfono</FieldLabel>
+              <Input {...register("phone")} />
+            </Field>
+          </FieldGroup>
+
+          {/* Dirección */}
           <Field>
-            <FieldLabel>Tipo de Identificación</FieldLabel>
+            <FieldLabel>Dirección</FieldLabel>
+            <Input {...register("address")} />
+          </Field>
+        </FieldSet>
+
+        {/* ======================= */}
+        {/*          ROLES          */}
+        {/* ======================= */}
+        <FieldSet>
+          <FieldLegend>Roles</FieldLegend>
+
+          <Field>
+            <FieldLabel>Rol</FieldLabel>
             <Controller
-              name="identificationType"
+              name="roles"
               control={control}
               render={({ field }) => (
                 <Select
-                  value={field.value || "NATURAL"}
-                  onValueChange={field.onChange}
+                  value={field.value[0]}
+                  onValueChange={(val) => field.onChange([val])}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
                   <SelectContent>
-                    {identificationOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
+                    {["CLIENT", "SUPPLIER", "SELLER"].map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {getRoleLabel(r)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               )}
             />
-            {errors.identificationType && (
-              <p className="text-red-500 text-xs">
-                {errors.identificationType.message}
-              </p>
-            )}
           </Field>
+        </FieldSet>
 
-          {/* Identificación */}
-          <Field>
-            <FieldLabel>Identificación</FieldLabel>
-            <Input {...register("identification")} />
-            {errors.identification && (
-              <p className="text-red-500 text-xs">
-                {errors.identification.message}
-              </p>
-            )}
-          </Field>
+        {/* ======================= */}
+        {/*      CONTABILIDAD       */}
+        {/* ======================= */}
+        <FieldSet>
+          <FieldLegend>Contabilidad</FieldLegend>
 
-          {/* Condicional NATURAL vs LEGAL */}
-          {watch("personKind") === "LEGAL" ? (
-            <>
-              <Field>
-                <FieldLabel>Razón Social</FieldLabel>
-                <Input {...register("businessName")} />
-              </Field>
+          <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Cuenta por pagar */}
+            <Field>
+              <FieldLabel>Cuenta por Pagar</FieldLabel>
+              <Controller
+                name="accountPayableId"
+                control={control}
+                render={({ field }) => (
+                  <AccountSelect
+                    label="Seleccionar cuenta"
+                    accounts={accounts}
+                    value={field.value ?? null}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </Field>
 
-              <Field>
-                <FieldLabel>Nombre Comercial</FieldLabel>
-                <Input {...register("commercialName")} />
-              </Field>
-            </>
-          ) : (
-            <>
-              <Field>
-                <FieldLabel>Nombres</FieldLabel>
-                <Input {...register("firstName")} />
-              </Field>
+            {/* Cuenta por cobrar */}
+            <Field>
+              <FieldLabel>Cuenta por Cobrar</FieldLabel>
+              <Controller
+                name="accountReceivableId"
+                control={control}
+                render={({ field }) => (
+                  <AccountSelect
+                    label="Seleccionar cuenta"
+                    accounts={accounts}
+                    value={field.value ?? null}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </Field>
 
-              <Field>
-                <FieldLabel>Apellidos</FieldLabel>
-                <Input {...register("lastName")} />
-              </Field>
-            </>
+            {/* Estado */}
+            <FormField
+              control={control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Activo</FormLabel>
+                  <FormControl className="flex items-center space-x-2">
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </FieldGroup>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
-          {/* Email */}
-          <Field>
-            <FieldLabel>Correo electrónico</FieldLabel>
-            <Input type="email" {...register("email")} />
-          </Field>
-
-          {/* Teléfono */}
-          <Field>
-            <FieldLabel>Teléfono</FieldLabel>
-            <Input {...register("phone")} />
-          </Field>
-        </FieldGroup>
-
-        {/* Dirección */}
-        <Field>
-          <FieldLabel>Dirección</FieldLabel>
-          <Input {...register("address")} />
-        </Field>
-      </FieldSet>
-
-      {/* ======================= */}
-      {/*          ROLES          */}
-      {/* ======================= */}
-      <FieldSet>
-        <FieldLegend>Roles</FieldLegend>
-
-        <Field>
-          <FieldLabel>Rol</FieldLabel>
-          <Controller
-            name="roles"
-            control={control}
-            render={({ field }) => (
-              <Select
-                value={field.value[0]}
-                onValueChange={(val) => field.onChange([val])}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar" />
-                </SelectTrigger>
-                <SelectContent>
-                  {["CLIENT", "SUPPLIER", "SELLER"].map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {getRoleLabel(r)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* Botones */}
+          <FieldGroup>
+            {onClose && (
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
             )}
-          />
-        </Field>
-      </FieldSet>
 
-      {/* ======================= */}
-      {/*      CONTABILIDAD       */}
-      {/* ======================= */}
-      <FieldSet>
-        <FieldLegend>Contabilidad</FieldLegend>
-
-        <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Cuenta por pagar */}
-          <Field>
-            <FieldLabel>Cuenta por Pagar</FieldLabel>
-            <Controller
-              name="accountPayableId"
-              control={control}
-              render={({ field }) => (
-                <AccountSelect
-                  label="Seleccionar cuenta"
-                  accounts={accounts}
-                  value={field.value ?? null}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-          </Field>
-
-          {/* Cuenta por cobrar */}
-          <Field>
-            <FieldLabel>Cuenta por Cobrar</FieldLabel>
-            <Controller
-              name="accountReceivableId"
-              control={control}
-              render={({ field }) => (
-                <AccountSelect
-                  label="Seleccionar cuenta"
-                  accounts={accounts}
-                  value={field.value ?? null}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-          </Field>
-        </FieldGroup>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Botones */}
-        <FieldGroup>
-          {onClose && (
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancelar
+            <Button type="submit" disabled={isSubmitting}>
+              {personId ? "Actualizar" : "Agregar"}
             </Button>
-          )}
-
-          <Button type="submit" disabled={isSubmitting}>
-            {personId ? "Actualizar" : "Agregar"}
-          </Button>
-        </FieldGroup>
-      </FieldSet>
+          </FieldGroup>
+        </FieldSet>
+      </Form>
     </form>
   );
 }

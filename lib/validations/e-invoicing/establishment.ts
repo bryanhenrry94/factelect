@@ -7,6 +7,7 @@ export const establishmentSchema = z.object({
     .string()
     .length(3, "El código del establecimiento debe tener 3 caracteres"),
   address: z.string().min(1, "La dirección es obligatoria"),
+  isActive: z.boolean(),
 });
 
 export const createEstablishmentSchema = establishmentSchema.omit({

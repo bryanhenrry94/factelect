@@ -68,17 +68,8 @@ export const DocumentFiscalInfo = ({
   };
 
   // 3️⃣ Load next sequence
-  const loadNextSequence = async (
-    tenantId: string,
-    estId: string,
-    epId: string
-  ) => {
-    const res = await getNextSequenceDocumentNumber(
-      tenantId,
-      estId,
-      epId,
-      documentType
-    );
+  const loadNextSequence = async (epId: string) => {
+    const res = await getNextSequenceDocumentNumber(epId, documentType);
 
     setValue(
       "fiscalInfo.sequence",
@@ -101,7 +92,7 @@ export const DocumentFiscalInfo = ({
       setValue("fiscalInfo.emissionPointId", epId);
 
       if (!epId) return;
-      await loadNextSequence(session.user.tenantId, estId, epId);
+      await loadNextSequence(epId);
     };
 
     applyDefaults();
@@ -127,11 +118,7 @@ export const DocumentFiscalInfo = ({
                   if (eps.length > 0) {
                     setValue("fiscalInfo.emissionPointId", eps[0].id);
                     if (!eps[0].id) return;
-                    await loadNextSequence(
-                      session?.user.tenantId || "",
-                      val,
-                      eps[0].id
-                    );
+                    await loadNextSequence(eps[0].id);
                   } else {
                     setValue("fiscalInfo.emissionPointId", "");
                     setValue("fiscalInfo.sequence", 0);
@@ -168,11 +155,7 @@ export const DocumentFiscalInfo = ({
                 value={field.value || ""}
                 onValueChange={async (val) => {
                   field.onChange(val);
-                  await loadNextSequence(
-                    session?.user.tenantId || "",
-                    getValues("fiscalInfo.establishmentId") || "",
-                    val
-                  );
+                  await loadNextSequence(val);
                 }}
               >
                 <FormControl>

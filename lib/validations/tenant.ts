@@ -1,9 +1,11 @@
 import { z } from "zod";
 
 export const tenantSchema = z.object({
-  id: z.string().uuid().optional(),
-  name: z.string().min(1, "El nombre es obligatorio"),
+  id: z.string().uuid(),
+  // Identidad
+  legalName: z.string().min(1, "El nombre es obligatorio"),
   tradeName: z.string().optional(),
+  ruc: z.string().min(1, "El RUC es obligatorio"),
   subdomain: z
     .string()
     .min(1, "El subdominio es obligatorio")
@@ -11,13 +13,23 @@ export const tenantSchema = z.object({
       /^[a-z0-9-]+$/,
       "El subdominio solo debe contener letras minúsculas, números y guiones"
     ),
-  ruc: z.string().optional(),
-  phone: z.string().optional(),
-  contactEmail: z.string().email().optional(),
+  // Datos fiscales
+  contributorType: z.enum(["NATURAL", "SOCIETY", "SPECIAL", "PUBLIC"]),
+  taxRegime: z.enum(["GENERAL", "RIMPE_EMPRENDEDOR", "RIMPE_NEGOCIO_POPULAR"]),
+  obligatedAccounting: z.boolean(),
+  isWithholdingAgent: z.boolean(),
+  isSpecialContributor: z.boolean(),
+  specialContributorNumber: z.string().optional(),
+  economicActivity: z.string().optional(),
+  // Contacto fiscal
   address: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional(),
+  // Branding
   logoUrl: z.string().optional(),
-  sriConfig: z.any().optional(), // Replace with specific schema if needed
-  obligatedAccounting: z.boolean().optional(),
+  // SRI Configuration
+  sriConfiguration: z.any().optional(), // Replace with specific schema if needed
+  // Timestamps
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

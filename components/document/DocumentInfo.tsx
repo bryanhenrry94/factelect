@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/command";
 
 import { cn } from "@/lib/utils";
-import { PersonInput } from "@/lib/validations/person";
+import { PersonInput } from "@/lib/validations/person/person";
 import { DocumentFiscalInfo } from "./DocumentFiscalInfo";
 
 interface DocumentInfoProps {

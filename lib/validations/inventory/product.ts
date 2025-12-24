@@ -22,7 +22,7 @@ export const productSchema = z.object({
   salesAccountId: z.string().optional().nullable(),
   inventoryAccountId: z.string().optional().nullable(),
   costAccountId: z.string().optional().nullable(),
-  status: z.enum(["ACTIVE", "INACTIVE"]),
+  isActive: z.boolean(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

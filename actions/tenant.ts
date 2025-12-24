@@ -1,12 +1,22 @@
 "use server";
 import { prisma } from "@/lib/prisma";
 import { Tenant } from "@/lib/validations/tenant";
+import { $Enums } from "@/prisma/generated/prisma";
 import bcrypt from "bcrypt";
 
-export async function createTenant(name: string, subdomain: string) {
+export async function createTenant(
+  contributorType: $Enums.ContributorType,
+  taxRegime: $Enums.TaxRegime,
+  legalName: string,
+  ruc: string,
+  subdomain: string
+) {
   return prisma.tenant.create({
     data: {
-      name,
+      contributorType,
+      taxRegime,
+      legalName,
+      ruc,
       subdomain,
     },
   });
@@ -51,14 +61,26 @@ export const getTenantById = async (
 
   const formattedTenant: Tenant = {
     id: tenant.id,
-    name: tenant.name,
+    // Identidad
+    legalName: tenant.legalName,
+    tradeName: tenant.tradeName || tenant.legalName,
+    ruc: tenant.ruc,
     subdomain: tenant.subdomain,
-    tradeName: tenant.tradeName || undefined,
-    ruc: tenant.ruc || undefined,
-    phone: tenant.phone || undefined,
-    contactEmail: tenant.contactEmail || undefined,
+    // Datos fiscales
+    contributorType: tenant.contributorType,
+    taxRegime: tenant.taxRegime,
+    obligatedAccounting: tenant.obligatedAccounting,
+    isWithholdingAgent: tenant.isWithholdingAgent,
+    isSpecialContributor: tenant.isSpecialContributor,
+    specialContributorNumber: tenant.specialContributorNumber || undefined,
+    economicActivity: tenant.economicActivity || undefined,
+    // Contacto fiscal
     address: tenant.address || undefined,
+    email: tenant.email || undefined,
+    phone: tenant.phone || undefined,
+    // Branding
     logoUrl: tenant.logoUrl || undefined,
+    // Timestamps
     createdAt: tenant.createdAt,
     updatedAt: tenant.updatedAt,
   };
@@ -74,12 +96,19 @@ export const updateTenant = async (
     const updatedTenant = await prisma.tenant.update({
       where: { id },
       data: {
-        name: data.name,
+        ruc: data.ruc,
+        legalName: data.legalName,
         subdomain: data.subdomain,
         tradeName: data.tradeName,
-        ruc: data.ruc,
+        contributorType: data.contributorType,
+        taxRegime: data.taxRegime,
+        obligatedAccounting: data.obligatedAccounting,
+        isWithholdingAgent: data.isWithholdingAgent,
+        isSpecialContributor: data.isSpecialContributor,
+        specialContributorNumber: data.specialContributorNumber,
+        economicActivity: data.economicActivity,
         phone: data.phone,
-        contactEmail: data.contactEmail,
+        email: data.email,
         address: data.address,
         logoUrl: data.logoUrl,
       },
@@ -87,14 +116,27 @@ export const updateTenant = async (
 
     const formattedTenant: Tenant = {
       id: updatedTenant.id,
-      name: updatedTenant.name,
+      // Identidad
+      legalName: updatedTenant.legalName,
+      tradeName: updatedTenant.tradeName || updatedTenant.legalName,
+      ruc: updatedTenant.ruc,
       subdomain: updatedTenant.subdomain,
-      tradeName: updatedTenant.tradeName || undefined,
-      ruc: updatedTenant.ruc || undefined,
-      phone: updatedTenant.phone || undefined,
-      contactEmail: updatedTenant.contactEmail || undefined,
+      // Datos fiscales
+      contributorType: updatedTenant.contributorType,
+      taxRegime: updatedTenant.taxRegime,
+      obligatedAccounting: updatedTenant.obligatedAccounting,
+      isWithholdingAgent: updatedTenant.isWithholdingAgent,
+      isSpecialContributor: updatedTenant.isSpecialContributor,
+      specialContributorNumber:
+        updatedTenant.specialContributorNumber || undefined,
+      economicActivity: updatedTenant.economicActivity || undefined,
+      // Contacto fiscal
       address: updatedTenant.address || undefined,
+      email: updatedTenant.email || undefined,
+      phone: updatedTenant.phone || undefined,
+      // Branding
       logoUrl: updatedTenant.logoUrl || undefined,
+      // Timestamps
       createdAt: updatedTenant.createdAt,
       updatedAt: updatedTenant.updatedAt,
     };

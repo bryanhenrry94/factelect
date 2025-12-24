@@ -34,7 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { PersonInput } from "@/lib/validations/person";
+import { PersonInput } from "@/lib/validations/person/person";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 
 export default function PersonsPage() {

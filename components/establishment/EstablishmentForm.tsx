@@ -9,19 +9,10 @@ import {
   deleteEstablishment,
   getEstablishments,
 } from "@/actions/establishment";
-import { AlertService } from "@/lib/alerts";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
 import EstablishmentDialog from "./establishment-dialog";
 
-/* shadcn */
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -73,85 +64,72 @@ export const EstablishmentForm = () => {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Establecimientos</CardTitle>
-          <CardDescription>
-            Configure los establecimientos registrados en el SRI.
-          </CardDescription>
-        </CardHeader>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Código</TableHead>
+              <TableHead>Dirección</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
 
-        <CardContent>
-          <div className="border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Dirección</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-
-              <TableBody>
-                {establishments.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center">
-                      No hay establecimientos registrados.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  establishments.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.code}</TableCell>
-                      <TableCell>{item.address}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => {
-                            setEstablishmentSelected(item);
-                            setOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-destructive"
-                          onClick={() =>
-                            handleDeleteEstablishment(item.id ?? "")
-                          }
-                        >
-                          <Delete className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-
-              <TableFooter>
-                <TableRow>
-                  <TableCell colSpan={3} className="text-right">
+          <TableBody>
+            {establishments.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center">
+                  No hay establecimientos registrados.
+                </TableCell>
+              </TableRow>
+            ) : (
+              establishments.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>{item.code}</TableCell>
+                  <TableCell>{item.address}</TableCell>
+                  <TableCell className="text-right space-x-2">
                     <Button
+                      size="icon"
                       variant="ghost"
                       onClick={() => {
-                        setEstablishmentSelected(null);
+                        setEstablishmentSelected(item);
                         setOpen(true);
                       }}
                     >
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Nuevo Establecimiento
+                      <Edit className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => handleDeleteEstablishment(item.id ?? "")}
+                    >
+                      <Delete className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>
-              </TableFooter>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+              ))
+            )}
+          </TableBody>
+
+          <TableFooter>
+            <TableRow>
+              <TableCell colSpan={3} className="text-right">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setEstablishmentSelected(null);
+                    setOpen(true);
+                  }}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Nuevo Establecimiento
+                </Button>
+              </TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </div>
 
       {/* Dialog */}
       <EstablishmentDialog

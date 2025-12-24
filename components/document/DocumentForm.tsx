@@ -31,7 +31,7 @@ import {
   DocumentPayment,
   Product,
 } from "@/lib/validations";
-import { PersonInput } from "@/lib/validations/person";
+import { PersonInput } from "@/lib/validations/person/person";
 import { Warehouse } from "@/lib/validations/inventory/warehouse";
 import { CreateDocumentFiscalInfo } from "@/lib/validations/document/document-fiscal-info";
 

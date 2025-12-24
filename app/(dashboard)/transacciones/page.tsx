@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PersonInput } from "@/lib/validations/person";
+import { PersonInput } from "@/lib/validations/person/person";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {

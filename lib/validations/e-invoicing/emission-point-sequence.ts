@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const SequenceControlSchema = z.object({
+export const EmissionPointSequenceSchema = z.object({
   id: z.string(),
   tenantId: z.string(),
   establishmentId: z.string(),
@@ -9,4 +9,4 @@ export const SequenceControlSchema = z.object({
   currentSequence: z.number().int().default(1),
 });
 
-export type SequenceControl = z.infer<typeof SequenceControlSchema>;
+export type EmissionPointSequence = z.infer<typeof EmissionPointSequenceSchema>;

@@ -9,65 +9,67 @@ datasource db {
 }
 
 model Tenant {
-  id                      String                                                 @id @default(uuid())
-  name                    String                    @map("name")
-  tradeName               String?                   @map("legal_name")
-  subdomain               String                                                 @unique
-  ruc                     String?
-  phone                   String?                   @map("phone")
-  contactEmail            String?                   @map("contact_email")
-  address                 String?                   @map("address")
-  logoUrl                 String?                   @map("logo_url")
-  sriConfig               SRIConfiguration?
-  obligatedAccounting     Boolean                   @map("obligated_accounting") @default(false)
+  id                       String                                                       @id @default(uuid())
+  //                       Identidad
+  legalName                String                    @map("legal_name")
+  tradeName                String?                   @map("trade_name")
+  ruc                      String                    @map("ruc")
+  subdomain                String                                                       @unique
 
-  createdAt               DateTime                  @map("created_at")           @default(now())
-  updatedAt               DateTime                  @map("updated_at")           @updatedAt
+  // Datos fiscales
+  contributorType          ContributorType           @map("contributor_type")
+  taxRegime                TaxRegime                 @map("tax_regime")
+  obligatedAccounting      Boolean                   @map("obligated_accounting")       @default(false)
+  isWithholdingAgent       Boolean                   @map("is_withholding_agent")       @default(false)
+  isSpecialContributor     Boolean                   @map("is_special_contributor")     @default(false)
+  specialContributorNumber String?                   @map("special_contributor_number")
+  economicActivity         String?                   @map("economic_activity")
 
-  //                      Relaciones
-  documents               Document[]
-  products                Product[]
-  persons                 Person[]
+  // Contacto fiscal
+  address                  String?                   @map("address")
+  phone                    String?                   @map("phone")
+  email                    String?                   @map("email")
 
-  transactions            Transaction[]
-  transactionDocuments    TransactionDocument[]
-  bankAccounts            BankAccount[]
-  bankMovements           BankMovement[]
-  bankTransfers           BankTransfer[]
-  cashBoxes               CashBox[]
-  cashSessions            CashSession[]
-  cashMovements           CashMovement[]
-  cashCounts              CashCount[]
-  cashReconciliations     CashReconciliation[]
-  establishments          Establishment[]
-  emissionPoints          EmissionPoint[]
-  category                Category[]
-  warehouse               Warehouse[]
-  stock                   Stock[]
-  inventoryMovement       InventoryMovement[]
-  warehouseTransfer       WarehouseTransfer[]
-  units                   Unit[]
-  inventoryAdjustment     InventoryAdjustment[]
-  warehouseTransferItems  WarehouseTransferItem[]
-  inventoryMovementItems  InventoryMovementItem[]
-  inventoryAdjustmentItem InventoryAdjustmentItem[]
-  bankMovementDetail      BankMovementDetail[]
-  memberships             Membership[]
-  tenantInvitations       TenantInvitation[]
+  //                       Branding
+  logoUrl                  String?                   @map("logo_url")
+
+  // SRI Configuration
+  sriConfiguration         SRIConfiguration?
+
+  createdAt                DateTime                  @map("created_at")                 @default(now())
+  updatedAt                DateTime                  @map("updated_at")                 @updatedAt
+
+  //                       Relaciones
+  documents                Document[]
+  products                 Product[]
+  persons                  Person[]
+  transactions             Transaction[]
+  transactionDocuments     TransactionDocument[]
+  bankAccounts             BankAccount[]
+  bankMovements            BankMovement[]
+  bankTransfers            BankTransfer[]
+  cashBoxes                CashBox[]
+  cashSessions             CashSession[]
+  cashMovements            CashMovement[]
+  cashCounts               CashCount[]
+  cashReconciliations      CashReconciliation[]
+  establishments           Establishment[]
+  emissionPoints           EmissionPoint[]
+  category                 Category[]
+  warehouse                Warehouse[]
+  stock                    Stock[]
+  inventoryMovement        InventoryMovement[]
+  warehouseTransfer        WarehouseTransfer[]
+  units                    Unit[]
+  inventoryAdjustment      InventoryAdjustment[]
+  warehouseTransferItems   WarehouseTransferItem[]
+  inventoryMovementItems   InventoryMovementItem[]
+  inventoryAdjustmentItem  InventoryAdjustmentItem[]
+  bankMovementDetail       BankMovementDetail[]
+  memberships              Membership[]
+  tenantInvitations        TenantInvitation[]
 
   @@map("tenant")
-}
-
-model TenantInvitation {
-  id        String                      @id @default(uuid())
-  tenantId  String   @map("tenant_id")
-  email     String   @map("email")
-  token     String   @map("token")      @unique
-  createdAt DateTime @map("created_at") @default(now())
-
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@map("tenant_invitation")
 }
 
 model SRIConfiguration {
@@ -87,12 +89,26 @@ model SRIConfiguration {
   @@map("sri_configuration")
 }
 
+model TenantInvitation {
+  id        String                      @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  email     String   @map("email")
+  token     String   @map("token")      @unique
+  createdAt DateTime @map("created_at") @default(now())
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_invitation")
+}
+
 model Establishment {
   id                 String                                                    @id @default(cuid())
   tenantId           String               @map("tenant_id")
   tenant             Tenant               @relation(fields: [tenantId], references: [id])
   code               String               @map("code") // 3 dígitos, ej: '001'
   address            String               @map("address")
+  isActive           Boolean                                                   @default(true)
+
   documentFiscalInfo DocumentFiscalInfo[]
   emissionPoints     EmissionPoint[]
 
@@ -100,30 +116,34 @@ model Establishment {
 }
 
 model EmissionPoint {
-  id                 String                                                    @id @default(cuid())
-  tenantId           String               @map("tenant_id")
-  tenant             Tenant               @relation(fields: [tenantId], references: [id])
-  establishmentId    String               @map("establishment_id")
-  code               String               @map("code") // 3 dígitos, ej: '002'
-  description        String?              @map("description")
-  isActive           Boolean                                                   @default(true)
-  establishment      Establishment        @relation(fields: [establishmentId], references: [id])
+  id                 String                                            @id @default(cuid())
+  tenantId           String                  @map("tenant_id")
+  establishmentId    String                  @map("establishment_id")
+  code               String                  @map("code") // ej: '002'
+  description        String?
+  isActive           Boolean                                           @default(true)
+
+  sequences          EmissionPointSequence[]
+
+  tenant             Tenant                  @relation(fields: [tenantId], references: [id])
+  establishment      Establishment           @relation(fields: [establishmentId], references: [id])
   documentFiscalInfo DocumentFiscalInfo[]
 
+  @@unique([tenantId, establishmentId, code])
   @@map("emission_point")
 }
 
-model SequenceControl {
-  id              String                                 @id @default(cuid())
-  tenantId        String       @map("tenant_id")
-  establishmentId String       @map("establishment_id")
-  emissionPointId String       @map("emission_point_id")
+model EmissionPointSequence {
+  id              String                                  @id @default(cuid())
+  emissionPointId String        @map("emission_point_id")
+  emissionPoint   EmissionPoint @relation(fields: [emissionPointId], references: [id])
   documentType    DocumentType
-  currentSequence Int          @map("current_sequence")  @default(1)
+  currentSequence Int                                     @default(1)
 
-  @@unique([tenantId, establishmentId, emissionPointId, documentType])
-  @@map("sequence_control")
+  @@unique([emissionPointId, documentType])
+  @@map("emission_point_sequence")
 }
+
 
 model User {
   id                  String               @map("id")                   @id @default(cuid())
@@ -188,7 +208,7 @@ model Product {
   costAccountId            String?                   @map("cost_account_id")
   costAccount              ChartOfAccount?           @relation("ProductCostAccount", fields: [costAccountId], references: [id])
 
-  status                   Status                                                 @default(ACTIVE) // ACTIVE | INACTIVE
+  isActive                 Boolean                                                @default(true)
 
   documentItems            DocumentItem[]
   stocks                   Stock[]
@@ -335,7 +355,7 @@ model Warehouse {
   costCenterId             String?                   @map("cost_center_id")
   costCenter               CostCenter?               @relation(fields: [costCenterId], references: [id])
 
-  status                   Status                                                 @default(ACTIVE)
+  isActive                 Boolean                                                @default(true)
 
   stocks                   Stock[]
   movements                InventoryMovement[]
@@ -700,7 +720,7 @@ model CashBox {
   tenantId      String          @map("tenant_id")
   tenant        Tenant          @relation(fields: [tenantId], references: [id])
 
-  status        Status                             @default(ACTIVE)
+  isActive      Boolean                            @default(true)
   createdAt     DateTime        @map("created_at") @default(now())
   updatedAt     DateTime        @map("updated_at") @updatedAt
 
@@ -815,6 +835,8 @@ model Person {
   accountReceivable   ChartOfAccount?        @relation("person_account_receivable", fields: [accountReceivableId], references: [id])
   accountPayable      ChartOfAccount?        @relation("person_account_payable", fields: [accountPayableId], references: [id])
 
+  isActive            Boolean                                              @default(true)
+
   createdAt           DateTime               @map("created_at")            @default(now())
   updatedAt           DateTime               @map("updated_at")            @updatedAt
 
@@ -864,6 +886,7 @@ model ChartOfAccount {
   parentId                   String?              @map("parent_id")
   parent                     ChartOfAccount?      @relation("AccountHierarchy", fields: [parentId], references: [id])
   children                   ChartOfAccount[]     @relation("AccountHierarchy")
+  isActive                   Boolean                                @default(true)
 
   ledgerEntries              JournalEntryLine[]
 
@@ -942,6 +965,7 @@ model CostCenter {
   tenantId            String               @map("tenant_id")
   code                String
   name                String
+  isActive            Boolean                                @default(true)
 
   ledgerEntries       JournalEntryLine[]
   warehouses          Warehouse[]
@@ -1165,4 +1189,17 @@ enum CashMovementCategory {
 enum MovementLineType {
   DEBIT
   CREDIT
+}
+
+enum ContributorType {
+  NATURAL
+  SOCIETY
+  SPECIAL
+  PUBLIC
+}
+
+enum TaxRegime {
+  GENERAL
+  RIMPE_EMPRENDEDOR
+  RIMPE_NEGOCIO_POPULAR
 }

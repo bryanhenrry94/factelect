@@ -1,6 +1,6 @@
 "use client";
 
-import { registerAccount } from "@/actions/auth";
+import { registerAccount, TenantFormValues } from "@/actions/auth";
 import { TenantStep } from "@/components/onboarding/TenantStep";
 import { TermsStep } from "@/components/onboarding/TermsStep";
 import Logo from "@/components/layout/shared/logo/Logo";
@@ -15,15 +15,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import { protocol, rootDomain } from "@/lib/config";
+import { Form } from "@/components/ui/form";
 
 const steps = ["Empresa", "Confirmación"];
-
-type FormValues = {
-  ruc: string;
-  tenantName: string;
-  tenantAddress: string;
-  acceptTerms: boolean;
-};
 
 export default function SignupPage() {
   const router = useRouter();
@@ -34,6 +28,19 @@ export default function SignupPage() {
   const [isFinished, setIsFinished] = useState(false);
   const [error, setError] = useState("");
 
+  const form = useForm<TenantFormValues>({
+    mode: "onTouched",
+    defaultValues: {
+      ruc: "",
+      legalName: "",
+      tradeName: "",
+      tenantAddress: "",
+      contributorType: "SOCIETY",
+      taxRegime: "GENERAL",
+      acceptTerms: false,
+    },
+  });
+
   const {
     handleSubmit,
     control,
@@ -41,9 +48,7 @@ export default function SignupPage() {
     getValues,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    mode: "onTouched",
-  });
+  } = form;
 
   const handleNext = async () => {
     const fields =
@@ -66,7 +71,7 @@ export default function SignupPage() {
     router.push(`${protocol}://${ruc}.${rootDomain}/auth/signin`);
   };
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = async (data: TenantFormValues) => {
     try {
       if (!email) {
         setError("Email no proporcionado.");
@@ -98,62 +103,64 @@ export default function SignupPage() {
         <CardContent className="p-6">
           {!isFinished ? (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Steps */}
-              <div className="flex justify-center gap-2 mb-4">
-                {steps.map((_, i) => (
-                  <div
-                    key={i}
-                    className={`h-2 w-2 rounded-full ${
-                      i === activeStep ? "bg-primary" : "bg-muted-foreground/40"
-                    }`}
-                  />
-                ))}
-              </div>
+              <Form {...form}>
+                {/* Steps */}
+                <div className="flex justify-center gap-2 mb-4">
+                  {steps.map((_, i) => (
+                    <div
+                      key={i}
+                      className={`h-2 w-2 rounded-full ${
+                        i === activeStep
+                          ? "bg-primary"
+                          : "bg-muted-foreground/40"
+                      }`}
+                    />
+                  ))}
+                </div>
 
-              {/* STEP VIEWS */}
-              {activeStep === 0 && (
-                <TenantStep control={control} errors={errors} />
-              )}
-              {activeStep === 1 && (
-                <TermsStep control={control} errors={errors} />
-              )}
-
-              {/* Error */}
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              {/* Buttons */}
-              <div className="flex justify-between">
-                <Button
-                  variant="outline"
-                  type="button"
-                  disabled={activeStep === 0}
-                  onClick={handleBack}
-                >
-                  Atrás
-                </Button>
-
-                {activeStep < steps.length - 1 ? (
-                  <Button onClick={handleNext} disabled={isSubmitting}>
-                    Siguiente
-                  </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting || !watch("acceptTerms")}
-                  >
-                    {isSubmitting ? "Guardando..." : "Finalizar"}
-                  </Button>
+                {/* STEP VIEWS */}
+                {activeStep === 0 && <TenantStep control={control} />}
+                {activeStep === 1 && (
+                  <TermsStep control={control} errors={errors} />
                 )}
-              </div>
 
-              <p className="text-xs text-center text-muted-foreground">
-                🔒 Tus datos están protegidos con cifrado SSL.
-              </p>
+                {/* Error */}
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Buttons */}
+                <div className="flex justify-between">
+                  <Button
+                    variant="outline"
+                    type="button"
+                    disabled={activeStep === 0}
+                    onClick={handleBack}
+                  >
+                    Atrás
+                  </Button>
+
+                  {activeStep < steps.length - 1 ? (
+                    <Button onClick={handleNext} disabled={isSubmitting}>
+                      Siguiente
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting || !watch("acceptTerms")}
+                    >
+                      {isSubmitting ? "Guardando..." : "Finalizar"}
+                    </Button>
+                  )}
+                </div>
+
+                <p className="text-xs text-center text-muted-foreground">
+                  🔒 Tus datos están protegidos con cifrado SSL.
+                </p>
+              </Form>
             </form>
           ) : (
             <div className="text-center space-y-4 py-4">

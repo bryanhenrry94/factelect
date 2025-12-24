@@ -33,7 +33,7 @@ import { useSearchFilter } from "@/hooks/useSearchFilter";
 import { useDateRangeFilter } from "@/hooks/useDateRangeFilter";
 import { usePersonFilter } from "@/hooks/usePersonFilter";
 import { useTypeFilter } from "@/hooks/useTypeFilter";
-import { PersonInput } from "@/lib/validations/person";
+import { PersonInput } from "@/lib/validations/person/person";
 import { useDocumentFilter } from "@/hooks/useDocumentFilter";
 import { getDocumentTypeLabel } from "@/utils/document";
 import { $Enums } from "@/prisma/generated/prisma";

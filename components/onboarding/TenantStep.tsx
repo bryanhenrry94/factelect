@@ -1,15 +1,28 @@
 "use client";
 
-import { Controller } from "react-hook-form";
-import { Label } from "@/components/ui/label";
+import { Control } from "react-hook-form";
+import {
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type StepProps = {
-  control: any;
-  errors: any;
+  control: Control<any>;
 };
 
-export const TenantStep: React.FC<StepProps> = ({ control, errors }) => {
+export const TenantStep: React.FC<StepProps> = ({ control }) => {
   return (
     <div className="space-y-6 mt-4">
       <div className="text-center">
@@ -22,80 +35,140 @@ export const TenantStep: React.FC<StepProps> = ({ control, errors }) => {
 
       <div className="space-y-4">
         {/* RUC */}
-        <div className="space-y-1">
-          <Label htmlFor="ruc">RUC</Label>
-          <Controller
-            name="ruc"
-            control={control}
-            rules={{
-              required: "El RUC es obligatorio",
-              pattern: {
-                value: /^\d{13}$/,
-                message: "El RUC debe tener 13 dígitos",
-              },
-            }}
-            render={({ field }) => (
-              <Input
-                id="ruc"
-                placeholder="Ingresa el RUC"
-                {...field}
-                value={field.value ?? ""}
-                className={errors.ruc ? "border-destructive" : ""}
-              />
-            )}
-          />
-          {errors.ruc && (
-            <p className="text-sm text-destructive">{errors.ruc.message}</p>
+        <FormField
+          control={control}
+          name="ruc"
+          rules={{
+            required: "El RUC es obligatorio",
+            pattern: {
+              value: /^\d{13}$/,
+              message: "El RUC debe tener 13 dígitos",
+            },
+          }}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>RUC</FormLabel>
+              <FormControl>
+                <Input placeholder="Ingresa el RUC" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
-        </div>
+        />
 
         {/* Nombre / Razón social */}
-        <div className="space-y-1">
-          <Label htmlFor="tenantName">Nombre / Razón Social</Label>
-          <Controller
-            name="tenantName"
-            control={control}
-            rules={{ required: "El nombre de la empresa es obligatorio" }}
-            render={({ field }) => (
-              <Input
-                id="tenantName"
-                placeholder="Nombre de la empresa"
-                {...field}
-                value={field.value ?? ""}
-                className={errors.tenantName ? "border-destructive" : ""}
-              />
-            )}
-          />
-          {errors.tenantName && (
-            <p className="text-sm text-destructive">
-              {errors.tenantName.message}
-            </p>
+        <FormField
+          control={control}
+          name="legalName"
+          rules={{ required: "El nombre de la empresa es obligatorio" }}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nombre / Razón Social</FormLabel>
+              <FormControl>
+                <Input placeholder="Nombre de la empresa" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
-        </div>
+        />
+
+        {/* Nombre Comercial */}
+        <FormField
+          control={control}
+          name="tradeName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nombre Comercial</FormLabel>
+              <FormControl>
+                <Input placeholder="Nombre Comercial" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {/* Dirección */}
-        <div className="space-y-1">
-          <Label htmlFor="tenantAddress">Dirección</Label>
-          <Controller
-            name="tenantAddress"
-            control={control}
-            rules={{ required: "La dirección es obligatoria" }}
-            render={({ field }) => (
-              <Input
-                id="tenantAddress"
-                placeholder="Dirección fiscal"
-                {...field}
-                value={field.value ?? ""}
-                className={errors.tenantAddress ? "border-destructive" : ""}
-              />
-            )}
-          />
-          {errors.tenantAddress && (
-            <p className="text-sm text-destructive">
-              {errors.tenantAddress.message}
-            </p>
+        <FormField
+          control={control}
+          name="tenantAddress"
+          rules={{ required: "La dirección es obligatoria" }}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Dirección</FormLabel>
+              <FormControl>
+                <Input placeholder="Dirección fiscal" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
-        </div>
+        />
+
+        {/* Tipo Contribuyente */}
+        <FormField
+          control={control}
+          name="contributorType"
+          rules={{ required: "El tipo de contribuyente es obligatorio" }}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tipo de Contribuyente</FormLabel>
+              <FormControl>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value ?? ""}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="NATURAL">Natural</SelectItem>
+                      <SelectItem value="SOCIETY">Sociedad</SelectItem>
+                      <SelectItem value="SPECIAL">
+                        Contribuyente Especial
+                      </SelectItem>
+                      <SelectItem value="PUBLIC">Entidad Pública</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Régimen Tributario */}
+        <FormField
+          control={control}
+          name="taxRegime"
+          rules={{ required: "El régimen tributario es obligatorio" }}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Régimen Tributario</FormLabel>
+              <FormControl>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value ?? ""}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="GENERAL">General</SelectItem>
+                      <SelectItem value="RIMPE_EMPRENDEDOR">
+                        RIMPE Emprendedor
+                      </SelectItem>
+                      <SelectItem value="RIMPE_NEGOCIO_POPULAR">
+                        RIMPE Negocio Popular
+                      </SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </div>
     </div>
   );

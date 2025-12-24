@@ -6,7 +6,7 @@ import {
   PersonInput,
   UpdatePersonInput,
   updatePersonSchema,
-} from "@/lib/validations/person";
+} from "@/lib/validations/person/person";
 import { $Enums } from "@/prisma/generated/prisma";
 import { PersonFilter } from "@/types";
 

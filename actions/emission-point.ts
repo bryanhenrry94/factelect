@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   EmissionPoint,
   EmissionPointWithEstablishmentSchema,
-} from "@/lib/validations/emission-point";
+} from "@/lib/validations/e-invoicing/emission-point";
 
 export const getEmissionPoints = async (
   tenantId: string

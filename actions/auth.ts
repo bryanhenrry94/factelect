@@ -8,10 +8,13 @@ import { SignupData } from "@/lib/validations/auth/signup";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-type FormValues = {
+export type TenantFormValues = {
   ruc: string;
-  tenantName: string;
+  legalName: string;
+  tradeName: string;
   tenantAddress: string;
+  contributorType: $Enums.ContributorType;
+  taxRegime: $Enums.TaxRegime;
   acceptTerms: boolean;
 };
 
@@ -133,7 +136,7 @@ export async function resetPassword(
 
 export const registerAccount = async (
   email: string,
-  data: FormValues
+  data: TenantFormValues
 ): Promise<{ success: boolean; error?: string; data?: any }> => {
   try {
     // ---------------------
@@ -157,8 +160,11 @@ export const registerAccount = async (
       // Crear tenant
       const tenant = await tx.tenant.create({
         data: {
+          contributorType: data.contributorType,
+          taxRegime: data.taxRegime,
           ruc: data.ruc,
-          name: data.tenantName,
+          legalName: data.legalName,
+          tradeName: data.tradeName,
           subdomain: data.ruc,
         },
       });
@@ -220,19 +226,35 @@ export const registerAccount = async (
         },
       });
 
-      await tx.sequenceControl.create({
-        data: {
-          tenantId: tenant.id,
-          documentType: $Enums.DocumentType.INVOICE,
-          establishmentId: establishment.id,
-          emissionPointId: emissionPoint.id,
-          currentSequence: 1,
-        },
-      });
+      const documentTypes = [
+        { documentType: $Enums.DocumentType.INVOICE },
+        { documentType: $Enums.DocumentType.CREDIT_NOTE },
+        { documentType: $Enums.DocumentType.DEBIT_NOTE },
+        { documentType: $Enums.DocumentType.WITHHOLDING },
+        { documentType: $Enums.DocumentType.REMISSION_GUIDE },
+      ];
+
+      for (const { documentType } of documentTypes) {
+        await tx.emissionPointSequence.create({
+          data: {
+            emissionPointId: emissionPoint.id,
+            documentType: documentType,
+            currentSequence: 1,
+          },
+        });
+      }
 
       await tx.warehouse.create({
         data: {
           name: "Almacén Principal",
+          tenantId: tenant.id,
+        },
+      });
+
+      await tx.costCenter.create({
+        data: {
+          code: "0001",
+          name: "General",
           tenantId: tenant.id,
         },
       });
@@ -299,6 +321,7 @@ export const signup = async (
         name: data.name,
         email: data.email,
         password: hashedPassword,
+        isAdmin: true,
       },
     });
 

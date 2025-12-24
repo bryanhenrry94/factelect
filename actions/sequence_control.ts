@@ -3,8 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { $Enums } from "@/prisma/generated/prisma";
 
 export const getNextSequenceDocumentNumber = async (
-  tenantId: string,
-  establishmentId: string,
   emissionPointId: string,
   documentType: $Enums.DocumentType
 ): Promise<{
@@ -14,11 +12,9 @@ export const getNextSequenceDocumentNumber = async (
 }> => {
   try {
     // You may need to provide tenantId as well; adjust as necessary
-    const sequenceControl = await prisma.sequenceControl.findUnique({
+    const sequenceControl = await prisma.emissionPointSequence.findUnique({
       where: {
-        tenantId_establishmentId_emissionPointId_documentType: {
-          tenantId: tenantId,
-          establishmentId: establishmentId,
+        emissionPointId_documentType: {
           emissionPointId: emissionPointId,
           documentType: documentType,
         },

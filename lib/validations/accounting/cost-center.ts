@@ -5,6 +5,7 @@ export const costCenterSchema = z.object({
   tenantId: z.string(),
   code: z.string().min(1, "El código es obligatorio"),
   name: z.string().min(1, "El nombre es obligatorio"),
+  isActive: z.boolean(),
 });
 
 export const createCostCenterSchema = costCenterSchema.omit({

@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { Building2, CreditCard, FileText, Users } from "lucide-react";
 
 import PageContainer from "@/components/container/PageContainer";
-import CompanyForm from "@/components/setting/company-form";
+import CompanyForm from "@/components/setting/company/company-form";
 import SRIConfigForm from "@/components/setting/sri-config-form";
 import { BillingForm } from "@/components/billing/BillingForm";
 
@@ -14,7 +14,14 @@ import { Tenant } from "@/lib/validations/tenant";
 
 /* shadcn */
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import TeamFormPage from "@/components/setting/team/team-form-page";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
@@ -40,51 +47,60 @@ export default function SettingsPage() {
       title="Configuración"
       description="Configuración de la cuenta"
     >
-      <Card className="p-4">
-        <Tabs defaultValue="company" className="w-full">
-          {/* Tabs Header */}
-          <TabsList className="mb-6 flex w-full justify-start gap-2">
-            <TabsTrigger value="company" className="flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              Empresa
-            </TabsTrigger>
+      <Card>
+        <CardHeader>
+          <CardTitle>Configuración</CardTitle>
+          <CardDescription>
+            Administra la configuración de tu empresa, usuarios y facturación.
+          </CardDescription>
+        </CardHeader>
 
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Usuarios
-            </TabsTrigger>
+        <CardContent>
+          <Tabs defaultValue="company" className="w-full">
+            {/* Tabs Header */}
+            <TabsList className="mb-6 flex w-full justify-start gap-2">
+              <TabsTrigger value="company" className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Empresa
+              </TabsTrigger>
 
-            <TabsTrigger value="sri" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Facturación Electrónica
-            </TabsTrigger>
+              <TabsTrigger value="users" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Usuarios
+              </TabsTrigger>
 
-            <TabsTrigger value="billing" className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              Facturación
-            </TabsTrigger>
-          </TabsList>
+              <TabsTrigger value="sri" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Facturación Electrónica
+              </TabsTrigger>
 
-          {/* Empresa */}
-          <TabsContent value="company" className="mt-0">
-            {tenant && <CompanyForm initialData={tenant} />}
-          </TabsContent>
+              <TabsTrigger value="billing" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Facturación
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Usuarios */}
-          <TabsContent value="users" className="mt-0">
-            <div>Gestión de usuarios en desarrollo</div>
-          </TabsContent>
+            {/* Empresa */}
+            <TabsContent value="company" className="mt-0">
+              {tenant && <CompanyForm initialData={tenant} />}
+            </TabsContent>
 
-          {/* Facturación Electrónica */}
-          <TabsContent value="sri" className="mt-0">
-            <SRIConfigForm tenantId={tenant?.id || ""} />
-          </TabsContent>
+            {/* Usuarios */}
+            <TabsContent value="users" className="mt-0">
+              <TeamFormPage />
+            </TabsContent>
 
-          {/* Billing */}
-          <TabsContent value="billing" className="mt-0">
-            <BillingForm />
-          </TabsContent>
-        </Tabs>
+            {/* Facturación Electrónica */}
+            <TabsContent value="sri" className="mt-0">
+              <SRIConfigForm tenantId={tenant?.id || ""} />
+            </TabsContent>
+
+            {/* Billing */}
+            <TabsContent value="billing" className="mt-0">
+              <BillingForm />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
       </Card>
     </PageContainer>
   );

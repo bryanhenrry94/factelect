@@ -336,11 +336,9 @@ export const createDocumentTx = async (
         },
       });
 
-      await tx.sequenceControl.update({
+      await tx.emissionPointSequence.update({
         where: {
-          tenantId_establishmentId_emissionPointId_documentType: {
-            tenantId,
-            establishmentId: data.fiscalInfo.establishmentId,
+          emissionPointId_documentType: {
             emissionPointId: data.fiscalInfo.emissionPointId,
             documentType: data.documentType as $Enums.DocumentType,
           },
@@ -722,7 +720,7 @@ export const getInvoiceDataForPDF = async (
       include: {
         tenant: {
           include: {
-            sriConfig: true,
+            sriConfiguration: true,
           },
         },
         person: true,
@@ -816,17 +814,17 @@ export const getInvoiceDataForPDF = async (
     const invoiceData = {
       emisor: {
         logoUrl: document.tenant.logoUrl,
-        razonSocial: document.tenant.name || document.tenant.tradeName,
+        razonSocial: document.tenant.legalName || document.tenant.tradeName,
         ruc: document.tenant.ruc,
         direccionMatriz: document.tenant.address,
-        correo: document.tenant.contactEmail,
+        correo: document.tenant.email,
         telefono: document.tenant.phone,
         obligadoContabilidad: document.tenant.obligatedAccounting ? "SI" : "NO",
         regimenRimpe: "",
       },
       infoTributaria: {
         ambiente:
-          document.tenant.sriConfig?.environment === "TEST"
+          document.tenant.sriConfiguration?.environment === "TEST"
             ? "PRUEBAS"
             : "PRODUCCIÓN",
         tipoEmision: "NORMAL",

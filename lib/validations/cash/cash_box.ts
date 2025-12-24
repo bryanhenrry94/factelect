@@ -7,7 +7,7 @@ export const CashBoxSchema = z.object({
   updatedAt: z.date(),
   accountId: z.string().nullable().optional(),
   tenantId: z.string(),
-  status: z.enum(["ACTIVE", "INACTIVE"]),
+  isActive: z.boolean(),
 });
 
 export const createCashBoxSchema = CashBoxSchema.omit({

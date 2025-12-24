@@ -9,7 +9,7 @@ export const emissionPointSchema = z.object({
     .string()
     .length(3, "El código del punto de emisión debe tener 3 caracteres"),
   description: z.string().optional().nullable(),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
 });
 
 export const createEmissionPointSchema = emissionPointSchema.omit({

@@ -219,29 +219,14 @@ const data = {
   ],
   projects: [
     {
-      name: "Empresa",
-      url: "/configuracion/empresa",
-      icon: Building,
-    },
-    {
-      name: "Facturación Electrónica",
-      url: "/configuracion/facturacion-electronica",
+      name: "Configuración",
+      url: "/configuracion",
       icon: Settings,
     },
     {
       name: "Perfil",
       url: "/configuracion/perfil",
       icon: PieChart,
-    },
-    {
-      name: "Usuarios",
-      url: "/configuracion/usuarios",
-      icon: User,
-    },
-    {
-      name: "Establecimientos",
-      url: "/configuracion/establecimientos",
-      icon: Map,
     },
   ],
 };

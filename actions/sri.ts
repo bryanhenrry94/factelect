@@ -21,15 +21,15 @@ export async function sendToSRI(
     // ===============================================
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      include: { sriConfig: true },
+      include: { sriConfiguration: true },
     });
 
     if (!tenant) throw new Error("Tenant no encontrado");
-    if (!tenant.sriConfig)
+    if (!tenant.sriConfiguration)
       throw new Error("Configuración del SRI no encontrada");
 
     const { certificateUrl, certificatePassword, environment } =
-      tenant.sriConfig;
+      tenant.sriConfiguration;
 
     if (!certificateUrl || !certificatePassword)
       throw new Error("Certificado SRI no configurado correctamente");
@@ -283,14 +283,14 @@ export async function retryPendingAuthorizations() {
     try {
       const tenant = await prisma.tenant.findUnique({
         where: { id: document.document.tenantId },
-        include: { sriConfig: true },
+        include: { sriConfiguration: true },
       });
 
-      if (!tenant?.sriConfig) continue;
+      if (!tenant?.sriConfiguration) continue;
 
       const resAuth = await consultarAutorizacionSRI(
         document.accessKey!,
-        tenant.sriConfig.environment as "1" | "2"
+        tenant.sriConfiguration.environment as "1" | "2"
       );
 
       console.log(

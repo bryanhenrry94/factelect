@@ -12,8 +12,8 @@ import { getEstablishments } from "@/actions";
 import {
   CreateEmissionPoint,
   EmissionPoint,
-} from "@/lib/validations/emission-point";
-import { Establishment } from "@/lib/validations/establishment";
+} from "@/lib/validations/e-invoicing/emission-point";
+import { Establishment } from "@/lib/validations/e-invoicing/establishment";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
 /* shadcn */

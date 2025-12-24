@@ -153,12 +153,8 @@ export default function CashBoxPage() {
                           )?.name || "-"}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant={
-                              m.status === "ACTIVE" ? "default" : "secondary"
-                            }
-                          >
-                            {m.status === "ACTIVE" ? "Activo" : "Inactivo"}
+                          <Badge variant={m.isActive ? "default" : "secondary"}>
+                            {m.isActive ? "Activo" : "Inactivo"}
                           </Badge>{" "}
                         </TableCell>
                         <TableCell className="text-right">

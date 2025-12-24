@@ -7,6 +7,7 @@ export const chartOfAccountSchema = z.object({
   name: z.string().min(1, "Name is required"),
   accountType: z.enum(["ASSET", "LIABILITY", "EQUITY", "INCOME", "EXPENSE"]),
   parentId: z.string().uuid().nullable().optional(),
+  isActive: z.boolean(),
 });
 
 export const createChartOfAccountSchema = chartOfAccountSchema.omit({

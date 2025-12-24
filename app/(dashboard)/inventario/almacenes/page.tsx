@@ -65,6 +65,7 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
 
 const initialState: Warehouse = {
   id: "",
@@ -72,7 +73,7 @@ const initialState: Warehouse = {
   name: "",
   accountInventoryId: null,
   costCenterId: null,
-  status: "ACTIVE",
+  isActive: true,
 };
 
 export default function BodegasPage() {
@@ -173,7 +174,7 @@ export default function BodegasPage() {
       name: warehouse.name,
       accountInventoryId: warehouse.accountInventoryId,
       costCenterId: warehouse.costCenterId,
-      status: warehouse.status,
+      isActive: warehouse.isActive,
     });
     setOpen(true);
   };
@@ -293,14 +294,10 @@ export default function BodegasPage() {
                         <TableCell>
                           <Badge
                             variant={
-                              warehouse.status === "ACTIVE"
-                                ? "default"
-                                : "secondary"
+                              warehouse.isActive ? "default" : "secondary"
                             }
                           >
-                            {warehouse.status === "ACTIVE"
-                              ? "Activo"
-                              : "Inactivo"}
+                            {warehouse.isActive ? "Activo" : "Inactivo"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right space-x-2">
@@ -365,7 +362,6 @@ export default function BodegasPage() {
                   </FormItem>
                 )}
               />
-
               {/* Cuenta contable inventario */}
               <FormField
                 control={control}
@@ -385,7 +381,6 @@ export default function BodegasPage() {
                   </FormItem>
                 )}
               />
-
               {/* Centro de costo */}
               <FormField
                 control={control}
@@ -423,26 +418,15 @@ export default function BodegasPage() {
               {/* Estado */}
               <FormField
                 control={control}
-                name="status"
+                name="isActive"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Estado</FormLabel>
-                    <FormControl>
-                      <Select
-                        value={field.value && "ACTIVE"}
-                        onValueChange={field.onChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccione un estado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectLabel>Estado</SelectLabel>
-                            <SelectItem value="ACTIVE">Activo</SelectItem>
-                            <SelectItem value="INACTIVE">Inactivo</SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
+                    <FormLabel>Activo</FormLabel>
+                    <FormControl className="flex items-center space-x-2">
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

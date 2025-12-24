@@ -1,6 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { Establishment } from "@/lib/validations/establishment";
+import { Establishment } from "@/lib/validations/e-invoicing/establishment";
 
 export const getEstablishments = async (
   tenantId: string
@@ -67,15 +67,15 @@ export const getEstablishmentsByTenant = async (
   try {
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      include: { sriConfig: true },
+      include: { sriConfiguration: true },
     });
 
-    if (!tenant || !tenant.sriConfig) {
+    if (!tenant || !tenant.sriConfiguration) {
       return { success: false, error: "Tenant not found.", data: [] };
     }
 
     const establishments = await prisma.establishment.findMany({
-      where: { tenantId: tenant.sriConfig?.id },
+      where: { tenantId: tenant.sriConfiguration?.id },
     });
 
     return { success: true, data: establishments };

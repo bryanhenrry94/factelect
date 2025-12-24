@@ -43,7 +43,7 @@ type User = {
   active: boolean;
 };
 
-export default function UsuariosPage() {
+export default function TeamFormPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [invitations, setInvitations] = useState<TenantInvitation[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
