@@ -29,8 +29,11 @@ export const personSchema = z
     email: z.email("El formato del correo electrónico es inválido"),
     phone: z.string().optional().nullable(),
     address: z.string().optional().nullable(),
-    roles: z.array(PersonRoleEnum).min(1, "Debe seleccionar al menos un rol"),
+
+    isCustomer: z.boolean(),
     accountReceivableId: z.string().optional().nullable(),
+    
+    isSupplier: z.boolean(),
     accountPayableId: z.string().optional().nullable(),
 
     isActive: z.boolean(),

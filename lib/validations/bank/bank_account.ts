@@ -5,7 +5,6 @@ export const BankAccountSchema = z.object({
   tenantId: z.string(),
   bankName: z.string().min(1, "El nombre de la cuenta es obligatorio"),
   accountNumber: z.string().min(1, "El número de cuenta es obligatorio"),
-  alias: z.string().nullable().optional(),
   type: z.enum(["CURRENT", "SAVINGS", "CREDIT", "OTHER"]),
   accountId: z.string().nullable().optional(),
   // account: Account? -- usually validated separately

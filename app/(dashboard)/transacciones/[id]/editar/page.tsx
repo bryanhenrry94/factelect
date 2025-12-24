@@ -48,7 +48,7 @@ export default function TransactionEditPage() {
     const fetchData = async () => {
       const filter: PersonFilter = {
         tenantId: session.user.tenantId,
-        role: "CLIENT",
+        isCustomer: true,
       };
 
       const [c, p, e, s, cb, ba] = await Promise.all([

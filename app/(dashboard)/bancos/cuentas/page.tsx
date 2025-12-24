@@ -30,6 +30,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -63,13 +64,28 @@ import {
 } from "@/components/ui/command";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  FieldDescription,
+  FieldGroup,
+  FieldLegend,
+  FieldSeparator,
+  FieldSet,
+} from "@/components/ui/field";
 
 const initialBankAccount: BankAccount = {
   id: "",
   tenantId: "",
   bankName: "",
   accountNumber: "",
-  alias: null,
   type: "CURRENT",
   accountId: null,
   createdAt: new Date(),
@@ -91,15 +107,17 @@ export default function BankAccountsPage() {
 
   const { search, setSearch } = useSearchFilter();
 
+  const form = useForm<CreateBankAccount>({
+    resolver: zodResolver(createBankAccountSchema),
+    defaultValues: initialBankAccount,
+  });
+
   const {
     control,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
-  } = useForm<CreateBankAccount>({
-    resolver: zodResolver(createBankAccountSchema),
-    defaultValues: initialBankAccount,
-  });
+    formState: { isSubmitting },
+  } = form;
 
   /* ======================= */
   /* Fetch data */
@@ -213,7 +231,6 @@ export default function BankAccountsPage() {
                   <TableRow>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Nro Cuenta</TableHead>
-                    <TableHead>Alias</TableHead>
                     <TableHead>Cuenta Contable</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
@@ -229,7 +246,6 @@ export default function BankAccountsPage() {
                       <TableRow key={a.id}>
                         <TableCell>{a.bankName}</TableCell>
                         <TableCell>{a.accountNumber}</TableCell>
-                        <TableCell>{a.alias}</TableCell>
                         <TableCell>
                           {accounts.find((c) => c.id === a.accountId)?.name}
                         </TableCell>
@@ -267,105 +283,146 @@ export default function BankAccountsPage() {
 
       {/* Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {bankSelected ? "Editar Cuenta" : "Nueva Cuenta"}
             </DialogTitle>
+            <DialogDescription>
+              {bankSelected
+                ? "Modifica la información de la cuenta bancaria."
+                : "Complete el formulario para crear una nueva cuenta bancaria."}
+            </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-            <Controller
-              name="type"
-              control={control}
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tipo de cuenta" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CURRENT">Corriente</SelectItem>
-                    <SelectItem value="SAVINGS">Ahorros</SelectItem>
-                    <SelectItem value="CREDIT">Crédito</SelectItem>
-                    <SelectItem value="OTHER">Otro</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            />
-
-            <Controller
-              name="bankName"
-              control={control}
-              render={({ field }) => (
-                <Input placeholder="Nombre de la cuenta" {...field} />
-              )}
-            />
-
-            <Controller
-              name="accountNumber"
-              control={control}
-              render={({ field }) => (
-                <Input placeholder="Número de cuenta" {...field} />
-              )}
-            />
-
-            <Controller
-              name="alias"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  placeholder="Alias"
-                  {...field}
-                  value={field.value ?? ""}
-                />
-              )}
-            />
-
-            {/* Autocomplete cuenta contable */}
-            <Controller
-              name="accountId"
-              control={control}
-              render={({ field }) => (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      {accounts.find((a) => a.id === field.value)?.name ??
-                        "Seleccionar cuenta contable"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-0">
-                    <Command>
-                      <CommandInput placeholder="Buscar cuenta..." />
-                      <CommandEmpty>No hay resultados</CommandEmpty>
-                      <CommandGroup>
-                        {accounts.slice(0, 10).map((a) => (
-                          <CommandItem
-                            key={a.id}
-                            onSelect={() => field.onChange(a.id)}
+          <Form {...form}>
+            <form onSubmit={handleSubmit(onSubmit)}>
+              {/* ======================= */}
+              {/*   DATOS DE LA CUENTA     */}
+              {/* ======================= */}
+              <FieldGroup>
+                <FieldGroup>
+                  {/* Tipo */}
+                  <FormField
+                    control={control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo de cuenta</FormLabel>
+                        <FormControl>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
                           >
-                            {a.code} — {a.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              )}
-            />
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccione el tipo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="CURRENT">Corriente</SelectItem>
+                              <SelectItem value="SAVINGS">Ahorros</SelectItem>
+                              <SelectItem value="CREDIT">Crédito</SelectItem>
+                              <SelectItem value="OTHER">Otro</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                Guardar
-              </Button>
-            </div>
-          </form>
+                  {/* Nombre */}
+                  <FormField
+                    control={control}
+                    name="bankName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nombre de la cuenta</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ej: Banco Pichincha" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Número */}
+                  <FormField
+                    control={control}
+                    name="accountNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Número de cuenta</FormLabel>
+                        <FormControl>
+                          <Input placeholder="0123456789" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={control}
+                    name="accountId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cuenta contable</FormLabel>
+                        <FormControl>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-full justify-start"
+                              >
+                                {accounts.find((a) => a.id === field.value)
+                                  ?.name ?? "Seleccionar cuenta contable"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="p-0 w-[300px]">
+                              <Command>
+                                <CommandInput placeholder="Buscar cuenta..." />
+                                <CommandEmpty>No hay resultados</CommandEmpty>
+                                <CommandGroup>
+                                  {accounts.slice(0, 10).map((a) => (
+                                    <CommandItem
+                                      key={a.id}
+                                      onSelect={() => field.onChange(a.id)}
+                                    >
+                                      {a.code} — {a.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </FormControl>
+                        <FormDescription>
+                          Relaciona esta cuenta bancaria con el plan de cuentas.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </FieldGroup>
+                <FieldSeparator />
+              </FieldGroup>
+
+              {/* ======================= */}
+              {/*        ACCIONES         */}
+              {/* ======================= */}
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  Guardar
+                </Button>
+              </div>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </PageContainer>

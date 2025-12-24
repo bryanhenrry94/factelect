@@ -14,7 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 import {
@@ -144,29 +150,16 @@ export function ProductForm({ productId, onCreate }: ProductFormProps) {
         <CardTitle>
           {productId ? "Editar Producto" : "Nuevo Producto / Servicio"}
         </CardTitle>
+        <CardDescription>
+          Complete el formulario para {productId ? "actualizar" : "crear"} el
+          producto o servicio.
+        </CardDescription>
       </CardHeader>
 
       <CardContent>
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Estado */}
-              <FormField
-                control={control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Activo</FormLabel>
-                    <FormControl className="flex items-center space-x-2">
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               {/* Tipo */}
               <Field>
                 <FieldLabel>Tipo</FieldLabel>
@@ -368,6 +361,24 @@ export function ProductForm({ productId, onCreate }: ProductFormProps) {
                 </Field>
               </div>
             </div>
+
+            {/* Estado */}
+            <FormField
+              control={control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Activo</FormLabel>
+                  <FormControl className="flex items-center space-x-2">
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Actions */}
             <div className="flex justify-end">

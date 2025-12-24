@@ -4,13 +4,6 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 import PageContainer from "@/components/container/PageContainer";
-import {
-  getPersonsByTenant,
-  getEstablishmentsByTenant,
-  getTenantSriConfig,
-  getAllProducts,
-} from "@/actions";
-import { PersonFilter } from "@/types";
 import TransactionForm from "@/components/transaction/TransactionForm";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,16 +35,7 @@ export default function TransactionNewPage() {
     if (!session?.user?.tenantId) return;
 
     const fetchData = async () => {
-      const filter: PersonFilter = {
-        tenantId: session.user.tenantId,
-        role: "CLIENT",
-      };
-
-      const [c, p, e, s, cb, ba] = await Promise.all([
-        getPersonsByTenant(filter),
-        getAllProducts(session.user.tenantId),
-        getEstablishmentsByTenant(session.user.tenantId),
-        getTenantSriConfig(session.user.tenantId),
+      const [cb, ba] = await Promise.all([
         getAllCashBoxes(session.user.tenantId),
         getAllBankAccounts(session.user.tenantId),
       ]);

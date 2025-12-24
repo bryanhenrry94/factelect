@@ -39,7 +39,7 @@ export default function SaleNewPage() {
     const fetchData = async () => {
       const filter: PersonFilter = {
         tenantId: session.user.tenantId,
-        role: "CLIENT",
+        isCustomer: true,
       };
 
       const [clients, productsRes, warehousesRes] = await Promise.all([

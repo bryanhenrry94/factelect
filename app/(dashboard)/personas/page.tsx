@@ -82,12 +82,8 @@ export default function PersonsPage() {
 
       if (allPersons.success) {
         const total = allPersons.data.length;
-        const clientes = allPersons.data.filter((p) =>
-          p.roles.includes("CLIENT")
-        ).length;
-        const proveedores = allPersons.data.filter((p) =>
-          p.roles.includes("SUPPLIER")
-        ).length;
+        const clientes = allPersons.data.filter((p) => p.isCustomer).length;
+        const proveedores = allPersons.data.filter((p) => p.isSupplier).length;
 
         setStats({ total, clientes, proveedores });
       }
@@ -105,7 +101,8 @@ export default function PersonsPage() {
 
     const response = await getPersonsByTenant({
       tenantId: session.user.tenantId,
-      role: role ?? "CLIENT",
+      isCustomer: tipoValue === "cliente" ? true : undefined,
+      isSupplier: tipoValue === "proveedor" ? true : undefined,
       search: debouncedSearch,
     });
 
@@ -226,7 +223,12 @@ export default function PersonsPage() {
                         <TableCell>{person.email}</TableCell>
                         <TableCell>{person.phone || "-"}</TableCell>
                         <TableCell>
-                          {person.roles.map(getRoleLabel).join(", ")}
+                          {[
+                            person.isCustomer ? "Cliente" : null,
+                            person.isSupplier ? "Proveedor" : null,
+                          ]
+                            .filter(Boolean)
+                            .join(", ")}
                         </TableCell>
 
                         <TableCell className="text-right space-x-2">

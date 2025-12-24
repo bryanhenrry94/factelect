@@ -26,14 +26,10 @@ export const getNextSequenceDocumentNumber = async (
       return { success: false, error: "Emission point not found." };
     }
 
-    if (documentType === "INVOICE") {
-      return {
-        success: true,
-        nextSequence: sequenceControl.currentSequence,
-      };
-    }
-
-    return { success: false, error: "Invalid document type." };
+    return {
+      success: true,
+      nextSequence: sequenceControl.currentSequence,
+    };
   } catch (error) {
     return { success: false, error: "Failed to fetch next document number." };
   }

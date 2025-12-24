@@ -20,15 +20,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useRouter } from "next/navigation";
 
 export default function PersonNewPage() {
   const { data: session } = useSession();
-  const router = useRouter();
-
-  const handleSave = async () => {
-    // Lógica después de guardar la nueva persona
-  };
 
   return (
     <PageContainer title="Nuevo Persona" description="Crear una nueva persona">

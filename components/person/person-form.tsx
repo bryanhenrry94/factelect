@@ -48,6 +48,7 @@ import {
   FormMessage,
 } from "../ui/form";
 import { Switch } from "../ui/switch";
+import { Checkbox } from "../ui/checkbox";
 
 interface PersonFormProps {
   open?: boolean;
@@ -81,9 +82,11 @@ export default function PersonForm({
       email: "",
       phone: "",
       address: "",
-      roles: ["CLIENT"],
+      isCustomer: false,
       accountPayableId: null,
+      isSupplier: false,
       accountReceivableId: null,
+      isActive: true,
     },
   });
 
@@ -115,7 +118,11 @@ export default function PersonForm({
         email: "",
         phone: "",
         address: "",
-        roles: ["CLIENT"],
+        isActive: true,
+        isCustomer: false,
+        accountReceivableId: null,
+        isSupplier: false,
+        accountPayableId: null,
       });
     }
   }, [personId, reset]);
@@ -151,6 +158,9 @@ export default function PersonForm({
       setError(action.error || "Error al guardar la persona");
     }
   };
+
+  const roles = ["CLIENT", "SUPPLIER", "SELLER"] as const;
+  type Role = (typeof roles)[number];
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -276,36 +286,44 @@ export default function PersonForm({
           </Field>
         </FieldSet>
 
-        {/* ======================= */}
-        {/*          ROLES          */}
-        {/* ======================= */}
         <FieldSet>
           <FieldLegend>Roles</FieldLegend>
 
-          <Field>
-            <FieldLabel>Rol</FieldLabel>
-            <Controller
-              name="roles"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  value={field.value[0]}
-                  onValueChange={(val) => field.onChange([val])}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["CLIENT", "SUPPLIER", "SELLER"].map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {getRoleLabel(r)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </Field>
+          {/* Estado */}
+          <FormField
+            control={control}
+            name="isCustomer"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cliente</FormLabel>
+                <FormControl className="flex items-center space-x-2">
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Estado */}
+          <FormField
+            control={control}
+            name="isSupplier"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Proveedor</FormLabel>
+                <FormControl className="flex items-center space-x-2">
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </FieldSet>
 
         {/* ======================= */}

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { getAccounts } from "@/actions/accounting/chart-of-account";
@@ -24,25 +24,17 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { AccountSelect } from "../AccountSelected";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import {
+  Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-} from "../ui/form";
-import { Switch } from "../ui/switch";
+} from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
+
+import { AccountSelect } from "../AccountSelected";
 
 const initialState: CreateCashBox = {
   name: "",
@@ -64,15 +56,17 @@ export const CashBoxForm: React.FC<CashBoxFormProps> = ({
   const { data: session } = useSession();
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
 
+  const form = useForm<CreateCashBox>({
+    resolver: zodResolver(createCashBoxSchema),
+    defaultValues: initialState,
+  });
+
   const {
     control,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
-  } = useForm<CreateCashBox>({
-    resolver: zodResolver(createCashBoxSchema),
-    defaultValues: initialState,
-  });
+    formState: { isSubmitting },
+  } = form;
 
   /* Cargar cuentas */
   useEffect(() => {
@@ -94,8 +88,6 @@ export const CashBoxForm: React.FC<CashBoxFormProps> = ({
 
   /* Reset al editar */
   useEffect(() => {
-    console.log("cashBoxSelected: ", cashBoxSelected);
-
     reset(cashBoxSelected || initialState);
   }, [cashBoxSelected, reset]);
 
@@ -125,79 +117,87 @@ export const CashBoxForm: React.FC<CashBoxFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <DialogHeader>
-        <DialogTitle>
-          {cashBoxSelected ? "Editar Caja" : "Registrar Caja"}
-        </DialogTitle>
-        <DialogDescription>
-          {cashBoxSelected
-            ? "Actualiza los datos de la caja."
-            : "Registra una nueva caja."}
-        </DialogDescription>
-      </DialogHeader>
+    <Form {...form}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <DialogHeader>
+          <DialogTitle>
+            {cashBoxSelected ? "Editar Caja" : "Registrar Caja"}
+          </DialogTitle>
+          <DialogDescription>
+            {cashBoxSelected
+              ? "Actualiza los datos de la caja."
+              : "Registra una nueva caja."}
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* Estado */}
-
-      {/* Estado */}
-      <FormField
-        control={control}
-        name="isActive"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Activo</FormLabel>
-            <FormControl className="flex items-center space-x-2">
-              <Switch checked={field.value} onCheckedChange={field.onChange} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      {/* Nombre */}
-      <div className="space-y-1">
-        <Label>Nombre</Label>
-        <Controller
+        {/* Nombre */}
+        <FormField
+          control={control}
           name="name"
-          control={control}
           render={({ field }) => (
-            <Input {...field} placeholder="Nombre de la caja" />
+            <FormItem>
+              <FormLabel>Nombre</FormLabel>
+              <FormControl>
+                <Input placeholder="Nombre de la caja" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
         />
-        {errors.name && (
-          <p className="text-sm text-destructive">{errors.name.message}</p>
-        )}
-      </div>
 
-      {/* Cuenta Contable */}
-      <div className="space-y-1">
-        <Label>Cuenta Contable</Label>
-        <Controller
+        {/* Cuenta Contable */}
+        <FormField
+          control={control}
           name="accountId"
-          control={control}
           render={({ field }) => (
-            <AccountSelect
-              label="Cuenta Contable"
-              value={field.value ?? null}
-              accounts={accounts}
-              onChange={(value) => field.onChange(value)}
-            />
+            <FormItem>
+              <FormLabel>Cuenta contable</FormLabel>
+              <FormControl>
+                <AccountSelect
+                  label="Cuenta Contable"
+                  value={field.value ?? null}
+                  accounts={accounts}
+                  onChange={(value) => field.onChange(value)}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
         />
-        {errors.accountId && (
-          <p className="text-sm text-destructive">{errors.accountId.message}</p>
-        )}
-      </div>
 
-      {/* Acciones */}
-      <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando..." : "Guardar Caja"}
-        </Button>
-      </div>
-    </form>
+        {/* Estado */}
+        <FormField
+          control={control}
+          name="isActive"
+          render={({ field }) => (
+            <FormItem className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <FormLabel>Activo</FormLabel>
+                <p className="text-sm text-muted-foreground">
+                  Indica si la caja está disponible para operar.
+                </p>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Acciones */}
+        <div className="flex justify-end gap-2 pt-4">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Guardando..." : "Guardar Caja"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 };

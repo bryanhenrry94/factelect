@@ -619,7 +619,6 @@ model BankAccount {
   tenantId                                                         String          @map("tenant_id")
   bankName                                                         String          @map("bank_name")
   accountNumber                                                    String          @map("account_number")
-  alias                                                            String?
   type          BankAccountType // CURRENT, SAVINGS, CREDIT, OTHER
 
   // NUEVO: referencia a la cuenta contable
@@ -827,12 +826,14 @@ model Person {
   email               String                 @map("email")
   phone               String?                @map("phone")
   address             String?                @map("address")
-  roles               PersonRole[]                                         @default([])
 
   accountReceivableId String?                @map("account_receivable_id")
   accountPayableId    String?                @map("account_payable_id")
 
+  isCustomer          Boolean                                              @default(false)
   accountReceivable   ChartOfAccount?        @relation("person_account_receivable", fields: [accountReceivableId], references: [id])
+
+  isSupplier          Boolean                                              @default(false)
   accountPayable      ChartOfAccount?        @relation("person_account_payable", fields: [accountPayableId], references: [id])
 
   isActive            Boolean                                              @default(true)
@@ -1049,12 +1050,6 @@ enum DocumentStatus {
   DRAFT
   CONFIRMED
   CANCELED
-}
-
-enum PersonRole {
-  CLIENT
-  SUPPLIER
-  SELLER
 }
 
 enum EntityType {

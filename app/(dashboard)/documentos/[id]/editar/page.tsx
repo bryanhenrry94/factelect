@@ -40,7 +40,7 @@ export default function DocumentEditPage() {
 
     const personFilter: PersonFilter = {
       tenantId: session.user.tenantId,
-      role: "CLIENT",
+      isCustomer: true,
     };
 
     const fetchData = async () => {

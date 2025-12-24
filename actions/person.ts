@@ -88,8 +88,12 @@ export async function getPersonsByTenant(
     };
 
     // Solo filtrar por rol si viene definido y no está vacío
-    if (filter.role) {
-      where.roles = { has: filter.role };
+    if (filter.isCustomer !== undefined) {
+      where.isCustomer = filter.isCustomer;
+    }
+
+    if (filter.isSupplier !== undefined) {
+      where.isSupplier = filter.isSupplier;
     }
 
     if (filter.search) {

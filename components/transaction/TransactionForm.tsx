@@ -166,7 +166,8 @@ export default function TransactionForm({
 
     const filter: PersonFilter = {
       tenantId: session.user.tenantId,
-      role,
+      isCustomer: role === "CLIENT",
+      isSupplier: role === "SUPPLIER",
     };
 
     const res = await getPersonsByTenant(filter);

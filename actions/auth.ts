@@ -204,7 +204,8 @@ export const registerAccount = async (
           firstName: "CONSUMIDOR",
           lastName: "FINAL",
           email: "noemail@example.com",
-          roles: ["CLIENT"],
+          isCustomer: true,
+          isSupplier: false,
           tenantId: tenant.id,
         },
       });
