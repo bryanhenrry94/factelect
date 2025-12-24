@@ -731,51 +731,65 @@ model CashBox {
 }
 
 model CashSession {
-  id                 String                                      @id @default(cuid())
+  id                 String                                   @id @default(cuid())
   tenantId           String               @map("tenant_id")
   cashBoxId          String               @map("cash_box_id")
   userId             String               @map("user_id")
 
-  openedAt           DateTime             @map("opened_at")      @default(now())
+  openedAt           DateTime             @map("opened_at")   @default(now())
   closedAt           DateTime?            @map("closed_at")
-  initialAmount      Float                @map("initial_amount")
-  closingAmount      Float?               @map("closing_amount")
-  status             CashSessionStatus                           @default(OPEN)
+  initialAmount      Float
+  closingAmount      Float?
+  status             CashSessionStatus                        @default(OPEN)
   notes              String?              @map("notes")
 
   cashBox            CashBox              @relation(fields: [cashBoxId], references: [id])
   tenant             Tenant               @relation(fields: [tenantId], references: [id])
   user               User                 @relation(fields: [userId], references: [id])
 
+  totalIn            Float?
+  totalOut           Float?
+  difference         Float?
+
+  cashMovements      CashMovement[]
   cashCount          CashCount[]
   cashReconciliation CashReconciliation[]
 
+  @@index([cashBoxId, status])
   @@map("cash_session")
 }
 
 model CashMovement {
-  id            String                                      @id @default(cuid())
+  id             String                                        @id @default(cuid())
 
-  cashBoxId     String               @map("cash_box_id")
-  cashBox       CashBox              @relation(fields: [cashBoxId], references: [id])
+  cashSessionId  String?              @map("cash_session_id")
+  cashSession    CashSession?         @relation(fields: [cashSessionId], references: [id])
 
-  transactionId String?              @map("transaction_id")
-  transaction   Transaction?         @relation(fields: [transactionId], references: [id])
+  cashBoxId      String               @map("cash_box_id")
+  cashBox        CashBox              @relation(fields: [cashBoxId], references: [id])
 
-  type          CashMovementType
-  category      CashMovementCategory                        @default(OTHER)
-  amount        Float
-  description   String?
-  reference     String?
-  issueDate     DateTime             @map("issue_date")     @default(now())
+  transactionId  String?              @map("transaction_id")
+  transaction    Transaction?         @relation(fields: [transactionId], references: [id])
 
-  createdAt     DateTime             @map("created_at")     @default(now())
+  // Enlace al diario
+  journalEntryId String?              @map("journal_entry_id")
+  journalEntry   JournalEntry?        @relation(fields: [journalEntryId], references: [id])
 
-  accountId     String?
-  account       ChartOfAccount?      @relation(fields: [accountId], references: [id])
+  type           CashMovementType
+  category       CashMovementCategory                          @default(OTHER)
 
-  tenantId      String               @map("tenant_id")
-  tenant        Tenant               @relation(fields: [tenantId], references: [id])
+  amount         Float
+  description    String?
+  reference      String?
+  issueDate      DateTime             @map("issue_date")       @default(now())
+
+  createdAt      DateTime             @map("created_at")       @default(now())
+
+  accountId      String?
+  account        ChartOfAccount?      @relation(fields: [accountId], references: [id])
+
+  tenantId       String               @map("tenant_id")
+  tenant         Tenant               @relation(fields: [tenantId], references: [id])
 
   @@map("cash_movement")
 }
@@ -912,23 +926,24 @@ model ChartOfAccount {
 // COMPROBANTES CONTABLES
 // ------------------------------
 model JournalEntry {
-  id           String                                 @id @default(uuid())
-  tenantId     String             @map("tenant_id")
-  date         DateTime
-  description  String?
-  type         EntryType                              @default(ENTRY)
+  id            String                                 @id @default(uuid())
+  tenantId      String             @map("tenant_id")
+  date          DateTime
+  description   String?
+  type          EntryType                              @default(ENTRY)
 
   // 🔹 Nuevo: qué tipo de evento lo generó
-  sourceType   JournalSourceType  @map("source_type")
+  sourceType    JournalSourceType  @map("source_type")
   // 🔹 Id de la entidad origen (documento, movimiento, etc.)
-  sourceId     String?            @map("source_id")
+  sourceId      String?            @map("source_id")
 
   // Relación con líneas
-  lines        JournalEntryLine[]
-  bankMovement BankMovement?
+  lines         JournalEntryLine[]
+  bankMovement  BankMovement?
+  cashMovements CashMovement[]
 
-  createdAt    DateTime           @map("created_at")  @default(now())
-  updatedAt    DateTime           @map("updated_at")  @updatedAt
+  createdAt     DateTime           @map("created_at")  @default(now())
+  updatedAt     DateTime           @map("updated_at")  @updatedAt
 
   @@map("journal_entry")
 }

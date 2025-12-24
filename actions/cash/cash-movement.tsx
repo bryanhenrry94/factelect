@@ -6,6 +6,36 @@ import {
   UpdateCashMovement,
 } from "@/lib/validations/cash/cash_movement";
 
+export const getAllMovementByCashSessionId = async (
+  cashSessionId: string
+): Promise<{ success: boolean; error?: string; data?: CashMovement[] }> => {
+  try {
+    const cashMovements = await prisma.cashMovement.findMany({
+      where: {
+        cashSessionId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    const mappedCashMovements = cashMovements.map((cm) => ({
+      ...cm,
+      transactionId: cm.transactionId ?? undefined,
+      description: cm.description ?? undefined,
+      reference: cm.reference ?? undefined,
+      accountId: cm.accountId ?? undefined,
+    }));
+
+    return { success: true, data: mappedCashMovements };
+  } catch (error) {
+    return {
+      success: false,
+      error: "Error al obtener los movimientos de caja por sesión",
+    };
+  }
+};
+
 export const getAllCashMovements = async (
   tenantId: string,
   search?: string,

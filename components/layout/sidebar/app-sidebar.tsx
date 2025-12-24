@@ -142,6 +142,10 @@ const data = {
       icon: Calculator,
       items: [
         {
+          title: "Abrir / Cerrar Caja",
+          url: "/caja/apertura-cierre",
+        },
+        {
           title: "Caja",
           url: "/caja",
         },

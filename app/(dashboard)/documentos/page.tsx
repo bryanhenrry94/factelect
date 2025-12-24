@@ -43,6 +43,7 @@ import { PersonInput } from "@/lib/validations/person/person";
 import { useDocumentFilter } from "@/hooks/useDocumentFilter";
 import { getDocumentTypeLabel } from "@/utils/document";
 import { $Enums } from "@/prisma/generated/prisma";
+import Link from "next/link";
 
 export default function DocumentsPage() {
   const router = useRouter();
@@ -308,10 +309,15 @@ export default function DocumentsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="font-normal text-sm">
-                            {getDocumentTypeLabel(document.documentType)} -{" "}
-                            {document.documentNumber}
-                          </div>
+                          <Link
+                            href={`/documentos/${document.id}/editar`}
+                            className="underline hover:text-primary"
+                          >
+                            <div className="font-normal text-sm">
+                              {getDocumentTypeLabel(document.documentType)} -{" "}
+                              {document.documentNumber}
+                            </div>
+                          </Link>
                         </TableCell>
                         {/* <TableCell>
                         {document.dueDate

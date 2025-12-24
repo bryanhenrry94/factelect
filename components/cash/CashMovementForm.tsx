@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { getAccounts } from "@/actions/accounting/chart-of-account";
@@ -36,6 +36,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { AccountSelect } from "../AccountSelected";
 
 const initialState: CreateCashMovement = {
   type: "IN",
@@ -60,15 +69,16 @@ export function CashMovementForm({
   const { data: session } = useSession();
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<CreateCashMovement>({
+  const form = useForm<CreateCashMovement>({
     resolver: zodResolver(createCashMovementSchema),
     defaultValues: initialState,
   });
+
+  const {
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = form;
 
   /* 🔄 Cargar cuentas */
   useEffect(() => {
@@ -101,11 +111,14 @@ export function CashMovementForm({
         return;
       }
 
-      data.cashBoxId = res.data.id;
+      const payload = {
+        ...data,
+        cashBoxId: res.data.id,
+      };
 
       const response = cashMovementSelected
-        ? await updateCashMovement(cashMovementSelected.id, data)
-        : await createCashMovement(session.user.tenantId, data);
+        ? await updateCashMovement(cashMovementSelected.id, payload)
+        : await createCashMovement(session.user.tenantId, payload);
 
       if (response.success) {
         notifyInfo(
@@ -122,160 +135,152 @@ export function CashMovementForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <DialogHeader>
-        <DialogTitle>
-          {cashMovementSelected
-            ? "Editar Movimiento de Caja"
-            : "Registrar Movimiento de Caja"}
-        </DialogTitle>
-        <DialogDescription>
-          {cashMovementSelected
-            ? "Actualiza los datos del movimiento."
-            : "Registra un nuevo movimiento de caja."}
-        </DialogDescription>
-      </DialogHeader>
+    <Form {...form}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <DialogHeader>
+          <DialogTitle>
+            {cashMovementSelected
+              ? "Editar Movimiento de Caja"
+              : "Registrar Movimiento de Caja"}
+          </DialogTitle>
+          <DialogDescription>
+            {cashMovementSelected
+              ? "Actualiza los datos del movimiento."
+              : "Registra un nuevo movimiento de caja."}
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* Tipo */}
-      <Controller
-        name="type"
-        control={control}
-        render={({ field }) => (
-          <div>
-            <Select
-              value={field.value ?? undefined}
-              onValueChange={field.onChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Tipo de movimiento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="IN">Ingreso</SelectItem>
-                <SelectItem value="OUT">Egreso</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.type && (
-              <p className="text-sm text-destructive">{errors.type.message}</p>
+        {/* Tipo y Categoría */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo</FormLabel>
+                <FormControl>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Tipo de movimiento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="IN">Ingreso</SelectItem>
+                      <SelectItem value="OUT">Egreso</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
-        )}
-      />
-
-      {/* Categoría */}
-      <Controller
-        name="category"
-        control={control}
-        render={({ field }) => (
-          <div>
-            <Select
-              value={field.value ?? undefined}
-              onValueChange={field.onChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                {[
-                  "SALE",
-                  "PURCHASE",
-                  "PETTY_CASH",
-                  "ADVANCE",
-                  "REFUND",
-                  "TRANSFER",
-                  "OTHER",
-                ].map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.category && (
-              <p className="text-sm text-destructive">
-                {errors.category.message}
-              </p>
-            )}
-          </div>
-        )}
-      />
-
-      {/* Monto */}
-      <Controller
-        name="amount"
-        control={control}
-        render={({ field }) => (
-          <Input
-            type="number"
-            placeholder="Monto"
-            inputMode="decimal"
-            value={field.value ?? ""}
-            onChange={(e) => field.onChange(e.target.value)}
-            onBlur={() => {
-              const n = Number(field.value);
-              field.onChange(isNaN(n) ? 0 : Number(n.toFixed(2)));
-            }}
           />
-        )}
-      />
-      {errors.amount && (
-        <p className="text-sm text-destructive">{errors.amount.message}</p>
-      )}
 
-      {/* Descripción */}
-      <Controller
-        name="description"
-        control={control}
-        render={({ field }) => (
-          <Textarea
-            placeholder="Descripción"
-            {...field}
-            value={field.value ?? ""}
-          />
-        )}
-      />
-      {errors.description && (
-        <p className="text-sm text-destructive">{errors.description.message}</p>
-      )}
-
-      {/* Cuenta contable */}
-      <Controller
-        name="accountId"
-        control={control}
-        render={({ field }) => (
-          <div>
-            <Select
-              value={field.value ?? undefined}
-              onValueChange={field.onChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Cuenta contable" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.code} - {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.accountId && (
-              <p className="text-sm text-destructive">
-                {errors.accountId.message}
-              </p>
+          <FormField
+            control={form.control}
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Categoría</FormLabel>
+                <FormControl>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={"SALE"}>Venta</SelectItem>
+                      <SelectItem value={"PURCHASE"}>Compra</SelectItem>
+                      <SelectItem value={"PETTY_CASH"}>Caja chica</SelectItem>
+                      <SelectItem value={"ADVANCE"}>Anticipo</SelectItem>
+                      <SelectItem value={"REFUND"}>Reembolso</SelectItem>
+                      <SelectItem value={"TRANSFER"}>Transferencia</SelectItem>
+                      <SelectItem value={"OTHER"}>Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
-        )}
-      />
+          />
+        </div>
 
-      {/* Botones */}
-      <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando..." : "Guardar Movimiento"}
-        </Button>
-      </div>
-    </form>
+        {/* Monto */}
+        <FormField
+          control={form.control}
+          name="amount"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Monto</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(
+                      e.target.value === "" ? "" : Number(e.target.value)
+                    )
+                  }
+                  onBlur={() => {
+                    const n = Number(field.value);
+                    field.onChange(isNaN(n) ? 0 : Number(n.toFixed(2)));
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Descripción */}
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descripción</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Detalle del movimiento"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Cuenta contable */}
+        <FormField
+          control={form.control}
+          name="accountId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Cuenta contable</FormLabel>
+              <FormControl>
+                <AccountSelect
+                  label="Selecciona una cuenta"
+                  accounts={accounts}
+                  value={field.value ?? ""}
+                  onChange={(value) => field.onChange(value)}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Acciones */}
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Guardando..." : "Guardar Movimiento"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }

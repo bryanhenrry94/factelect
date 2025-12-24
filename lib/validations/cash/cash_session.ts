@@ -9,14 +9,15 @@ export const CashSessionSchema = z.object({
   closedAt: z.date().nullable().optional(),
   initialAmount: z.number(),
   closingAmount: z.number().nullable().optional(),
+  totalIn: z.number().optional(),
+  totalOut: z.number().optional(),
+  difference: z.number().optional(),
   status: z.enum(["OPEN", "CLOSED", "PENDING"]),
   notes: z.string().nullable().optional(),
 });
 
 export const createCashSessionSchema = CashSessionSchema.omit({
   id: true,
-  tenantId: true,
-  userId: true,
   openedAt: true,
   closedAt: true,
   status: true,

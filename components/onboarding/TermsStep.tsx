@@ -15,7 +15,7 @@ export const TermsStep: React.FC<StepProps> = ({ control, errors }) => {
     <div className="mt-4 space-y-6">
       {/* Encabezado */}
       <div className="text-center space-y-1">
-        <p className="text-sm text-muted-foreground">(1/3)</p>
+        <p className="text-sm text-muted-foreground">(2/2)</p>
         <h2 className="text-xl font-semibold">Términos y Condiciones</h2>
         <p className="text-sm text-muted-foreground">
           Acepta nuestros términos para completar tu registro.

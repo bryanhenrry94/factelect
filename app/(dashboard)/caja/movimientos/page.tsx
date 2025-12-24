@@ -39,13 +39,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { CashBox } from "@/lib/validations/cash/cash_box";
+import { getAllCashBoxes } from "@/actions/cash/cash-box";
 
 const now = new Date();
 const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -61,6 +58,7 @@ export default function CashBoxMovementsPage() {
   });
 
   const [open, setOpen] = useState(false);
+  const [cashBoxes, setCashBoxes] = useState<CashBox[]>([]);
   const [cashMovements, setCashMovements] = useState<CashMovement[]>([]);
   const [cashMovementSelected, setCashMovementSelected] =
     useState<CashMovement | null>(null);
@@ -90,6 +88,20 @@ export default function CashBoxMovementsPage() {
       notifyError("Error al cargar los movimientos");
     }
   };
+
+  const fetchCashBoxes = async () => {
+    const tenantId = session?.user?.tenantId;
+    if (!tenantId) return;
+
+    const result = await getAllCashBoxes(tenantId);
+    if (result.success) {
+      setCashBoxes(result.data || []);
+    }
+  };
+
+  useEffect(() => {
+    fetchCashBoxes();
+  }, [session?.user?.tenantId]);
 
   useEffect(() => {
     fetchCashMovements();
@@ -175,6 +187,7 @@ export default function CashBoxMovementsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Caja</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Categoría</TableHead>
                     <TableHead>Fecha</TableHead>
@@ -187,6 +200,9 @@ export default function CashBoxMovementsPage() {
                 <TableBody>
                   {paginatedData.map((m) => (
                     <TableRow key={m.id}>
+                      <TableCell>
+                        {cashBoxes.find((cb) => cb.id === m.cashBoxId)?.name}
+                      </TableCell>
                       <TableCell>{getMovementTypeLabel(m.type)}</TableCell>
                       <TableCell>
                         {getMovementCategoryLabel(m.category)}
