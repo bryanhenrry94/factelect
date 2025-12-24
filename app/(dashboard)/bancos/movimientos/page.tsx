@@ -19,11 +19,16 @@ import { formatCurrency, formatDate, toInputDate } from "@/utils/formatters";
 import { $Enums } from "@/prisma/generated/prisma/wasm";
 import { useDateRangeFilter } from "@/hooks/useDateRangeFilter";
 import { useSearchFilter } from "@/hooks/useSearchFilter";
-import { AlertService } from "@/lib/alerts";
 
 /* shadcn */
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -34,6 +39,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const now = new Date();
 const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -82,7 +88,7 @@ export default function BankMovementsPage() {
   /* ========================== */
 
   const handleDelete = async (id: string) => {
-    const confirm = await AlertService.showConfirm(
+    const confirm = await ConfirmDialog.confirm(
       "Aviso",
       "¿Deseas eliminar el movimiento?"
     );
@@ -154,12 +160,17 @@ export default function BankMovementsPage() {
 
       {/* Tabla */}
       <Card>
-        <CardContent className="p-4">
+        <CardHeader>
+          <CardTitle>Movimientos Bancarios</CardTitle>
+          <CardDescription>
+            Lista de movimientos bancarios registrados en el sistema.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           {bankMovements.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">
               <ShoppingBag className="mx-auto mb-2" />
-              <p className="font-medium">No hay movimientos aún</p>
-              <p className="text-sm">Agrega el primer movimiento bancario</p>
+              No hay movimientos aún
             </div>
           ) : (
             <>

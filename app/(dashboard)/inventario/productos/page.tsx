@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Edit, Trash2, PackageSearch } from "lucide-react";
+import { Plus, Edit, Trash2, ShoppingBag } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -13,7 +13,13 @@ import { Product } from "@/lib/validations/inventory/product";
 
 /* shadcn */
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -120,19 +126,19 @@ export default function ProductsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Productos</CardTitle>
+          <CardDescription>
+            Lista de productos disponibles en el sistema
+          </CardDescription>
         </CardHeader>
-        <CardContent className="p-2">
+        <CardContent>
           {loading ? (
             <div className="py-10 text-center text-muted-foreground">
               Cargando productos...
             </div>
           ) : products.length === 0 ? (
-            <div className="py-12 flex flex-col items-center gap-2 text-muted-foreground">
-              <PackageSearch size={40} />
-              <p className="font-medium">No hay productos</p>
-              <p className="text-sm">
-                Empieza creando tu primer producto o servicio
-              </p>
+            <div className="text-center py-10 text-muted-foreground">
+              <ShoppingBag className="mx-auto mb-2" />
+              No hay productos registrados.
             </div>
           ) : (
             <>

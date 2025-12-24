@@ -21,7 +21,6 @@ import { useSession } from "next-auth/react";
 import { formatCurrency, formatDate, toInputDate } from "@/utils/formatters";
 import { useDateRangeFilter } from "@/hooks/useDateRangeFilter";
 import { useSearchFilter } from "@/hooks/useSearchFilter";
-import { AlertService } from "@/lib/alerts";
 import {
   BankTransfer,
   BankTransferWithAccount,
@@ -31,6 +30,7 @@ import {
   getAllBankTransfers,
 } from "@/actions/bank/bank-transfer";
 import { BankTransferForm } from "@/components/bank/BankTransferForm";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const now = new Date();
 const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -89,7 +89,7 @@ const BankTransfersPage = () => {
   };
 
   const handleDelete = async (id: string) => {
-    const confirm = await AlertService.showConfirm(
+    const confirm = await ConfirmDialog.confirm(
       "Aviso",
       "¿Deseas eliminar la transferencia?"
     );

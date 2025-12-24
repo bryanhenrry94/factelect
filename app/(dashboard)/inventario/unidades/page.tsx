@@ -13,7 +13,13 @@ import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
 
 /* shadcn */
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -167,13 +173,15 @@ const UnitsPage = () => {
       <Card>
         <CardHeader>
           <CardTitle>Unidades</CardTitle>
+          <CardDescription>
+            Lista de unidades de medida disponibles en el sistema
+          </CardDescription>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent>
           {units.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
-              <ShoppingBag className="h-10 w-10" />
-              <p className="text-lg font-medium">No hay unidades aún</p>
-              <p className="text-sm">Agrega la primera unidad de medida</p>
+            <div className="text-center py-10 text-muted-foreground">
+              <ShoppingBag className="mx-auto mb-2" />
+              No hay unidades registradas.
             </div>
           ) : (
             <>

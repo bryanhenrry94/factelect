@@ -14,7 +14,6 @@ import {
   TenantSriConfigInput,
 } from "@/lib/validations/sri-config";
 
-import { AlertService } from "@/lib/alerts";
 import { sriEnvironmentOptions } from "@/constants/sri";
 import UploadCertificateForm from "../ui/UploadCertificateForm";
 import { notifyError, notifyInfo } from "@/lib/notifications";
@@ -56,6 +55,7 @@ import {
 } from "../ui/field";
 import { EstablishmentForm } from "../establishment/EstablishmentForm";
 import { EmissionPointForm } from "../emission-point/EmissionPointForm";
+import { ConfirmDialog } from "../ConfirmDialog";
 
 interface SriTenantFormProps {
   tenantId: string;
@@ -86,7 +86,7 @@ const SRIConfigForm: React.FC<SriTenantFormProps> = ({ tenantId }) => {
     }
 
     if (data.environment === "PRODUCTION") {
-      const confirm = await AlertService.showConfirm(
+      const confirm = await ConfirmDialog.confirm(
         "¿Cambiar al ambiente de PRODUCCIÓN?",
         "El ambiente de producción envía comprobantes electrónicos con validez fiscal ante el SRI. ¿Desea continuar?"
       );

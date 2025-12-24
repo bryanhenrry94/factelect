@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,7 +9,13 @@ import { Plus, Edit, Trash2, ShoppingBag } from "lucide-react";
 import PageContainer from "@/components/container/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -164,12 +169,15 @@ export default function CategorysProductsPage() {
       <Card className="mt-4">
         <CardHeader>
           <CardTitle>Categorías</CardTitle>
+          <CardDescription>
+            Lista de categorías disponibles en el sistema
+          </CardDescription>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent>
           {categories.length === 0 ? (
-            <div className="flex flex-col items-center py-10 text-muted-foreground">
-              <ShoppingBag className="h-10 w-10 mb-2" />
-              <p>No hay categorías aún</p>
+            <div className="text-center py-10 text-muted-foreground">
+              <ShoppingBag className="mx-auto mb-2" />
+              No hay categorías registradas.
             </div>
           ) : (
             <>
@@ -189,7 +197,7 @@ export default function CategorysProductsPage() {
                     .map((category) => (
                       <TableRow key={category.id}>
                         <TableCell>{category.name}</TableCell>
-                        <TableCell className="text-right space-x-1">
+                        <TableCell className="text-right">
                           <Button
                             variant="ghost"
                             size="icon"

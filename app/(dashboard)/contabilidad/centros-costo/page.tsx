@@ -26,7 +26,13 @@ import {
 /* ShadCN */
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -190,17 +196,18 @@ export default function CentrosCostoPage() {
       </div>
 
       <Card>
+        <CardHeader>
+          <CardTitle>Centros de Costo</CardTitle>
+          <CardDescription>
+            Gestiona los centros de costo de tu organización
+          </CardDescription>
+        </CardHeader>
         <CardContent>
           {costCenters.length === 0 ? (
-            <div className="flex flex-col items-center py-10 text-center">
-              <ShoppingBag className="h-10 w-10 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">
-                No hay centros de costo
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Agrega el primero para comenzar
-              </p>
-            </div>
+            <div className="text-center py-10 text-muted-foreground">
+              <ShoppingBag className="mx-auto mb-2" />
+                No hay centros de costo disponibles.
+              </div>
           ) : (
             <>
               <Table>

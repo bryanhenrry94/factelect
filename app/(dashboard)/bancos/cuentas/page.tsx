@@ -26,7 +26,13 @@ import { useSearchFilter } from "@/hooks/useSearchFilter";
 
 /* shadcn */
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -193,6 +199,21 @@ export default function BankAccountsPage() {
     }
   };
 
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case "CURRENT":
+        return "Corriente";
+      case "SAVINGS":
+        return "Ahorros";
+      case "CREDIT":
+        return "Crédito";
+      case "OTHER":
+        return "Otro";
+      default:
+        return type;
+    }
+  };
+
   /* ======================= */
   /* UI */
   /* ======================= */
@@ -218,7 +239,13 @@ export default function BankAccountsPage() {
 
       {/* Table */}
       <Card>
-        <CardContent className="p-4">
+        <CardHeader>
+          <CardTitle>Cuentas Bancarias</CardTitle>
+          <CardDescription>
+            Lista de cuentas bancarias registradas en el sistema.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           {bankAccounts.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">
               <ShoppingBag className="mx-auto mb-2" />
@@ -249,7 +276,7 @@ export default function BankAccountsPage() {
                         <TableCell>
                           {accounts.find((c) => c.id === a.accountId)?.name}
                         </TableCell>
-                        <TableCell>{a.type}</TableCell>
+                        <TableCell>{getTypeLabel(a.type)}</TableCell>
                         <TableCell className="text-right space-x-2">
                           <Button
                             size="icon"

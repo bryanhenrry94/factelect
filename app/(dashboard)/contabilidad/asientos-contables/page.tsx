@@ -22,7 +22,13 @@ import { formatCurrency, formatDate } from "@/utils/formatters";
 /* ShadCN */
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -48,6 +54,7 @@ import { useAccountFilter } from "@/hooks/useAccountFilter";
 import { ChartOfAccount } from "@/lib/validations";
 import { getAccounts } from "@/actions/accounting/chart-of-account";
 import { AccountSelect } from "@/components/AccountSelected";
+import { Separator } from "@/components/ui/separator";
 
 export default function AsientosContablesPage() {
   const router = useRouter();
@@ -144,20 +151,22 @@ export default function AsientosContablesPage() {
       title="Asientos Contables"
       description="Gestiona los asientos contables de tu organización"
     >
-      <Card className="shadow-sm">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
-            <CardTitle className="text-lg">Filtros</CardTitle>
+            <CardTitle>Asientos Contables</CardTitle>
+            <CardDescription>
+              Administra los asientos contables de tu empresa.
+            </CardDescription>
           </div>
 
-          <Button onClick={handleCreate} size="sm">
+          <Button variant="default" onClick={handleCreate}>
             <Plus className="mr-2 h-4 w-4" />
             Nuevo
           </Button>
         </CardHeader>
-
         <CardContent>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 mt-4">
             {/* Buscar */}
             <Field>
               <FieldLabel>Buscar</FieldLabel>
@@ -220,20 +229,13 @@ export default function AsientosContablesPage() {
               />
             </Field>
           </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardContent className="p-6">
+          <Separator className="my-4" />
+
           {journalEntries.length === 0 ? (
-            <div className="flex flex-col items-center py-12 text-center">
-              <ShoppingBag className="h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">
-                No hay asientos contables
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Agrega el primero para comenzar
-              </p>
+            <div className="text-center py-10 text-muted-foreground">
+              <ShoppingBag className="mx-auto mb-2" />
+              No se encontraron asientos contables.
             </div>
           ) : (
             <div className="space-y-4">

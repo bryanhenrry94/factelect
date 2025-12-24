@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import PageContainer from "@/components/container/PageContainer";
 import { notifyError, notifyInfo } from "@/lib/notifications";
-import { AlertService } from "@/lib/alerts";
 import { useDateRangeFilter } from "@/hooks/useDateRangeFilter";
 import { useSearchFilter } from "@/hooks/useSearchFilter";
 import { formatCurrency, formatDate, toInputDate } from "@/utils/formatters";
@@ -24,7 +23,13 @@ import { Plus, Edit, Delete, ShoppingBag } from "lucide-react";
 
 /* shadcn */
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -40,6 +45,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const now = new Date();
 const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -95,7 +101,7 @@ export default function CashBoxMovementsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    const confirm = await AlertService.showConfirm(
+    const confirm = await ConfirmDialog.confirm(
       "Aviso",
       "¿Deseas eliminar el movimiento?"
     );
@@ -152,12 +158,17 @@ export default function CashBoxMovementsPage() {
 
       {/* Tabla */}
       <Card>
+        <CardHeader>
+          <CardTitle>Movimientos de Caja</CardTitle>
+          <CardDescription>
+            Lista de movimientos registrados en el sistema
+          </CardDescription>
+        </CardHeader>
         <CardContent>
           {cashMovements.length === 0 ? (
-            <div className="flex flex-col items-center py-12 text-muted-foreground">
-              <ShoppingBag className="h-10 w-10" />
-              <p className="mt-3 text-lg font-medium">No hay movimientos aún</p>
-              <p className="text-sm">Registra el primer movimiento de caja</p>
+            <div className="text-center py-10 text-muted-foreground">
+              <ShoppingBag className="mx-auto mb-2" />
+              No hay movimientos aún
             </div>
           ) : (
             <>

@@ -23,7 +23,13 @@ import FilterCard from "@/components/ui/FilterCard";
 
 // ⭐ SHADCN UI
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -183,6 +189,12 @@ export default function PersonsPage() {
 
       {/* TABLA */}
       <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Personas</CardTitle>
+          <CardDescription>
+            Gestiona las personas asociadas a tu organización.
+          </CardDescription>
+        </CardHeader>
         <CardContent className="p-6">
           {persons.length === 0 ? (
             <div className="text-center py-8">

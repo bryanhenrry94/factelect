@@ -17,7 +17,7 @@ import { Search } from "lucide-react";
 
 /* ShadCN */
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -34,6 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AccountSelect } from "@/components/AccountSelected";
 
 export default function MovimientosCuentaPage() {
   const { data: session } = useSession();
@@ -52,7 +53,7 @@ export default function MovimientosCuentaPage() {
     .toISOString()
     .substring(0, 10);
 
-  const [accountId, setAccountId] = useState<string | undefined>();
+  const [accountId, setAccountId] = useState<string | null>(null);
   const [costCenterId, setCostCenterId] = useState<string | undefined>();
   const [dateFrom, setDateFrom] = useState(firstDayOfMonth);
   const [dateTo, setDateTo] = useState(lastDayOfMonth);
@@ -115,14 +116,21 @@ export default function MovimientosCuentaPage() {
   return (
     <PageContainer title="Movimientos de Cuenta">
       {/* ================= Filtros ================= */}
-      <Card className="mt-4">
-        <CardContent className="p-6">
-          <h2 className="mb-4 text-lg font-semibold">Filtros de Búsqueda</h2>
-
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtros de búsqueda</CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
             {/* Cuenta */}
             <div className="md:col-span-2">
-              <Select value={accountId} onValueChange={setAccountId}>
+              <AccountSelect
+                label="Seleccione cuenta"
+                accounts={accounts}
+                value={accountId}
+                onChange={setAccountId}
+              />
+              {/* <Select value={accountId} onValueChange={setAccountId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccione cuenta" />
                 </SelectTrigger>
@@ -133,7 +141,7 @@ export default function MovimientosCuentaPage() {
                     </SelectItem>
                   ))}
                 </SelectContent>
-              </Select>
+              </Select> */}
             </div>
 
             {/* Centro de costo */}

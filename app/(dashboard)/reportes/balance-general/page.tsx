@@ -96,7 +96,7 @@ export default function BalanceGeneralPage() {
   return (
     <PageContainer title="Estado de Situación Financiera">
       {/* Filtros */}
-      <Card className="mt-6">
+      <Card>
         <CardHeader>
           <CardTitle>Filtros de búsqueda</CardTitle>
         </CardHeader>
@@ -144,8 +144,7 @@ export default function BalanceGeneralPage() {
             <h2 className="font-semibold">{session?.user?.tenantName}</h2>
             <p className="text-sm">Estado de Situación Financiera</p>
             <p className="text-xs text-muted-foreground">
-              Del {formatDate(dateFrom)} al{" "}
-              {formatDate(dateTo)}
+              Del {formatDate(dateFrom)} al {formatDate(dateTo)}
             </p>
           </div>
 

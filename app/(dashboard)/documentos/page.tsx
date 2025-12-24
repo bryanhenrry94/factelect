@@ -8,7 +8,13 @@ import { DocumentResponse } from "@/lib/validations";
 import { deleteDocument, getDocuments, getPersonsByTenant } from "@/actions";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { Plus, Files, Delete, Edit, Check } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -142,19 +148,9 @@ export default function DocumentsPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div>
-            <CardTitle className="text-lg">Filtros</CardTitle>
-            {/* <CardDescription>
-              Filtra y busca entre las transacciones registradas
-            </CardDescription> */}
-          </div>
-
-          <Button onClick={handleAdd} size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo
-          </Button>
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtros</CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -251,8 +247,17 @@ export default function DocumentsPage() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Documentos</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div>
+            <CardTitle>Documentos</CardTitle>
+            <CardDescription>
+              Gestiona los documentos asociados a tu organización.
+            </CardDescription>
+          </div>
+          <Button onClick={handleAdd} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo
+          </Button>
         </CardHeader>
         <CardContent>
           {documents.length === 0 ? (

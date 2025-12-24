@@ -5,7 +5,6 @@ import { useSession } from "next-auth/react";
 import { Delete, Edit, PlusCircle } from "lucide-react";
 
 import { deleteEmissionPoint, getEmissionPoints } from "@/actions";
-import { AlertService } from "@/lib/alerts";
 import {
   EmissionPoint,
   EmissionPointWithEstablishmentSchema,
@@ -33,6 +32,7 @@ import {
 } from "@/components/ui/card";
 
 import EmissionPointDialog from "./emission-point-dialog";
+import { ConfirmDialog } from "../ConfirmDialog";
 
 export const EmissionPointForm = () => {
   const { data: session } = useSession();
@@ -57,7 +57,7 @@ export const EmissionPointForm = () => {
   }, [fetchEmissionPoints]);
 
   const handleDeleteEmissionPoint = async (id: string) => {
-    const confirm = await AlertService.showConfirm(
+    const confirm = await ConfirmDialog.confirm(
       "¿Eliminar este punto de emisión?",
       "Esta acción no se puede deshacer."
     );

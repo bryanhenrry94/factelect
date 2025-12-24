@@ -7,7 +7,6 @@ import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
 
 import PageContainer from "@/components/container/PageContainer";
 import { notifyError, notifyInfo } from "@/lib/notifications";
-import { AlertService } from "@/lib/alerts";
 import { useSearchFilter } from "@/hooks/useSearchFilter";
 
 import {
@@ -22,7 +21,13 @@ import { formatDate } from "@/utils/formatters";
 
 /* shadcn */
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -33,6 +38,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const ROWS_PER_PAGE = 5;
 
@@ -61,7 +67,7 @@ export default function MovimientosInventarioPage() {
      DELETE
   ========================= */
   const handleDelete = async (id: string) => {
-    const confirm = await AlertService.showConfirm(
+    const confirm = await ConfirmDialog.confirm(
       "Aviso",
       "¿Deseas eliminar el movimiento de inventario?"
     );
@@ -164,16 +170,17 @@ export default function MovimientosInventarioPage() {
 
       {/* Table */}
       <Card>
-        <CardContent className="pt-6">
+        <CardHeader>
+          <CardTitle>Movimientos de Inventario</CardTitle>
+          <CardDescription>
+            Lista de movimientos de inventario registrados en el sistema
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           {movements.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
-              <ShoppingBag className="h-10 w-10" />
-              <p className="text-lg font-medium">
-                No hay movimientos de inventario aún
-              </p>
-              <p className="text-sm text-center">
-                Agrega el primer movimiento de inventario
-              </p>
+            <div className="text-center py-10 text-muted-foreground">
+              <ShoppingBag className="mx-auto mb-2" />
+              No hay movimientos de inventario registrados.
             </div>
           ) : (
             <>

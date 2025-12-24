@@ -43,26 +43,24 @@ export default function FilterCard({
   const colors = colorClassMap[color];
   return (
     <Card
-      className={cn("min-w-[180px] shadow-none transition-colors", colors.card)}
+      className={cn("min-w-[120px] shadow-none transition-colors", colors.card)}
     >
       <button
         type="button"
         onClick={onClick}
-        className="flex items-center gap-3 w-full p-4 bg-transparent hover:bg-muted/50 rounded-lg transition-colors"
+        className="flex items-center gap-2 w-full p-2 bg-transparent hover:bg-muted/50 rounded-lg transition-colors"
       >
         <span
           className={cn(
-            "min-w-[50px] min-h-[50px] flex items-center justify-center rounded-lg mr-3",
+            "min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg mr-2",
             colors.icon
           )}
         >
-          <Icon size={22} />
+          <Icon size={16} />
         </span>
         <CardContent className="p-0">
-          <div className={cn("font-medium text-base", colors.text)}>
-            {title}
-          </div>
-          <div className="font-semibold text-sm">{count} Personas</div>
+          <div className={cn("font-medium text-sm", colors.text)}>{title}</div>
+          <div className="font-semibold text-xs">{count} Personas</div>
         </CardContent>
       </button>
     </Card>

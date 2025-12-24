@@ -31,7 +31,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 
 import { Separator } from "@/components/ui/separator";
 
@@ -199,6 +199,7 @@ export function TreeTable({
     <Card>
       <CardHeader>
         <CardTitle>Plan de Cuentas</CardTitle>
+        <CardDescription>Gestiona el plan de cuentas de tu organización</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">

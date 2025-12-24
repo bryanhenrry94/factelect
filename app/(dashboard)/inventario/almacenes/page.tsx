@@ -25,7 +25,13 @@ import { getCostCenters } from "@/actions/accounting/cost-center";
 
 /* shadcn */
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -250,15 +256,15 @@ export default function BodegasPage() {
       <Card>
         <CardHeader>
           <CardTitle>Almacenes</CardTitle>
+          <CardDescription>
+            Lista de almacenes disponibles en el sistema
+          </CardDescription>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent>
           {warehouses.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
-              <ShoppingBag className="h-10 w-10" />
-              <p className="text-lg font-medium">No hay almacenes aún</p>
-              <p className="text-sm text-center">
-                Agrega el primer almacén para comenzar a gestionar tu inventario
-              </p>
+            <div className="text-center py-10 text-muted-foreground">
+              <ShoppingBag className="mx-auto mb-2" />
+              No hay almacenes registrados.
             </div>
           ) : (
             <>

@@ -4,7 +4,13 @@ import { useEffect, useState } from "react";
 import PageContainer from "@/components/container/PageContainer";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -39,7 +45,7 @@ import { BankMovementForm } from "@/components/bank/BankMovementForm";
 import { $Enums } from "@/prisma/generated/prisma/wasm";
 import { useDateRangeFilter } from "@/hooks/useDateRangeFilter";
 import { useSearchFilter } from "@/hooks/useSearchFilter";
-import { AlertService } from "@/lib/alerts";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const now = new Date();
 const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -83,7 +89,7 @@ export default function BankConciliacionPage() {
   }, [session?.user?.tenantId, search, dateFrom, dateTo]);
 
   const handleDelete = async (id: string) => {
-    const confirm = await AlertService.showConfirm(
+    const confirm = await ConfirmDialog.confirm(
       "Aviso",
       "¿Deseas eliminar el movimiento?"
     );
@@ -145,12 +151,17 @@ export default function BankConciliacionPage() {
       </div>
 
       <Card>
+        <CardHeader>
+          <CardTitle>Conciliaciones Bancarias</CardTitle>
+          <CardDescription>
+            Lista de movimientos bancarios conciliados
+          </CardDescription>
+        </CardHeader>
         <CardContent>
           {bankMovements.length === 0 ? (
-            <div className="flex flex-col items-center py-12 text-muted-foreground">
-              <ShoppingBag className="w-8 h-8 mb-3" />
-              <p className="font-medium">No hay conciliaciones aún</p>
-              <p className="text-sm">Agrega la primera conciliación bancaria</p>
+            <div className="text-center py-10 text-muted-foreground">
+              <ShoppingBag className="mx-auto mb-2" />
+              No hay conciliaciones registradas
             </div>
           ) : (
             <Table>

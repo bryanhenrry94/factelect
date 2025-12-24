@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { CloudUpload, File } from "lucide-react";
+import { CloudUpload, FileCheck } from "lucide-react";
 
 import { uploadLogoAction } from "@/actions/supabase";
 import { updateLogoUrl } from "@/actions/tenant";
@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-
 import { Separator } from "@/components/ui/separator";
 
 interface UploadLogoFormProps {
@@ -34,8 +33,17 @@ export default function UploadLogoForm({
   const { data: session } = useSession();
 
   const [isPending, startTransition] = useTransition();
-  const [preview, setPreview] = useState<string | null>(logoUrl || null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Si viene logoUrl desde props, lo usamos como preview inicial
+  useEffect(() => {
+    if (logoUrl) {
+      setPreview(logoUrl);
+    } else {
+      setPreview(null);
+    }
+  }, [logoUrl]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -43,11 +51,9 @@ export default function UploadLogoForm({
 
     setError(null);
 
-    // Preview
+    // Preview inmediato
     if (file.type.startsWith("image/")) {
       setPreview(URL.createObjectURL(file));
-    } else {
-      setPreview(null);
     }
 
     startTransition(async () => {
@@ -55,8 +61,9 @@ export default function UploadLogoForm({
         const tenantId = session?.user?.tenantId;
 
         if (!tenantId) {
-          setError("No se pudo obtener el ID de la empresa.");
-          notifyError("No se pudo obtener el ID de la empresa.");
+          const msg = "No se pudo obtener el ID de la empresa.";
+          setError(msg);
+          notifyError(msg);
           return;
         }
 
@@ -75,50 +82,50 @@ export default function UploadLogoForm({
           setError(msg);
           notifyError(msg);
         }
-      } catch (error) {
-        console.error(error);
-        setError("Ocurrió un error inesperado.");
-        notifyError("Ocurrió un error inesperado.");
+      } catch (err) {
+        console.error(err);
+        const msg = "Ocurrió un error inesperado.";
+        setError(msg);
+        notifyError(msg);
       }
     });
   };
 
-  const isImage = preview && /\.(png|jpg|jpeg|gif)$/i.test(preview);
+  const hasLogo = Boolean(preview);
 
   return (
     <Card className="border-dashed">
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Logo de la empresa</CardTitle>
-        <CardDescription>Sube una imagen (.png, .jpg, .jpeg).</CardDescription>
+        <CardDescription>
+          {hasLogo
+            ? "El logo actual de tu empresa."
+            : "Aún no has cargado un logo. Sube una imagen (.png, .jpg, .jpeg)."}
+        </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Preview */}
-        <div className="flex justify-center">
-          {preview ? (
-            isImage ? (
+        {/* Preview solo si hay logo */}
+        {hasLogo && (
+          <>
+            <div className="flex flex-col items-center gap-2">
               <div className="relative h-36 w-56 rounded-lg border overflow-hidden">
                 <Image
-                  src={preview}
-                  alt="Vista previa del logo"
+                  src={preview!}
+                  alt="Logo de la empresa"
                   fill
                   className="object-contain"
                 />
               </div>
-            ) : (
-              <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <File size={40} />
-                <span className="text-sm">Archivo subido</span>
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <FileCheck className="h-4 w-4" />
+                Logo cargado
               </div>
-            )
-          ) : (
-            <div className="flex h-32 w-full items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
-              No hay logo seleccionado
             </div>
-          )}
-        </div>
 
-        <Separator />
+            <Separator />
+          </>
+        )}
 
         {/* Upload field */}
         <div className="space-y-2">
@@ -127,7 +134,11 @@ export default function UploadLogoForm({
           <Button asChild disabled={isPending} className="w-full">
             <label className="flex cursor-pointer items-center justify-center gap-2">
               <CloudUpload className="h-4 w-4" />
-              {isPending ? "Subiendo..." : "Seleccionar logo"}
+              {isPending
+                ? "Subiendo..."
+                : hasLogo
+                ? "Cambiar logo"
+                : "Subir logo"}
               <input
                 type="file"
                 accept={accept}

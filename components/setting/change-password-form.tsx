@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { Eye, EyeOff } from "lucide-react";
 
 import { changeUserPassword } from "@/actions/setting/user";
-import { AlertService } from "@/lib/alerts";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
 /* shadcn */
@@ -70,7 +69,7 @@ export default function ChangePasswordForm({
         notifyError(result.error || "Error al actualizar la contraseña");
       }
     } catch (error) {
-      AlertService.showError("Error al actualizar la contraseña");
+      notifyError("Error al actualizar la contraseña");
       console.error(error);
     }
   };

@@ -15,7 +15,13 @@ import { CashBoxForm } from "@/components/cash/CashBoxForm";
 
 /* shadcn */
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
@@ -115,12 +121,17 @@ export default function CashBoxPage() {
 
       {/* Tabla */}
       <Card>
-        <CardContent className="p-0">
+        <CardHeader>
+          <CardTitle>Cajas</CardTitle>
+          <CardDescription>
+            Lista de cajas registradas en el sistema
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           {cashBoxes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <ShoppingBag className="h-10 w-10" />
-              <p className="mt-3 text-lg font-medium">No hay cajas aún</p>
-              <p className="text-sm">Agrega la primera caja para comenzar</p>
+            <div className="text-center py-10 text-muted-foreground">
+              <ShoppingBag className="mx-auto mb-2" />
+              No hay cajas registradas
             </div>
           ) : (
             <>

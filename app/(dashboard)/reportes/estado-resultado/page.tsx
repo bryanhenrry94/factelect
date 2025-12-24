@@ -16,7 +16,7 @@ import { CostCenter } from "@/lib/validations/accounting/cost-center";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
 /* shadcn */
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -97,9 +97,9 @@ export default function EstadoResultadoPage() {
   return (
     <PageContainer title="Estado de Resultado">
       {/* Filtros */}
-      <Card className="mt-6">
-        <CardHeader className="pb-2">
-          <h2 className="text-lg font-semibold">Filtros de búsqueda</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtros de búsqueda</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
