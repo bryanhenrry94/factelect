@@ -1,5 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
+import { EmissionPointSequence } from "@/lib/validations";
 import { $Enums } from "@/prisma/generated/prisma";
 
 export const getNextSequenceDocumentNumber = async (
@@ -35,5 +36,26 @@ export const getNextSequenceDocumentNumber = async (
     return { success: false, error: "Invalid document type." };
   } catch (error) {
     return { success: false, error: "Failed to fetch next document number." };
+  }
+};
+
+export const getEmissionPointSequences = async (
+  emissionPointId: string
+): Promise<{
+  success: boolean;
+  data?: EmissionPointSequence[];
+  error?: string;
+}> => {
+  try {
+    const sequences = await prisma.emissionPointSequence.findMany({
+      where: { emissionPointId },
+    });
+
+    return { success: true, data: sequences };
+  } catch (error) {
+    return {
+      success: false,
+      error: "Failed to fetch emission point sequences.",
+    };
   }
 };

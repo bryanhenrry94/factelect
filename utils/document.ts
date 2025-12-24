@@ -16,3 +16,22 @@ export const getDocumentTypeLabel = (type: string) => {
       return type;
   }
 };
+
+export const getDocumentTypeLabelV2 = (type: string) => {
+  switch (type) {
+    case "INVOICE":
+      return "Factura";
+    case "PURCHASE":
+      return "Liquidación de compra";
+    case "CREDIT_NOTE":
+      return "Nota de crédito";
+    case "DEBIT_NOTE":
+      return "Nota de débito";
+    case "WITHHOLDING":
+      return "Retención";
+    case "REMISSION_GUIDE":
+      return "Guía de remisión";
+    default:
+      return type;
+  }
+};

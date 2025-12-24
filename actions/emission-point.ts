@@ -29,9 +29,45 @@ export const createEmissionPoint = async (
   emissionPointData: Omit<EmissionPoint, "id">
 ): Promise<{ success: boolean; data?: EmissionPoint; error?: string }> => {
   try {
-    const newEmissionPoint = await prisma.emissionPoint.create({
-      data: emissionPointData,
+    // valida que no exista otro punto de emisión con el mismo código en la misma establecimiento
+    const existingEP = await prisma.emissionPoint.findFirst({
+      where: {
+        establishmentId: emissionPointData.establishmentId,
+        code: emissionPointData.code,
+      },
     });
+
+    if (existingEP) {
+      return {
+        success: false,
+        error:
+          "Ya existe un punto de emisión con este código en el establecimiento seleccionado.",
+      };
+    }
+
+    const newEmissionPoint = await prisma.emissionPoint.create({
+      data: {
+        establishmentId: emissionPointData.establishmentId,
+        tenantId: emissionPointData.tenantId,
+        code: emissionPointData.code,
+        description: emissionPointData.description,
+        isActive: emissionPointData.isActive,
+      },
+    });
+
+    // Create sequences if provided
+    if (emissionPointData.sequences && emissionPointData.sequences.length > 0) {
+      for (const seq of emissionPointData.sequences) {
+        await prisma.emissionPointSequence.create({
+          data: {
+            emissionPointId: newEmissionPoint.id,
+            documentType: seq.documentType,
+            currentSequence: Number(seq.currentSequence),
+          },
+        });
+      }
+    }
+
     return { success: true, data: newEmissionPoint };
   } catch (error) {
     console.error(error);
@@ -46,8 +82,36 @@ export const updateEmissionPoint = async (
   try {
     const updatedEmissionPoint = await prisma.emissionPoint.update({
       where: { id },
-      data: emissionPointData,
+      data: {
+        establishmentId: emissionPointData.establishmentId,
+        code: emissionPointData.code,
+        description: emissionPointData.description,
+        isActive: emissionPointData.isActive,
+      },
     });
+
+    // Update sequences if provided
+    if (emissionPointData.sequences && emissionPointData.sequences.length > 0) {
+      for (const seq of emissionPointData.sequences) {
+        await prisma.emissionPointSequence.upsert({
+          where: {
+            emissionPointId_documentType: {
+              emissionPointId: updatedEmissionPoint.id,
+              documentType: seq.documentType,
+            },
+          },
+          update: {
+            currentSequence: Number(seq.currentSequence),
+          },
+          create: {
+            emissionPointId: updatedEmissionPoint.id,
+            documentType: seq.documentType,
+            currentSequence: Number(seq.currentSequence),
+          },
+        });
+      }
+    }
+
     return { success: true, data: updatedEmissionPoint };
   } catch (error) {
     console.error(error);

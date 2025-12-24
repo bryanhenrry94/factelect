@@ -153,7 +153,7 @@ export const EmissionPointForm = () => {
         open={open}
         onClose={() => setOpen(false)}
         onSuccess={fetchEmissionPoints}
-        editingData={editingEmissionPoint}
+        id={editingEmissionPoint?.id}
       />
     </>
   );

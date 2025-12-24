@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 
 import {
   createEmissionPoint,
+  getEmissionPoint,
+  getEmissionPoints,
   updateEmissionPoint,
 } from "@/actions/emission-point";
 import { getEstablishments } from "@/actions";
@@ -27,7 +29,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
@@ -36,48 +45,83 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
+import { initialSequences } from "./initialSequence";
+import { getDocumentTypeLabelV2 } from "@/utils/document";
+import { getEmissionPointSequences } from "@/actions/emission-point-sequence";
 
 interface EmissionPointDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => Promise<void>;
-  editingData: EmissionPoint | null;
+  id?: string;
 }
 
 const EmissionPointDialog: React.FC<EmissionPointDialogProps> = ({
   open,
   onClose,
   onSuccess,
-  editingData,
+  id,
 }) => {
   const { data: session } = useSession();
   const [establishments, setEstablishments] = useState<Establishment[]>([]);
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    reset,
-  } = useForm<CreateEmissionPoint>({
+  const form = useForm<CreateEmissionPoint>({
     defaultValues: {
       establishmentId: "",
       code: "",
       description: "",
+      sequences: initialSequences,
       isActive: true,
     },
   });
 
+  const {
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = form;
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "sequences",
+  });
+
   /**
-   * 🔁 Reset formulario al cambiar entre crear / editar
+   * 🔁 Reset al editar
    */
   useEffect(() => {
-    reset({
-      establishmentId: editingData?.establishmentId ?? "",
-      code: editingData?.code ?? "",
-      description: editingData?.description ?? "",
-      isActive: editingData?.isActive ?? true,
-    });
-  }, [editingData, reset]);
+    if (!id) return;
+
+    const getData = async () => {
+      const response = await getEmissionPoint(id);
+      if (response.success && response.data) {
+        const emissionPointData = response.data;
+
+        const responseSequences = await getEmissionPointSequences(id);
+
+        reset({
+          establishmentId: emissionPointData.establishmentId,
+          code: emissionPointData.code,
+          description: emissionPointData.description || "",
+          isActive: emissionPointData.isActive,
+          sequences:
+            responseSequences.success && responseSequences.data
+              ? responseSequences.data
+              : initialSequences,
+        });
+      }
+    };
+
+    getData();
+  }, [id, reset]);
 
   /**
    * 📥 Cargar establecimientos
@@ -110,13 +154,13 @@ const EmissionPointDialog: React.FC<EmissionPointDialogProps> = ({
         tenantId: session.user.tenantId,
       };
 
-      const response = editingData
-        ? await updateEmissionPoint(editingData.id!, payload)
+      const response = id
+        ? await updateEmissionPoint(id!, payload)
         : await createEmissionPoint(payload);
 
       if (response.success) {
         notifyInfo(
-          editingData
+          id
             ? "Punto de emisión actualizado correctamente"
             : "Punto de emisión creado correctamente"
         );
@@ -133,113 +177,164 @@ const EmissionPointDialog: React.FC<EmissionPointDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <DialogHeader>
-            <DialogTitle>
-              {editingData
-                ? "Editar Punto de Emisión"
-                : "Agregar Punto de Emisión"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingData
-                ? "Actualiza la información del punto de emisión."
-                : "Agrega un nuevo punto de emisión a tu base de datos."}
-            </DialogDescription>
-          </DialogHeader>
+      <DialogContent className="sm:max-w-1xl max-h-[90vh] flex flex-col">
+        <Form {...form}>
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col flex-1 overflow-hidden"
+          >
+            <DialogHeader>
+              <DialogTitle>
+                {id ? "Editar Punto de Emisión" : "Agregar Punto de Emisión"}
+              </DialogTitle>
+              <DialogDescription>
+                {id
+                  ? "Actualiza la información del punto de emisión."
+                  : "Agrega un nuevo punto de emisión a tu base de datos."}
+              </DialogDescription>
+            </DialogHeader>
 
-          {/* Establecimiento */}
-          <div className="space-y-1">
-            <Label>Establecimiento</Label>
-            <Controller
-              name="establishmentId"
-              control={control}
-              rules={{ required: "El establecimiento es obligatorio" }}
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione un establecimiento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {establishments.map((est) => (
-                      <SelectItem key={est.id} value={est.id || ""}>
-                        {est.code} - {est.address}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.establishmentId && (
-              <p className="text-sm text-destructive">
-                {errors.establishmentId.message}
-              </p>
-            )}
-          </div>
+            <div className="flex-1 overflow-y-auto pr-2 space-y-6 mt-4 mb-4">
+              {/* Establecimiento */}
+              <FormField
+                control={form.control}
+                name="establishmentId"
+                rules={{ required: "El establecimiento es obligatorio" }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Establecimiento</FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccione un establecimiento" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {establishments.map((est) => (
+                            <SelectItem key={est.id} value={est.id || ""}>
+                              {est.code} - {est.address}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          {/* Código */}
-          <div className="space-y-1">
-            <Label>Punto de Emisión</Label>
-            <Controller
-              name="code"
-              control={control}
-              rules={{
-                required: "El punto de emisión es obligatorio",
-                minLength: { value: 3, message: "Debe tener 3 dígitos" },
-                maxLength: { value: 3, message: "Debe tener 3 dígitos" },
-              }}
-              render={({ field }) => <Input placeholder="001" {...field} />}
-            />
-            {errors.code && (
-              <p className="text-sm text-destructive">{errors.code.message}</p>
-            )}
-          </div>
+              {/* Código */}
+              <FormField
+                control={form.control}
+                name="code"
+                rules={{
+                  required: "El punto de emisión es obligatorio",
+                  minLength: { value: 3, message: "Debe tener 3 dígitos" },
+                  maxLength: { value: 3, message: "Debe tener 3 dígitos" },
+                }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Punto de Emisión</FormLabel>
+                    <FormControl>
+                      <Input placeholder="001" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          {/* Descripción */}
-          <div className="space-y-1">
-            <Label>Descripción</Label>
-            <Controller
-              name="description"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  placeholder="Caja principal"
-                  {...field}
-                  value={field.value || ""}
-                />
-              )}
-            />
-          </div>
+              {/* Descripción */}
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descripción</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Caja principal"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          {/* Activo */}
-          <div className="flex items-center space-x-2">
-            <Controller
-              name="isActive"
-              control={control}
-              render={({ field }) => (
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              )}
-            />
-            <Label>Activo</Label>
-          </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tipo Documento</TableHead>
+                    <TableHead>Secuencia Actual</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {fields.map((field, index) => (
+                    <TableRow key={field.id}>
+                      <TableCell>
+                        {getDocumentTypeLabelV2(field.documentType)}
+                      </TableCell>
+                      <TableCell>
+                        <FormField
+                          control={form.control}
+                          name={`sequences.${index}.currentSequence` as const}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  {...field}
+                                  value={field.value || 1}
+                                  className="text-right"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {editingData ? "Actualizar" : "Agregar"}
-            </Button>
-          </DialogFooter>
-        </form>
+              {/* Activo */}
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="font-normal">Activo</FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <DialogFooter className="pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {id ? "Actualizar" : "Agregar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
