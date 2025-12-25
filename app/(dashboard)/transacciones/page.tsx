@@ -3,10 +3,14 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Plus, Edit, Trash2, File, Car } from "lucide-react";
+import { Plus, Edit, Trash2, File } from "lucide-react";
 
 import PageContainer from "@/components/container/PageContainer";
-import { getPersonsByTenant, getTransactions } from "@/actions";
+import {
+  deleteTransaction,
+  getPersonsByTenant,
+  getTransactions,
+} from "@/actions";
 import { TransactionInput } from "@/lib/validations";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { getTransactionTypeLabel } from "@/utils/transaction";
@@ -33,7 +37,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PersonInput } from "@/lib/validations/person/person";
 import { PaginationControls } from "@/components/ui/pagination-controls";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -45,6 +49,8 @@ import { useSearchFilter } from "@/hooks/useSearchFilter";
 import { useDateRangeFilter } from "@/hooks/useDateRangeFilter";
 import { usePersonFilter } from "@/hooks/usePersonFilter";
 import { useTypeFilter } from "@/hooks/useTypeFilter";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { notifyError, notifyInfo } from "@/lib/notifications";
 
 const TransactionsPage = () => {
   const { data: session } = useSession();
@@ -69,7 +75,26 @@ const TransactionsPage = () => {
   const handleEdit = (t: TransactionInput) => {
     router.push(`/transacciones/${t.id}/editar`);
   };
-  const handleDelete = (id: string) => {};
+  const handleDelete = async (id: string) => {
+    const confirmed = await ConfirmDialog.confirm(
+      "¿Estás seguro",
+      "¿Deseas eliminar esta transacción?"
+    );
+
+    if (confirmed) {
+      const res = await deleteTransaction(id);
+
+      if (!res.success) {
+        notifyError(res.error || "No se pudo eliminar la transacción.");
+        return;
+      }
+
+      if (res.success) {
+        notifyInfo("Transacción eliminada correctamente.");
+        fetchTransactions();
+      }
+    }
+  };
 
   const normalizedSearch = React.useMemo(
     () => search?.trim() || undefined,

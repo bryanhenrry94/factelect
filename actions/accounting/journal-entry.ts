@@ -146,9 +146,52 @@ export const deleteJournalEntry = async (
   id: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    // Aqui se debe validar si el asiento puede ser eliminado (no estar referenciado en otros documentos)
-
     const result = await prisma.$transaction(async (tx) => {
+      // 1️⃣ Validar existencia
+      const movement = await tx.journalEntry.findUnique({
+        where: { id },
+      });
+
+      if (!movement) {
+        throw new Error("Asiento contable no encontrado");
+      }
+
+      // Validar que no este referenciado en contabilizacion de documentos
+      if (movement.sourceType === "DOCUMENT" && movement.sourceId) {
+        const linkedDocument = await tx.document.findUnique({
+          where: { id: movement.sourceId },
+        });
+
+        if (linkedDocument) {
+          throw new Error(
+            "No se puede eliminar un asiento contable asociado a un documento"
+          );
+        }
+      }
+
+      // 2️⃣ Validar que no esté referenciado en movimientos de caja
+      const hasCashMovement = await tx.cashMovement.findFirst({
+        where: { journalEntryId: id },
+      });
+
+      if (hasCashMovement) {
+        throw new Error(
+          "No se puede eliminar un asiento contable asociado a un movimiento de caja"
+        );
+      }
+
+      // 3️⃣ Validar que no esté referenciado en movimientos bancarios
+      const hasBankMovement = await tx.bankMovement.findFirst({
+        where: { journalEntryId: id },
+      });
+
+      if (hasBankMovement) {
+        throw new Error(
+          "No se puede eliminar un asiento contable asociado a un movimiento bancario"
+        );
+      }
+
+      // proceder a eliminar
       // eliminar ledger lines asociados
       await tx.journalEntryLine.deleteMany({
         where: { journalEntryId: id },
@@ -161,9 +204,12 @@ export const deleteJournalEntry = async (
     });
 
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting journal entry:", error);
-    return { success: false, error: "Error deleting journal entry" };
+    return {
+      success: false,
+      error: error.message || "Error al eliminar el asiento contable",
+    };
   }
 };
 

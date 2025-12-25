@@ -64,13 +64,57 @@ export const deleteBankMovement = async (
   id: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    await prisma.bankMovement.deleteMany({
-      where: { id },
+    await prisma.$transaction(async (tx) => {
+      // 1️⃣ Obtener movimiento
+      const movement = await tx.bankMovement.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          transactionId: true,
+          journalEntryId: true,
+        },
+      });
+
+      if (!movement) {
+        throw new Error("Movimiento bancario no encontrado");
+      }
+
+      // 2️⃣ Validar que no venga de una transacción
+      if (movement.transactionId) {
+        throw new Error(
+          "No se puede eliminar un movimiento asociado a una transacción"
+        );
+      }
+
+      // 3️⃣ Eliminar asiento contable asociado
+      if (movement.journalEntryId) {
+        await tx.journalEntryLine.deleteMany({
+          where: { journalEntryId: movement.journalEntryId },
+        });
+
+        await tx.journalEntry.delete({
+          where: { id: movement.journalEntryId },
+        });
+      }
+
+      // 4️⃣ Eliminar detalles del movimiento
+      await tx.bankMovementDetail.deleteMany({
+        where: { bankMovementId: id },
+      });
+
+      // 5️⃣ Eliminar el movimiento bancario
+      await tx.bankMovement.delete({
+        where: { id },
+      });
     });
+
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting bank movement:", error);
-    return { success: false, error: "Error deleting bank movement" };
+    return {
+      success: false,
+      error: error.message || "Error deleting bank movement",
+    };
   }
 };
 

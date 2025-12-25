@@ -119,7 +119,11 @@ export function CashMovementForm({
       };
 
       const response = cashMovementSelected
-        ? await updateCashMovement(cashMovementSelected.id, payload)
+        ? await updateCashMovement(
+            cashMovementSelected.id,
+            session.user.tenantId,
+            payload
+          )
         : await createCashMovement(session.user.tenantId, payload);
 
       if (response.success) {

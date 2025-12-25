@@ -43,6 +43,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CashBox } from "@/lib/validations/cash/cash_box";
 import { getAllCashBoxes } from "@/actions/cash/cash-box";
+import { useRouter } from "next/navigation";
 
 const now = new Date();
 const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -50,6 +51,7 @@ const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
 export default function CashBoxMovementsPage() {
   const { data: session } = useSession();
+  const router = useRouter();
 
   const { search, setSearch } = useSearchFilter();
   const { dateFrom, setDateFrom, dateTo, setDateTo } = useDateRangeFilter({
@@ -108,6 +110,11 @@ export default function CashBoxMovementsPage() {
   }, [session?.user?.tenantId, search, dateFrom, dateTo]);
 
   const handleEdit = (m: CashMovement) => {
+    if(m.transactionId) {
+      router.push(`/transacciones/${m.transactionId}/editar`);
+      return;
+    }
+
     setCashMovementSelected(m);
     setOpen(true);
   };

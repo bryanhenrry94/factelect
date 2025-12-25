@@ -137,11 +137,14 @@ export default function AsientosContablesPage() {
 
     const response = await deleteJournalEntry(id);
 
+    if (!response.success) {
+      notifyError(response.error || "Error al eliminar el asiento contable");
+      return;
+    }
+
     if (response.success) {
       notifyInfo("Asiento contable eliminado correctamente");
       fetchJournalEntries();
-    } else {
-      notifyError("Error al eliminar el asiento contable");
     }
   };
 

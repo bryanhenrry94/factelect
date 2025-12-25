@@ -609,13 +609,98 @@ export const deleteTransaction = async (
   transactionId: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    await prisma.transaction.delete({
-      where: { id: transactionId },
+    await prisma.$transaction(async (tx) => {
+      // 1️⃣ Validar que exista
+      const existing = await tx.transaction.findUnique({
+        where: { id: transactionId },
+      });
+
+      if (!existing) {
+        throw new Error("La transacción no existe");
+      }
+
+      // 2️⃣ Obtener documentos asociados ANTES de borrar
+      const transactionDocuments = await tx.transactionDocument.findMany({
+        where: { transactionId },
+      });
+
+      // 3️⃣ Obtener movimientos de caja asociados
+      const cashMovements = await tx.cashMovement.findMany({
+        where: { transactionId },
+      });
+
+      for (const cm of cashMovements) {
+        if (cm.journalEntryId) {
+          await tx.journalEntry.delete({
+            where: { id: cm.journalEntryId },
+          });
+        }
+
+        await tx.cashMovement.delete({
+          where: { id: cm.id },
+        });
+      }
+
+      // 4️⃣ Obtener movimientos bancarios asociados
+      const bankMovements = await tx.bankMovement.findMany({
+        where: { transactionId },
+      });
+
+      for (const bm of bankMovements) {
+        if (bm.journalEntryId) {
+          await tx.journalEntry.delete({
+            where: { id: bm.journalEntryId },
+          });
+        }
+
+        await tx.bankMovementDetail.deleteMany({
+          where: { bankMovementId: bm.id },
+        });
+
+        await tx.bankMovement.delete({
+          where: { id: bm.id },
+        });
+      }
+
+      // 5️⃣ Recalcular saldos de documentos
+      for (const txDoc of transactionDocuments) {
+        const document = await tx.document.findUnique({
+          where: { id: txDoc.documentId },
+          select: { total: true, paidAmount: true },
+        });
+
+        if (document) {
+          const paid = Number(document.paidAmount || 0) - Number(txDoc.amount);
+          const safePaid = Math.max(paid, 0);
+          const balance = Number(document.total) - safePaid;
+
+          await tx.document.update({
+            where: { id: txDoc.documentId },
+            data: {
+              paidAmount: safePaid,
+              balance: Math.max(balance, 0),
+            },
+          });
+        }
+      }
+
+      // 6️⃣ Eliminar asociaciones con documentos
+      await tx.transactionDocument.deleteMany({
+        where: { transactionId },
+      });
+
+      // 7️⃣ Eliminar la transacción
+      await tx.transaction.delete({
+        where: { id: transactionId },
+      });
     });
 
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting transaction:", error);
-    return { success: false, error: "Error deleting transaction" };
+    return {
+      success: false,
+      error: error.message || "Error deleting transaction",
+    };
   }
 };

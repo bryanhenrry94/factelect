@@ -155,7 +155,7 @@ export const updateCashMovementTx = async (
   tx: Prisma.TransactionClient,
   tenantId: string,
   id: string,
-  data: CreateCashMovement
+  data: Partial<CreateCashMovement>
 ): Promise<CashMovement> => {
   // Actualizar el movimiento de caja
   const updatedMovement = await tx.cashMovement.update({
@@ -216,7 +216,16 @@ export const updateCashMovementTx = async (
   if (existingJournalEntry) {
     await updateJournalEntryTx(tx, existingJournalEntry.id, journalEntry);
   } else {
-    await createJournalEntryTx(tx, tenantId, journalEntry);
+    const response = await createJournalEntryTx(tx, tenantId, journalEntry);
+    if (response.success && response.data) {
+      // actualiza cas movement para linkear el journal entry
+      await tx.cashMovement.update({
+        where: { id: updatedMovement.id },
+        data: {
+          journalEntryId: response.data.id,
+        },
+      });
+    }
   }
 
   return {
@@ -252,38 +261,16 @@ export const createCashMovement = async (
 
 export const updateCashMovement = async (
   id: string,
+  tenantId: string,
   data: UpdateCashMovement
 ): Promise<{ success: boolean; error?: string; data?: CashMovement }> => {
   try {
-    const updatedCashMovement = await prisma.cashMovement.updateMany({
-      where: {
-        id,
-      },
-      data,
+    const response = await prisma.$transaction(async (tx) => {
+      const cashMovement = await updateCashMovementTx(tx, tenantId, id, data);
+      return cashMovement;
     });
 
-    if (updatedCashMovement.count === 0) {
-      return {
-        success: false,
-        error: "Movimiento de caja no encontrado o sin permisos",
-      };
-    }
-
-    const cashMovement = await prisma.cashMovement.findUnique({
-      where: { id },
-    });
-
-    const mappedCashMovement = cashMovement
-      ? {
-          ...cashMovement,
-          transactionId: cashMovement.transactionId ?? undefined,
-          description: cashMovement.description ?? undefined,
-          reference: cashMovement.reference ?? undefined,
-          accountId: cashMovement.accountId ?? undefined,
-        }
-      : undefined;
-
-    return { success: true, data: mappedCashMovement };
+    return { success: true, data: response };
   } catch (error) {
     return {
       success: false,
