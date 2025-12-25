@@ -7,6 +7,8 @@ import {
 } from "@/lib/validations";
 import { createCashMovementTx } from "./cash/cash-movement";
 import { CreateCashMovement } from "@/lib/validations/cash/cash_movement";
+import { CreateBankMovement } from "@/lib/validations/bank/bank_movement";
+import { createBankMovementTx } from "./bank/bank-movement";
 
 export const validateTransactionData = async (
   data: Partial<CreateTransactionInput>
@@ -255,68 +257,25 @@ export const createTransaction = async (
         if (!counterAccountId)
           throw new Error("Cuenta contable de la persona no configurada");
 
-        const bankMov = await tx.bankMovement.create({
-          data: {
-            bankAccountId: parsedData.bankAccountId,
-            transactionId: transaction.id,
-            type: isIncome ? "CREDIT" : "DEBIT",
-            amount,
-            description: parsedData.description ?? "",
-            date: parsedData.issueDate,
-            tenantId,
-          },
-        });
+        const bankMov: CreateBankMovement = {
+          bankAccountId: parsedData.bankAccountId,
+          transactionId: transaction.id,
+          type: isIncome ? "IN" : "OUT",
+          date: parsedData.issueDate,
+          amount,
+          description: parsedData.description ?? "",
+          details: [
+            {
+              accountId: counterAccountId,
+              amount,
+              description: parsedData.description ?? "",
+              costCenterId: null,
+            },
+          ],
+        };
 
-        const bankMovDet = await tx.bankMovementDetail.create({
-          data: {
-            tenantId,
-            bankMovementId: bankMov.id,
-            description: parsedData.description ?? "",
-            costCenterId: null,
-            accountId: counterAccountId,
-            amount,
-          },
-        });
-
-        const journal = await tx.journalEntry.create({
-          data: {
-            tenantId,
-            date: parsedData.issueDate,
-            description: parsedData.description ?? "",
-            sourceType: "BANK_MOVEMENT",
-            sourceId: bankMov.id,
-            type: parsedData.type,
-          },
-        });
-
-        const bankAccount = await tx.bankAccount.findUnique({
-          where: { id: parsedData.bankAccountId },
-        });
-        if (!bankAccount)
-          throw new Error("Cuenta bancaria no encontrada para la transacción");
-
-        /* Asientos contables */
-        // 🏦 Banco
-        await tx.journalEntryLine.create({
-          data: {
-            tenantId,
-            journalEntryId: journal.id,
-            accountId: bankAccount.accountId!,
-            debit: isIncome ? amount : 0,
-            credit: isIncome ? 0 : amount,
-          },
-        });
-
-        // 👤 Cliente / Proveedor
-        await tx.journalEntryLine.create({
-          data: {
-            tenantId,
-            journalEntryId: journal.id,
-            accountId: counterAccountId,
-            debit: isIncome ? 0 : amount,
-            credit: isIncome ? amount : 0,
-          },
-        });
+        // Crear el movimiento bancario dentro de la misma transacción
+        await createBankMovementTx(tx, tenantId, bankMov);
       }
 
       return transaction;

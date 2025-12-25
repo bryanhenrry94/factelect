@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createBankMovementDetailSchema } from "./bank-movement-detail";
 
-export const BankMovementTypeEnum = z.enum(["DEBIT", "CREDIT"]);
+export const BankMovementTypeEnum = z.enum(["IN", "OUT"]);
 
 export const BankMovementSchema = z.object({
   id: z.string(),
@@ -10,6 +10,7 @@ export const BankMovementSchema = z.object({
   type: BankMovementTypeEnum,
   date: z.date(),
   reference: z.string().optional(),
+  transactionId: z.string().optional(),
   amount: z.number().positive("El monto debe ser un número positivo"),
   description: z.string().optional(),
   journalEntryId: z.string().optional(),

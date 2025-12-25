@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash } from "lucide-react";
 
@@ -36,6 +36,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
 
 /* domain */
 import { notifyError, notifyInfo } from "@/lib/notifications";
@@ -47,19 +55,20 @@ import {
   BankMovementSchema,
 } from "@/lib/validations/bank/bank_movement";
 import { $Enums } from "@/prisma/generated/prisma";
+import { AccountSelect } from "../AccountSelected";
 
 /* -------------------------------- */
 
 const bankMovementTypeLabels: Record<$Enums.BankMovementType, string> = {
-  DEBIT: "Nota de Débito",
-  CREDIT: "Nota de Crédito",
+  IN: "Ingreso",
+  OUT: "Egreso",
 };
 
 const initialBankMovement: BankMovement = {
   id: "",
   tenantId: "",
   bankAccountId: "",
-  type: $Enums.BankMovementType.DEBIT,
+  type: $Enums.BankMovementType.IN,
   date: new Date(),
   amount: 0,
   description: "",
@@ -80,6 +89,11 @@ export function BankMovementForm({ bankMovementId }: Props) {
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
 
+  const form = useForm<BankMovement>({
+    resolver: zodResolver(BankMovementSchema),
+    defaultValues: initialBankMovement,
+  });
+
   const {
     control,
     handleSubmit,
@@ -87,10 +101,7 @@ export function BankMovementForm({ bankMovementId }: Props) {
     watch,
     setValue,
     formState: { isSubmitting },
-  } = useForm<BankMovement>({
-    resolver: zodResolver(BankMovementSchema),
-    defaultValues: initialBankMovement,
-  });
+  } = form;
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -127,7 +138,7 @@ export function BankMovementForm({ bankMovementId }: Props) {
 
   const total = useMemo(() => {
     return (details || []).reduce((sum, d) => sum + Number(d?.amount || 0), 0);
-  }, [details?.map((d) => d.amount).join(",")]);
+  }, [details]);
 
   useEffect(() => {
     setValue("amount", total, { shouldDirty: true });
@@ -154,226 +165,271 @@ export function BankMovementForm({ bankMovementId }: Props) {
   /* ==================== UI ==================== */
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="flex items-center justify-between border-b pb-4">
-        <div>
-          <h2 className="text-xl font-semibold">Movimiento Bancario</h2>
-          <p className="text-sm text-muted-foreground">
-            {bankMovementId ? "Editar movimiento" : "Nuevo movimiento"}
-          </p>
+    <Form {...form}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b pb-4">
+          <div>
+            <h2 className="text-xl font-semibold">Movimiento Bancario</h2>
+            <p className="text-sm text-muted-foreground">
+              {bankMovementId ? "Editar movimiento" : "Nuevo movimiento"}
+            </p>
+          </div>
+
+          <div className="text-sm text-muted-foreground">
+            Total:
+            <span className="ml-2 text-lg font-semibold text-foreground">
+              {new Intl.NumberFormat("es-EC", {
+                style: "currency",
+                currency: "USD",
+              }).format(total)}
+            </span>
+          </div>
         </div>
 
-        <div className="text-sm text-muted-foreground">
-          Total:
-          <span className="ml-2 text-lg font-semibold text-foreground">
-            {new Intl.NumberFormat("es-EC", {
-              style: "currency",
-              currency: "USD",
-            }).format(total)}
-          </span>
-        </div>
-      </div>
-
-      {/* Datos principales */}
-      <div className="rounded-lg border bg-muted/30 p-4">
-        <h3 className="mb-3 text-sm font-medium text-muted-foreground">
-          Datos generales
-        </h3>
-
+        {/* Datos generales */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* type */}
-          <Controller
-            name="type"
+          <FormField
             control={control}
+            name="type"
             render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tipo de movimiento" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values($Enums.BankMovementType).map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {bankMovementTypeLabels[t]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormItem>
+                <FormLabel>Tipo</FormLabel>
+                <FormControl>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Tipo de movimiento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values($Enums.BankMovementType).map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {bankMovementTypeLabels[t]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
           />
 
           {/* date */}
-          <Controller
-            name="date"
+          <FormField
             control={control}
+            name="date"
             render={({ field }) => (
-              <Input
-                type="date"
-                value={field.value?.toISOString().split("T")[0]}
-                onChange={(e) => field.onChange(new Date(e.target.value))}
-              />
+              <FormItem>
+                <FormLabel>Fecha</FormLabel>
+                <FormControl>
+                  <Input
+                    type="date"
+                    value={
+                      field.value
+                        ? new Date(field.value).toISOString().split("T")[0]
+                        : ""
+                    }
+                    onChange={(e) => field.onChange(new Date(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
           />
 
           {/* bankAccount */}
-          <Controller
-            name="bankAccountId"
+          <FormField
             control={control}
+            name="bankAccountId"
             render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Cuenta bancaria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bankAccounts.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.bankName} - {b.accountNumber}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormItem>
+                <FormLabel>Cuenta bancaria</FormLabel>
+                <FormControl>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Cuenta bancaria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bankAccounts.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.bankName} - {b.accountNumber}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
           />
 
           {/* reference */}
-          <Controller
-            name="reference"
+          <FormField
             control={control}
+            name="reference"
             render={({ field }) => (
-              <Input {...field} placeholder="Referencia" />
+              <FormItem>
+                <FormLabel>Referencia</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Referencia" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
           />
 
           {/* description */}
-          <Controller
-            name="description"
+          <FormField
             control={control}
+            name="description"
             render={({ field }) => (
-              <Textarea {...field} placeholder="Descripción" />
+              <FormItem className="md:col-span-2">
+                <FormLabel>Descripción</FormLabel>
+                <FormControl>
+                  <Textarea {...field} placeholder="Descripción" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
           />
         </div>
-      </div>
 
-      {/* Detalles */}
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/40">
-            <TableHead>Cuenta contable</TableHead>
-            <TableHead className="text-right">Monto</TableHead>
-            <TableHead>Centro de costo</TableHead>
-            <TableHead className="w-10" />
-          </TableRow>
-        </TableHeader>
+        {/* Detalles */}
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40">
+              <TableHead>Cuenta contable</TableHead>
+              <TableHead className="text-right">Monto</TableHead>
+              <TableHead>Centro de costo</TableHead>
+              <TableHead className="w-10" />
+            </TableRow>
+          </TableHeader>
 
-        <TableBody>
-          {fields.map((f, i) => (
-            <TableRow key={f.id}>
-              <TableCell>
-                <Controller
-                  name={`details.${i}.accountId`}
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value || "__none"}
-                      onValueChange={(v) =>
-                        field.onChange(v === "__none" ? "" : v)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Cuenta" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none">Seleccionar</SelectItem>
-                        {accounts.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.code} {a.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </TableCell>
+          <TableBody>
+            {fields.map((f, i) => (
+              <TableRow key={f.id}>
+                {/* account */}
+                <TableCell>
+                  <FormField
+                    control={control}
+                    name={`details.${i}.accountId`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <AccountSelect
+                            label="Selecciona una cuenta"
+                            accounts={accounts}
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TableCell>
 
-              <TableCell className="text-right">
-                <Controller
-                  name={`details.${i}.amount`}
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="number"
-                      className="text-right font-mono"
-                      value={field.value ?? ""}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  )}
-                />
-              </TableCell>
+                {/* amount */}
+                <TableCell className="text-right">
+                  <FormField
+                    control={control}
+                    name={`details.${i}.amount`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            className="text-right font-mono"
+                            value={field.value ?? ""}
+                            onChange={(e) =>
+                              field.onChange(Number(e.target.value))
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TableCell>
 
-              <TableCell>
-                <Controller
-                  name={`details.${i}.costCenterId`}
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value || "__none"}
-                      onValueChange={(v) =>
-                        field.onChange(v === "__none" ? null : v)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Centro de costo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none">Ninguno</SelectItem>
-                        {costCenters.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.code} {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </TableCell>
+                {/* cost center */}
+                <TableCell>
+                  <FormField
+                    control={control}
+                    name={`details.${i}.costCenterId`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Select
+                            value={field.value || "__none"}
+                            onValueChange={(v) =>
+                              field.onChange(v === "__none" ? null : v)
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Centro de costo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none">Ninguno</SelectItem>
+                              {costCenters.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.code} {c.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TableCell>
 
-              <TableCell>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => remove(i)}
-                >
-                  <Trash className="h-4 w-4 text-destructive" />
-                </Button>
+                {/* delete */}
+                <TableCell>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => remove(i)}
+                  >
+                    <Trash className="h-4 w-4 text-destructive" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+
+            <TableRow>
+              <TableCell colSpan={4}>
+                <div className="flex justify-start py-3">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() =>
+                      append({
+                        accountId: "",
+                        amount: 0,
+                        costCenterId: null,
+                      })
+                    }
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Agregar línea contable
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
-          ))}
+          </TableBody>
+        </Table>
 
-          <TableRow>
-            <TableCell colSpan={4}>
-              <div className="flex justify-start py-3">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() =>
-                    append({ accountId: "", amount: 0, costCenterId: null })
-                  }
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Agregar línea contable
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-
-      <div className="flex justify-end">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando..." : "Guardar Movimiento"}
-        </Button>
-      </div>
-    </form>
+        {/* Actions */}
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Guardando..." : "Guardar Movimiento"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }

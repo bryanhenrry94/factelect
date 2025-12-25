@@ -1,6 +1,7 @@
 "use server";
 import { prisma } from "@/lib/prisma";
 import { BankMovement } from "@/lib/validations/bank/bank_movement";
+import { Prisma } from "@/prisma/generated/prisma";
 
 export const getAllBankMovements = async (
   tenantId: string,
@@ -33,6 +34,7 @@ export const getAllBankMovements = async (
 
     const formatted = bankMovements.map((m) => ({
       ...m,
+      transactionId: m.transactionId || undefined,
       description: m.description ?? "",
       journalEntryId: m.journalEntryId ?? undefined,
       reference: m.reference ?? "",
@@ -66,6 +68,95 @@ export const deleteBankMovement = async (
   }
 };
 
+export const createBankMovementTx = async (
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  data: Omit<BankMovement, "id" | "tenantId" | "createdAt">
+): Promise<BankMovement> => {
+  const newMovement = await tx.bankMovement.create({
+    data: {
+      tenantId,
+      bankAccountId: data.bankAccountId,
+      type: data.type,
+      date: data.date,
+      amount: data.amount,
+      description: data.description || null,
+      reference: data.reference || null,
+    },
+  });
+
+  if (data.details?.length) {
+    await Promise.all(
+      data.details.map((detail) =>
+        tx.bankMovementDetail.create({
+          data: {
+            tenantId,
+            bankMovementId: newMovement.id,
+            accountId: detail.accountId,
+            costCenterId: detail.costCenterId || null,
+            description: detail.description || null,
+            amount: detail.amount,
+          },
+        })
+      )
+    );
+
+    // Contabilizar los detalles del movimiento bancario aquí si es necesario
+    const journal = await tx.journalEntry.create({
+      data: {
+        tenantId,
+        date: newMovement.date,
+        description: newMovement.description ?? "",
+        sourceType: "BANK_MOVEMENT",
+        sourceId: newMovement.id,
+        type: "DEPOSIT",
+      },
+    });
+
+    const bankAccount = await tx.bankAccount.findUnique({
+      where: { id: newMovement.bankAccountId },
+    });
+    if (!bankAccount)
+      throw new Error("Cuenta bancaria no encontrada para la transacción");
+
+    /* Asientos contables */
+    // 🏦 Banco
+    await tx.journalEntryLine.create({
+      data: {
+        tenantId,
+        journalEntryId: journal.id,
+        accountId: bankAccount.accountId!,
+        debit: newMovement.type === "IN" ? newMovement.amount : 0,
+        credit: newMovement.type === "OUT" ? newMovement.amount : 0,
+      },
+    });
+
+    // 📄 Detalles del movimiento bancario
+    data.details.map(async (detail) => {
+      await tx.journalEntryLine.create({
+        data: {
+          tenantId,
+          journalEntryId: journal.id,
+          accountId: detail.accountId,
+          debit: newMovement.type === "IN" ? 0 : detail.amount,
+          credit: newMovement.type === "OUT" ? 0 : detail.amount,
+        },
+      });
+    });
+  }
+
+  return {
+    ...newMovement,
+    transactionId: newMovement.transactionId || undefined,
+    description: newMovement.description || "",
+    reference: newMovement.reference || "",
+    journalEntryId: newMovement.journalEntryId ?? undefined,
+  };
+};
+
+/* =========================================================
+ * Función pública: abre la transacción y llama a la nueva
+ * ========================================================= */
 export const createBankMovement = async (
   tenantId: string,
   data: Omit<BankMovement, "id" | "tenantId" | "createdAt">
@@ -73,41 +164,11 @@ export const createBankMovement = async (
   try {
     console.log("Creating bank movement with data:", data);
 
-    const newMovement = await prisma.bankMovement.create({
-      data: {
-        tenantId,
-        bankAccountId: data.bankAccountId,
-        type: data.type,
-        date: data.date,
-        amount: data.amount,
-        description: data.description,
-        reference: data.reference || null,
-      },
-    });
+    const movement = await prisma.$transaction((tx) =>
+      createBankMovementTx(tx, tenantId, data)
+    );
 
-    // registrar detalles si es necesario
-    data.details?.forEach(async (detail) => {
-      await prisma.bankMovementDetail.create({
-        data: {
-          tenantId,
-          bankMovementId: newMovement.id,
-          accountId: detail.accountId,
-          costCenterId: detail.costCenterId || null,
-          description: detail.description || null,
-          amount: detail.amount,
-        },
-      });
-    });
-
-    const formattedMovement = {
-      ...newMovement,
-      description: newMovement.description || "",
-      reference: newMovement.reference || "",
-      amount: newMovement.amount,
-      journalEntryId: newMovement.journalEntryId ?? undefined,
-    };
-
-    return { success: true, data: formattedMovement };
+    return { success: true, data: movement };
   } catch (error) {
     console.error("Error creating bank movement:", error);
     return { success: false, error: "Error creating bank movement" };
@@ -165,6 +226,7 @@ export const updateBankMovement = async (
     const formattedMovement = movement
       ? {
           ...movement,
+          transactionId: movement.transactionId || undefined,
           description: movement.description || "",
           reference: movement.reference || "",
           amount: movement.amount,
@@ -194,6 +256,7 @@ export const getBankMovementById = async (
 
     const formattedMovement = {
       ...movement,
+      transactionId: movement.transactionId || undefined,
       description: movement.description || "",
       journalEntryId: movement.journalEntryId ?? undefined,
       reference: movement.reference || "",

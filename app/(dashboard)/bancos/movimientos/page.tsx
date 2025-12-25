@@ -113,10 +113,10 @@ export default function BankMovementsPage() {
   /* Helpers */
   /* ========================== */
 
-  const getSymbol = (t: $Enums.BankMovementType) => (t === "DEBIT" ? "-" : "+");
+  const getSymbol = (t: $Enums.BankMovementType) => (t === "OUT" ? "-" : "+");
 
   const getTypeMovementLabel = (t: $Enums.BankMovementType) =>
-    t === "DEBIT" ? "ND" : "NC";
+    t === "IN" ? "Ingreso" : "Egreso";
 
   /* ========================== */
   /* UI */

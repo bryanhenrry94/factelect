@@ -136,7 +136,7 @@ export const createBankTransfer = async (
       data: {
         tenantId,
         bankAccountId: data.fromAccountId,
-        type: "DEBIT",
+        type: "OUT",
         date: data.date,
         amount: data.amount,
         description: data.description,
@@ -149,7 +149,7 @@ export const createBankTransfer = async (
       data: {
         tenantId,
         bankAccountId: data.toAccountId,
-        type: "CREDIT",
+        type: "IN",
         date: data.date,
         amount: data.amount,
         description: data.description,
@@ -216,7 +216,7 @@ export const updateBankTransfer = async (
         where: { id: data.movementOutId },
         data: {
           bankAccountId: data.fromAccountId,
-          type: "DEBIT",
+          type: "OUT",
           date: data.date,
           amount: data.amount,
           description: data.description,
@@ -230,7 +230,7 @@ export const updateBankTransfer = async (
         where: { id: data.movementInId },
         data: {
           bankAccountId: data.toAccountId,
-          type: "CREDIT",
+          type: "IN",
           date: data.date,
           amount: data.amount,
           description: data.description,

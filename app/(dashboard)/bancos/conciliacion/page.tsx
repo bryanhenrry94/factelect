@@ -105,10 +105,9 @@ export default function BankConciliacionPage() {
   };
 
   const getTypeLabel = (t: $Enums.BankMovementType) =>
-    t === "DEBIT" ? "ND" : "NC";
+    t === "OUT" ? "Egreso" : "Ingreso";
 
-  const getSymbol = (t: $Enums.BankMovementType) =>
-    t === "CREDIT" ? "+" : "-";
+  const getSymbol = (t: $Enums.BankMovementType) => (t === "IN" ? "+" : "-");
 
   return (
     <PageContainer

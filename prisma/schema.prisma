@@ -1107,8 +1107,8 @@ enum AccountKind {
 }
 
 enum BankMovementType {
-  DEBIT
-  CREDIT
+  IN
+  OUT
 }
 
 enum CashMovementType {
