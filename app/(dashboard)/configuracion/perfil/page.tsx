@@ -19,9 +19,16 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+/* Removed unused Avatar and Alert imports */
 import { Label } from "@/components/ui/label";
+import {
+  FieldDescription,
+  FieldGroup,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Lock, User } from "lucide-react";
 
 export default function ProfilePage() {
   const { data: session } = useSession();
@@ -53,99 +60,83 @@ export default function ProfilePage() {
 
   return (
     <PageContainer title="Perfil" description="Gestión de perfil de usuario">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* ===================== */}
-        {/* PERFIL / AVATAR */}
-        {/* ===================== */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Actualizar Perfil</CardTitle>
-            <CardDescription>
-              Cambia tu foto de perfil desde aquí
-            </CardDescription>
-          </CardHeader>
+      <Card>
+        <CardHeader>
+          <CardTitle>Perfil de Usuario</CardTitle>
+          <CardDescription>
+            Gestiona tu información personal y configuración de seguridad
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="profile" className="w-full">
+            {/* Tabs Header */}
+            <TabsList className="mb-6 flex w-full justify-start gap-2">
+              <TabsTrigger value="profile" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Perfil
+              </TabsTrigger>
 
-          <CardContent className="flex flex-col items-center gap-4">
-            <Avatar className="h-28 w-28 text-4xl">
-              <AvatarImage
-                src={session?.user?.image || undefined}
-                alt="Avatar"
-              />
-              <AvatarFallback>
-                {session?.user?.name?.charAt(0) ?? "U"}
-              </AvatarFallback>
-            </Avatar>
+              <TabsTrigger value="security" className="flex items-center gap-2">
+                <Lock className="h-4 w-4" />
+                Seguridad
+              </TabsTrigger>
+            </TabsList>
 
-            <div className="flex gap-2 w-full">
-              <Button variant="default" className="w-full" disabled>
-                Subir foto
-              </Button>
-              <Button variant="outline" className="w-full" disabled>
-                Eliminar
-              </Button>
-            </div>
+            {/* Perfil */}
+            <TabsContent value="profile" className="mt-0">
+              <FieldSet>
+                <FieldLegend>Detalles del Perfil</FieldLegend>
+                <FieldDescription>
+                  Modifica tu nombre de usuario según sea necesario.
+                </FieldDescription>
 
-            <Alert>
-              <AlertDescription>Funcionalidad en desarrollo</AlertDescription>
-            </Alert>
+                <div className="space-y-4">
+                  {/* Nombre */}
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nombre</Label>
+                    <Input
+                      id="name"
+                      value={userInfo.name}
+                      onChange={(e) => setUserInfo({ name: e.target.value })}
+                      placeholder="Ingresa tu nombre"
+                    />
+                  </div>
 
-            <p className="text-sm text-muted-foreground text-center">
-              Formatos permitidos: JPG, PNG. Tamaño máximo 2MB.
-            </p>
-          </CardContent>
-        </Card>
+                  {/* Acciones */}
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        setUserInfo({
+                          name: session?.user?.name ?? "",
+                        })
+                      }
+                    >
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSave}>Guardar cambios</Button>
+                  </div>
+                </div>
+              </FieldSet>
+            </TabsContent>
 
-        {/* ===================== */}
-        {/* CAMBIAR CONTRASEÑA */}
-        {/* ===================== */}
-        <ChangePasswordForm userId={session?.user?.id ?? ""} />
-
-        {/* ===================== */}
-        {/* INFORMACIÓN PERSONAL */}
-        {/* ===================== */}
-        <Card className="md:col-span-3">
-          <CardHeader>
-            <CardTitle>Información Personal</CardTitle>
-            <CardDescription>
-              Actualiza tu información personal aquí
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-4 max-w-xl">
-            <div className="space-y-1">
-              <Label>Nombre</Label>
-              <Input
-                value={userInfo.name}
-                readOnly={!isEditing}
-                onChange={(e) => setUserInfo({ name: e.target.value })}
-              />
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              {isEditing ? (
-                <>
-                  <Button onClick={handleSave}>Guardar</Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setUserInfo({
-                        name: session?.user?.name ?? "",
-                      });
-                      setIsEditing(false);
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                </>
-              ) : (
-                <Button onClick={() => setIsEditing(true)}>
-                  Editar perfil
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            {/* Seguridad */}
+            <TabsContent value="security" className="mt-0">
+              <FieldSet>
+                <FieldLegend>Cambiar Contraseña</FieldLegend>
+                <FieldDescription>
+                  Actualiza tu contraseña regularmente para mantener la
+                  seguridad de tu cuenta
+                </FieldDescription>
+                <ChangePasswordForm userId={session?.user?.id ?? ""} />
+              </FieldSet>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+        <CardContent>
+          <FieldGroup></FieldGroup>
+        </CardContent>
+      </Card>
     </PageContainer>
   );
 }

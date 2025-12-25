@@ -1,6 +1,9 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { BankAccount, CreateBankAccount } from "@/lib/validations/bank/bank_account";
+import {
+  BankAccount,
+  CreateBankAccount,
+} from "@/lib/validations/bank/bank_account";
 
 export const createBankAccount = async (
   tenantId: string,
@@ -38,6 +41,18 @@ export const updateBankAccount = async (
 
 export const deleteBankAccount = async (id: string) => {
   try {
+    // valida si la cuenta bancaria tiene movimientos asociados
+    const hasBankMovements = await prisma.bankMovement.findFirst({
+      where: { bankAccountId: id },
+    });
+    if (hasBankMovements) {
+      return {
+        success: false,
+        error:
+          "No se puede eliminar la cuenta bancaria porque tiene movimientos asociados.",
+      };
+    }
+    
     await prisma.bankAccount.delete({
       where: { id },
     });

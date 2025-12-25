@@ -18,6 +18,7 @@ import {
   User,
   Building,
   Settings,
+  ShoppingBag,
 } from "lucide-react";
 
 import { NavMain } from "@/components/layout/sidebar/nav-main";
@@ -85,24 +86,16 @@ const data = {
           title: "Ventas",
           url: "/documentos?type=CUSTOMER&documentType=INVOICE",
         },
-        {
-          title: "Proformas",
-          url: "/proformas",
-        },
       ],
     },
     {
       title: "Compras",
       url: "#",
-      icon: CreditCard,
+      icon: ShoppingBag,
       items: [
         {
           title: "Compras",
           url: "/documentos?type=SUPPLIER&documentType=INVOICE",
-        },
-        {
-          title: "Ordenes de Compra",
-          url: "/ordenes-compra",
         },
       ],
     },

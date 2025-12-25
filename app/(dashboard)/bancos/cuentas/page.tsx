@@ -175,10 +175,16 @@ export default function BankAccountsPage() {
     if (!confirm) return;
 
     const res = await deleteBankAccount(id);
+
+    if (!res.success) {
+      notifyError(res.error || "Error al eliminar la cuenta bancaria");
+      return;
+    }
+
     if (res.success) {
       notifyInfo("Cuenta eliminada");
       fetchBankAccounts();
-    } else notifyError("Error al eliminar");
+    }
   };
 
   const onSubmit = async (data: CreateBankAccount) => {

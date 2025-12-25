@@ -195,9 +195,13 @@ export default function BankMovementsPage() {
                         <TableCell>{m.account?.name}</TableCell>
                         <TableCell>{getTypeMovementLabel(m.type)}</TableCell>
                         <TableCell>{formatDate(m.date.toString())}</TableCell>
-                        <TableCell>
-                          {`${getSymbol(m.type)} ${formatCurrency(m.amount)}`}
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1 whitespace-nowrap">
+                            <span>{getSymbol(m.type)}</span>
+                            <span>{formatCurrency(m.amount)}</span>
+                          </div>
                         </TableCell>
+
                         <TableCell>{m.reference}</TableCell>
                         <TableCell>{m.description}</TableCell>
                         <TableCell className="text-right space-x-2">

@@ -487,6 +487,7 @@ export const updateTransactionTx = async (
       transactionId: transaction.id,
       type: isIncome ? "IN" : "OUT",
       date: transaction.issueDate,
+      reference: transaction.reference || undefined,
       amount,
       description: transaction.description ?? "",
       details: [
