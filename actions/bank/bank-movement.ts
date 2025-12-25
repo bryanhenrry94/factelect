@@ -1,7 +1,16 @@
 "use server";
 import { prisma } from "@/lib/prisma";
+import {
+  CreateJournalEntryLine,
+  JournalEntryLine,
+} from "@/lib/validations/accounting/journal-entry-line";
+import {
+  CreateJournalEntry,
+  JournalEntry,
+} from "@/lib/validations/accounting/journal_entry";
 import { BankMovement } from "@/lib/validations/bank/bank_movement";
 import { Prisma } from "@/prisma/generated/prisma";
+import { createJournalEntryTx } from "../accounting/journal-entry";
 
 export const getAllBankMovements = async (
   tenantId: string,
@@ -102,16 +111,14 @@ export const createBankMovementTx = async (
     );
 
     // Contabilizar los detalles del movimiento bancario aquí si es necesario
-    const journal = await tx.journalEntry.create({
-      data: {
-        tenantId,
-        date: newMovement.date,
-        description: newMovement.description ?? "",
-        sourceType: "BANK_MOVEMENT",
-        sourceId: newMovement.id,
-        type: "DEPOSIT",
-      },
-    });
+    const journal: CreateJournalEntry = {
+      date: newMovement.date,
+      type: "DEPOSIT",
+      description: newMovement.description ?? "",
+      sourceType: "BANK_MOVEMENT",
+      sourceId: newMovement.id,
+      lines: [],
+    };
 
     const bankAccount = await tx.bankAccount.findUnique({
       where: { id: newMovement.bankAccountId },
@@ -121,28 +128,26 @@ export const createBankMovementTx = async (
 
     /* Asientos contables */
     // 🏦 Banco
-    await tx.journalEntryLine.create({
-      data: {
-        tenantId,
-        journalEntryId: journal.id,
-        accountId: bankAccount.accountId!,
-        debit: newMovement.type === "IN" ? newMovement.amount : 0,
-        credit: newMovement.type === "OUT" ? newMovement.amount : 0,
-      },
-    });
+    const lineBank: CreateJournalEntryLine = {
+      accountId: bankAccount.accountId!,
+      debit: newMovement.type === "IN" ? newMovement.amount : 0,
+      credit: newMovement.type === "OUT" ? newMovement.amount : 0,
+    };
+
+    journal.lines.push(lineBank);
 
     // 📄 Detalles del movimiento bancario
     data.details.map(async (detail) => {
-      await tx.journalEntryLine.create({
-        data: {
-          tenantId,
-          journalEntryId: journal.id,
-          accountId: detail.accountId,
-          debit: newMovement.type === "IN" ? 0 : detail.amount,
-          credit: newMovement.type === "OUT" ? 0 : detail.amount,
-        },
-      });
+      const lineDetail: CreateJournalEntryLine = {
+        accountId: detail.accountId,
+        debit: newMovement.type === "OUT" ? detail.amount : 0,
+        credit: newMovement.type === "IN" ? detail.amount : 0,
+      };
+      journal.lines.push(lineDetail);
     });
+
+    // Crear asiento contable
+    await createJournalEntryTx(tx, tenantId, journal);
   }
 
   return {

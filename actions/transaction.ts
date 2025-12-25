@@ -198,7 +198,7 @@ export const createTransaction = async (
       }
 
       /* ===========================
-       * 3. Movimiento Caja
+       * 3. Movimiento Caja + Contabilidad
        * =========================== */
       if (parsedData.method === "CASH") {
         // Obtener la sesión de caja abierta del usuario

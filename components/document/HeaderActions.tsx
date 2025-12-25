@@ -72,7 +72,7 @@ export default function HeaderActions({
               onClick={() => handlePaymentRegister!()}
             >
               <DollarSign />
-              Registrar Pago
+              Cobro/Pago
             </Button>
 
             {/* DOWNLOADS */}
