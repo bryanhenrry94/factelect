@@ -47,6 +47,7 @@ import {
 import { AccountSelect } from "../AccountSelected";
 
 const initialState: CreateCashMovement = {
+  cashSessionId: "",
   type: "IN",
   category: "OTHER",
   amount: 0,
@@ -113,7 +114,8 @@ export function CashMovementForm({
 
       const payload = {
         ...data,
-        cashBoxId: res.data.id,
+        cashSessionId: res.data.id,
+        cashBoxId: res.data.cashBoxId,
       };
 
       const response = cashMovementSelected

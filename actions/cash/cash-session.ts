@@ -132,62 +132,85 @@ export async function closeCashSession(
   closingAmount: number
 ): Promise<{ success: boolean; error?: string; data?: CashSession }> {
   try {
-    // Valida que la sesión exista y esté abierta
-    const existingSession = await prisma.cashSession.findUnique({
-      where: { id: sessionId },
+    const result = await prisma.$transaction(async (tx) => {
+      const session = await tx.cashSession.findUnique({
+        where: { id: sessionId },
+      });
+
+      if (!session || session.status !== "OPEN") {
+        return {
+          success: false,
+          error: "La sesión de caja no existe o ya está cerrada",
+        };
+      }
+
+      // 🔢 Calcular totales en BD
+      const totals = await tx.cashMovement.groupBy({
+        by: ["type"],
+        where: { cashSessionId: sessionId },
+        _sum: { amount: true },
+      });
+
+      const totalIn = totals.find((t) => t.type === "IN")?._sum.amount ?? 0;
+      const totalOut = totals.find((t) => t.type === "OUT")?._sum.amount ?? 0;
+
+      const expected = session.initialAmount + totalIn - totalOut;
+
+      const difference = Number((expected - closingAmount).toFixed(2));
+
+      // ⚠️ Tolerancia por decimales
+      if (Math.abs(difference) > 0.01) {
+        return {
+          success: false,
+          error: `La diferencia debe ser 0 para cerrar la sesión. Diferencia actual: ${difference}`,
+        };
+      }
+
+      const closedSession = await tx.cashSession.update({
+        where: { id: sessionId },
+        data: {
+          closedAt: new Date(),
+          totalIn,
+          totalOut,
+          closingAmount,
+          difference,
+          status: "CLOSED",
+        },
+      });
+
+      return { success: true, data: closedSession };
     });
 
-    if (!existingSession || existingSession.status !== "OPEN") {
-      return {
-        success: false,
-        error: "La sesión de caja no existe o ya está cerrada",
-      };
+    if (!result.success) {
+      return { success: false, error: result.error };
     }
 
-    // valida que la diferencia sea igual a 0
-    const difference =
-      existingSession.initialAmount +
-      (existingSession.totalIn || 0) -
-      (existingSession.closingAmount || 0) -
-      (existingSession.totalOut || 0);
+    const mappedResult = result.data
+      ? {
+          ...result.data,
+          totalIn:
+            result.data.totalIn === null ? undefined : result.data.totalIn,
+          totalOut:
+            result.data.totalOut === null ? undefined : result.data.totalOut,
+          closingAmount:
+            result.data.closingAmount === null
+              ? undefined
+              : result.data.closingAmount,
+          difference:
+            result.data.difference === null
+              ? undefined
+              : result.data.difference,
+          notes: result.data.notes === null ? undefined : result.data.notes,
+        }
+      : undefined;
 
-    if (difference !== 0) {
-      return {
-        success: false,
-        error: "La diferencia debe ser igual a 0 para cerrar la sesión",
-      };
-    }
-
-    const closedSession = await prisma.cashSession.update({
-      where: { id: sessionId },
-      data: {
-        closedAt: new Date(),
-        closingAmount,
-        status: "CLOSED",
-      },
-    });
-
-    const cashSessionMapped = {
-      ...closedSession,
-      totalIn:
-        closedSession.totalIn === null ? undefined : closedSession.totalIn,
-      totalOut:
-        closedSession.totalOut === null ? undefined : closedSession.totalOut,
-      closingAmount:
-        closedSession.closingAmount === null
-          ? undefined
-          : closedSession.closingAmount,
-      difference:
-        closedSession.difference === null
-          ? undefined
-          : closedSession.difference,
-      notes: closedSession.notes === null ? undefined : closedSession.notes,
-    };
-
-    return { success: true, data: cashSessionMapped };
+    return { success: true, data: mappedResult };
   } catch (error) {
     console.error("Error closing cash session:", error);
-    return { success: false, error: "Error closing cash session" };
+    return {
+      success: false,
+      error: "Ocurrió un error al cerrar la sesión de caja",
+    };
   }
 }
 

@@ -1,10 +1,13 @@
 "use server";
 import { prisma } from "@/lib/prisma";
+import { CreateJournalEntry } from "@/lib/validations/accounting/journal_entry";
 import {
   CashMovement,
   CreateCashMovement,
   UpdateCashMovement,
 } from "@/lib/validations/cash/cash_movement";
+import { Prisma } from "@/prisma/generated/prisma";
+import { createJournalEntryTx } from "../accounting/journal-entry";
 
 export const getAllMovementByCashSessionId = async (
   cashSessionId: string
@@ -81,28 +84,84 @@ export const getAllCashMovements = async (
   }
 };
 
+export const createCashMovementTx = async (
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  data: CreateCashMovement
+): Promise<CashMovement> => {
+  const newCashMovement = await tx.cashMovement.create({
+    data: {
+      ...data,
+      tenantId,
+    },
+  });
+
+  const cashBox = await tx.cashBox.findUnique({
+    where: { id: newCashMovement.cashBoxId },
+  });
+
+  if (!cashBox) {
+    throw new Error("Caja no encontrada");
+  }
+
+  if (!cashBox.accountId) {
+    throw new Error("La caja no tiene una cuenta asociada para movimientos");
+  }
+
+  // Obtener la transacción asociada si existe
+  const transaction = await tx.transaction.findUnique({
+    where: { id: newCashMovement.transactionId || "" },
+  });
+
+  // Contabiliza movimiento de caja
+  const journalEntry: CreateJournalEntry = {
+    type: "SALE",
+    sourceType: "CASH_MOVEMENT",
+    sourceId: newCashMovement.id,
+    date: newCashMovement.createdAt,
+    description: newCashMovement.description || "Movimiento de caja",
+    lines: [
+      {
+        accountId: cashBox.accountId,
+        debit: data.type === "IN" ? newCashMovement.amount : 0,
+        credit: data.type === "OUT" ? newCashMovement.amount : 0,
+      },
+      {
+        accountId: newCashMovement.accountId!,
+        debit: data.type === "IN" ? 0 : newCashMovement.amount,
+        credit: data.type === "OUT" ? 0 : newCashMovement.amount,
+        personId: transaction?.personId || undefined,
+      },
+    ],
+  };
+
+  // Crear asiento contable
+  await createJournalEntryTx(tx, tenantId, journalEntry);
+
+  return {
+    ...newCashMovement,
+    cashSessionId: newCashMovement.cashSessionId,
+    cashBoxId: newCashMovement.cashBoxId,
+    transactionId: newCashMovement.transactionId ?? undefined,
+    description: newCashMovement.description ?? undefined,
+    accountId: newCashMovement.accountId ?? undefined,
+  };
+};
+
 export const createCashMovement = async (
   tenantId: string,
   data: CreateCashMovement
 ): Promise<{ success: boolean; error?: string; data?: CashMovement }> => {
   try {
-    const newCashMovement = await prisma.cashMovement.create({
-      data: {
-        ...data,
-        tenantId,
-      },
-    });
-
-    const mappedCashMovement = {
-      ...newCashMovement,
-      transactionId: newCashMovement.transactionId ?? undefined,
-      description: newCashMovement.description ?? undefined,
-      reference: newCashMovement.reference ?? undefined,
-      accountId: newCashMovement.accountId ?? undefined,
-    };
+    const mappedCashMovement = await createCashMovementTx(
+      prisma,
+      tenantId,
+      data
+    );
 
     return { success: true, data: mappedCashMovement };
   } catch (error) {
+    console.error(error);
     return {
       success: false,
       error: "Error al crear el movimiento de caja",

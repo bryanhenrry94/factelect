@@ -68,6 +68,7 @@ model Tenant {
   bankMovementDetail       BankMovementDetail[]
   memberships              Membership[]
   tenantInvitations        TenantInvitation[]
+  accountingSetting        AccountingSetting[]
 
   @@map("tenant")
 }
@@ -581,9 +582,6 @@ model Transaction {
   bankAccountId                                             String?               @map("bank_account_id") // cuenta bancaria usada (opcional)
   bankAccount                                               BankAccount?          @relation(fields: [bankAccountId], references: [id])
 
-  cashBoxId                                                 String?               @map("cash_box_id") // caja usada (opcional)
-  cashBox                                                   CashBox?              @relation(fields: [cashBoxId], references: [id])
-
   createdAt                                                 DateTime                                                                          @default(now())
   updatedAt                                                 DateTime                                                                          @updatedAt
 
@@ -725,7 +723,6 @@ model CashBox {
 
   cashMovements CashMovement[]
   cashSession   CashSession[]
-  transaction   Transaction[]
 
   @@map("cash_box")
 }
@@ -762,8 +759,8 @@ model CashSession {
 model CashMovement {
   id             String                                        @id @default(cuid())
 
-  cashSessionId  String?              @map("cash_session_id")
-  cashSession    CashSession?         @relation(fields: [cashSessionId], references: [id])
+  cashSessionId  String               @map("cash_session_id")
+  cashSession    CashSession          @relation(fields: [cashSessionId], references: [id])
 
   cashBoxId      String               @map("cash_box_id")
   cashBox        CashBox              @relation(fields: [cashBoxId], references: [id])
@@ -918,6 +915,7 @@ model ChartOfAccount {
   cashMovement               CashMovement[]
   bankTransaction            BankTransaction[]
   bankMovementDetail         BankMovementDetail[]
+  accountingSetting          AccountingSetting[]
 
   @@map("chart_of_account")
 }
@@ -990,6 +988,21 @@ model CostCenter {
   @@unique([tenantId, code])
   @@map("cost_center")
 }
+
+model AccountingSetting {
+  id        String           @id @default(cuid())
+  tenantId  String
+
+  key       AccountingKey
+  accountId String?
+
+  account   ChartOfAccount? @relation(fields: [accountId], references: [id])
+  tenant    Tenant          @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, key])
+  @@map("accounting_setting")
+}
+
 
 // ------------------------------
 // IMPUESTOS (IVA, retenciones, etc.)
@@ -1212,4 +1225,14 @@ enum TaxRegime {
   GENERAL
   RIMPE_EMPRENDEDOR
   RIMPE_NEGOCIO_POPULAR
+}
+
+enum AccountingKey {
+  VAT_SALES        // IVA sobre ventas (débito fiscal)
+  VAT_PURCHASES    // IVA sobre compras (crédito fiscal)
+  RETENTION_VAT    // Retención de IVA
+  RETENTION_SOURCE // Retención en la fuente
+  CASH_DEFAULT     // Caja general
+  BANK_DEFAULT     // Banco por defecto
+  ROUNDING         // Diferencias por redondeo
 }

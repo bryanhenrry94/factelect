@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Building2, CreditCard, FileText, Users } from "lucide-react";
+import {
+  BookMinus,
+  Building2,
+  CreditCard,
+  FileText,
+  Users,
+} from "lucide-react";
 
 import PageContainer from "@/components/container/PageContainer";
 import CompanyForm from "@/components/setting/company/company-form";
@@ -22,6 +28,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import TeamFormPage from "@/components/setting/team/team-form-page";
+import AccountingSettingForm from "@/components/accounting/accounting-setting-form";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
@@ -74,6 +81,14 @@ export default function SettingsPage() {
                 Facturación Electrónica
               </TabsTrigger>
 
+              <TabsTrigger
+                value="accounting"
+                className="flex items-center gap-2"
+              >
+                <BookMinus className="h-4 w-4" />
+                Contabilidad
+              </TabsTrigger>
+
               <TabsTrigger value="billing" className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
                 Facturación
@@ -93,6 +108,11 @@ export default function SettingsPage() {
             {/* Facturación Electrónica */}
             <TabsContent value="sri" className="mt-0">
               <SRIConfigForm tenantId={tenant?.id || ""} />
+            </TabsContent>
+
+            {/* Contabilidad */}
+            <TabsContent value="accounting" className="mt-0">
+              <AccountingSettingForm />
             </TabsContent>
 
             {/* Billing */}

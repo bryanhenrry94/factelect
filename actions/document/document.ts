@@ -14,6 +14,7 @@ import {
   createJournalEntryTx,
   getJournalEntriesDocumentData,
 } from "../accounting/journal-entry";
+import { CreateJournalEntry } from "@/lib/validations/accounting/journal_entry";
 
 export interface DocumentFilter {
   tenantId: string;
@@ -195,10 +196,26 @@ export const createDocument = async (
       }
 
       // 2️⃣ Obtener datos para asiento contable
-      const journalData = await getJournalEntriesDocumentData(
+      const resJournalData = await getJournalEntriesDocumentData(
         tx,
         resultDocument.data.id
       );
+
+      if (!resJournalData.success || !resJournalData.data) {
+        throw new Error(
+          resJournalData.error ||
+            "Error obteniendo datos para el asiento contable"
+        );
+      }
+
+      const journalData: CreateJournalEntry | null =
+        resJournalData.success && resJournalData.data
+          ? resJournalData.data
+          : null;
+
+      if (!journalData) {
+        throw new Error("Error obteniendo datos para el asiento contable");
+      }
 
       // 3️⃣ Crear asiento contable
       const journal = await createJournalEntryTx(tx, tenantId, journalData);
@@ -221,7 +238,10 @@ export const createDocumentTx = async (
   try {
     const resValidated = await validateDocument(data);
     if (!resValidated.success) {
-      return { success: false, error: "Datos del documento inválidos" };
+      return {
+        success: false,
+        error: resValidated.error || "Datos del documento inválidos",
+      };
     }
 
     const balance = data.total - (data.paidAmount || 0);
@@ -393,10 +413,27 @@ export const updateDocument = async (
       }
 
       // 2️⃣ Obtener datos para asiento contable
-      const journalData = await getJournalEntriesDocumentData(
+      const resJournalData = await getJournalEntriesDocumentData(
         tx,
         resultDocument.data.id
       );
+
+      if (!resJournalData.success || !resJournalData.data) {
+        throw new Error(
+          resJournalData.error ||
+            "Error obteniendo datos para el asiento contable"
+        );
+      }
+
+      // 2️⃣ Obtener datos para asiento contable
+      const journalData: CreateJournalEntry | null =
+        resJournalData.success && resJournalData.data
+          ? resJournalData.data
+          : null;
+
+      if (!journalData) {
+        throw new Error("Error obteniendo datos para el asiento contable");
+      }
 
       // Valida si el documento ya tiene un asiento contable asociado
       const existingJournals = await tx.journalEntry.findMany({
@@ -423,9 +460,12 @@ export const updateDocument = async (
     });
 
     return { success: true, data: result.document };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating document:", error);
-    return { success: false, error: "Error actualizando el documento" };
+    return {
+      success: false,
+      error: error.message || "Error actualizando el documento",
+    };
   }
 };
 
@@ -437,7 +477,10 @@ export const updateDocumentTx = async (
   try {
     const resValidated = await validateDocument(data);
     if (!resValidated.success) {
-      return { success: false, error: "Datos del documento inválidos" };
+      return {
+        success: false,
+        error: resValidated.error || "Datos del documento inválidos",
+      };
     }
 
     const balance = data.total - (data.paidAmount || 0);
@@ -893,6 +936,13 @@ export const updateInvoiceXmlFile = async (
 export const validateDocument = async (
   data: CreateDocument
 ): Promise<{ success: boolean; error?: string }> => {
+  if (!data.personId) {
+    return {
+      success: false,
+      error: "El cliente/proveedor es obligatorio",
+    };
+  }
+
   // Validar pagos solo para facturas de clientes
   if (data.entityType === "CUSTOMER" && data.documentType === "INVOICE") {
     const totalPayments =

@@ -403,14 +403,17 @@ export const updateJournalEntry = async (
 export const getJournalEntriesDocumentData = async (
   tx: Prisma.TransactionClient,
   documentId: string
-): Promise<CreateJournalEntry> => {
+): Promise<{ success: boolean; error?: string; data?: CreateJournalEntry }> => {
   const document = await tx.document.findUnique({
     where: { id: documentId },
     include: { items: true },
   });
 
   if (!document) {
-    throw new Error("Documento no encontrado");
+    return {
+      success: false,
+      error: "Documento no encontrado",
+    };
   }
 
   // Obtener la persona asociada al documento
@@ -419,7 +422,35 @@ export const getJournalEntriesDocumentData = async (
   });
 
   if (!person) {
-    throw new Error("Persona no encontrada para el documento");
+    return {
+      success: false,
+      error: "Persona no encontrada para el documento",
+    };
+  }
+
+  if (
+    document.entityType !== "CUSTOMER" &&
+    document.entityType !== "SUPPLIER"
+  ) {
+    return {
+      success: false,
+      error: "Tipo de entidad no soportada para asiento contable",
+    };
+  }
+
+  // Valida si es cliente que tenga cuenta por cobrar o proveedor que tenga cuenta por pagar
+  if (document.entityType === "CUSTOMER" && !person.accountReceivableId) {
+    return {
+      success: false,
+      error:
+        "La persona asociada al documento no tiene cuenta por cobrar definida",
+    };
+  }
+
+  if (document.entityType === "SUPPLIER" && !person.accountPayableId) {
+    throw new Error(
+      "La persona asociada al documento no tiene cuenta por pagar definida"
+    );
   }
 
   const journalData: CreateJournalEntry = {
@@ -445,9 +476,10 @@ export const getJournalEntriesDocumentData = async (
   };
 
   if (!document.items || document.items.length === 0) {
-    throw new Error(
-      "El documento no tiene ítems para generar el asiento contable"
-    );
+    return {
+      success: false,
+      error: "El documento no tiene ítems para generar el asiento contable",
+    };
   }
 
   // Haber/Debe: Ingresos por ventas (agrupar por cuenta de ingresos si es necesario)
@@ -467,9 +499,14 @@ export const getJournalEntriesDocumentData = async (
     const accountId = productMap.get(item.productId);
 
     if (!accountId) {
-      throw new Error(
-        `Cuenta de venta no definida para el producto: ${item.productId}`
-      );
+      const product = await tx.product.findUnique({
+        where: { id: item.productId },
+      });
+
+      return {
+        success: false,
+        error: `Cuenta de venta no definida para el producto: ${product?.code} - ${product?.description}`,
+      };
     }
 
     const prev = salesMap.get(accountId) ?? 0;
@@ -484,17 +521,48 @@ export const getJournalEntriesDocumentData = async (
     });
   }
 
+  const settings = await tx.accountingSetting.findMany({
+    where: { tenantId: document.tenantId },
+  });
+
+  const VAT_SALES_SETTING = settings.find((s) => s.key === "VAT_SALES");
+  const VAT_PURCHASES_SETTING = settings.find((s) => s.key === "VAT_PURCHASES");
+
+  // Valida que existan las cuentas de IVA en la configuración
+  if (document.taxTotal && document.taxTotal > 0) {
+    if (document.entityType === "CUSTOMER" && !VAT_SALES_SETTING?.accountId) {
+      return {
+        success: false,
+        error:
+          "No se ha configurado la cuenta para IVA sobre ventas en la configuración contable",
+      };
+    }
+
+    if (
+      document.entityType === "SUPPLIER" &&
+      !VAT_PURCHASES_SETTING?.accountId
+    ) {
+      return {
+        success: false,
+        error:
+          "No se ha configurado la cuenta para IVA sobre compras en la configuración contable",
+      };
+    }
+  }
+
+  const accountId =
+    document.entityType === "CUSTOMER"
+      ? VAT_SALES_SETTING?.accountId
+      : VAT_PURCHASES_SETTING?.accountId;
+
   // Haber: IVA por pagar
   if (document.taxTotal && document.taxTotal > 0) {
     journalData.lines.push({
-      accountId:
-        document.entityType === "CUSTOMER"
-          ? "4fc61e72-aeb1-43f0-a9bf-fdbd9374d8c7" // 2.1.7.4.1	IVA sobre Ventas
-          : "6ca61431-bd5e-48cf-ac59-cf2cf2c13ba4", // 1.1.5.1.1	IVA sobre Compras
+      accountId: accountId!,
       debit: 0,
       credit: document.taxTotal,
     });
   }
 
-  return journalData;
+  return { success: true, data: journalData };
 };

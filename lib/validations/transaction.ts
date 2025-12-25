@@ -23,7 +23,7 @@ export const transactionSchema = z.object({
   reconciled: z.boolean().optional(),
   reconciledAt: z.date().nullable().optional(),
   bankAccountId: z.string().nullable().optional(),
-  cashBoxId: z.string().nullable().optional(),
+  userId: z.string().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -36,12 +36,12 @@ export const createTransactionSchema = transactionSchema
     updatedAt: true,
   })
   .superRefine((data, ctx) => {
-    if (data.type === "INCOME" && data.method === "CASH") {
-      if (!data.cashBoxId) {
+    if (data.method === "TRANSFER") {
+      if (!data.bankAccountId) {
         ctx.addIssue({
-          path: ["cashBoxId"],
+          path: ["bankAccountId"],
           message:
-            "La caja es obligatoria cuando el tipo es Cobro y el método es Efectivo.",
+            "La cuenta bancaria es obligatoria cuando el método es Transferencia.",
           code: z.ZodIssueCode.custom,
         });
       }

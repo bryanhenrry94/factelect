@@ -3,6 +3,7 @@ import { z } from "zod";
 export const CashMovementSchema = z.object({
   id: z.string(),
   cashBoxId: z.string(),
+  cashSessionId: z.string(),
   transactionId: z.string().optional(),
   type: z.enum(["IN", "OUT"]),
   category: z.enum([

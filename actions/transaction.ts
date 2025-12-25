@@ -5,24 +5,31 @@ import {
   createTransactionSchema,
   TransactionInput,
 } from "@/lib/validations";
+import { createCashMovementTx } from "./cash/cash-movement";
+import { CreateCashMovement } from "@/lib/validations/cash/cash_movement";
 
-export const createTransaction = async (
-  data: CreateTransactionInput,
-  tenantId: string
-): Promise<{ success: boolean; error?: string; data?: TransactionInput }> => {
+export const validateTransactionData = async (
+  data: Partial<CreateTransactionInput>
+): Promise<{ success: boolean; error?: string }> => {
   try {
+    // ========================
+    // Validaciones básicas
+    // ========================
     if (!data.personId) {
       return { success: false, error: "Debe seleccionar una persona." };
     }
 
-    if (!data.amount || data.amount <= 0) {
+    const amount = Number(data.amount);
+    if (!amount || amount <= 0) {
       return { success: false, error: "El monto debe ser mayor a cero." };
     }
 
+    // ========================
     // Validar documentos
+    // ========================
     if (data.documents?.length) {
       const totalDocs = data.documents.reduce(
-        (s, d) => s + Number(d.amount),
+        (sum, d) => sum + Number(d.amount || 0),
         0
       );
 
@@ -33,26 +40,100 @@ export const createTransaction = async (
         };
       }
 
-      if (Number(totalDocs) !== Number(data.amount)) {
+      // tolerancia para decimales
+      const diff = Math.abs(Number(totalDocs) - amount);
+      if (diff > 0.01) {
         return {
           success: false,
-          error: "El monto de la transacción no coincide con los documentos.",
+          error:
+            "El monto de la transacción no coincide con el total aplicado a los documentos.",
         };
       }
 
-      for (const doc of data.documents) {
-        const document = await prisma.document.findUnique({
-          where: { id: doc.documentId },
-          select: { balance: true },
-        });
+      const documentIds = data.documents.map((d) => d.documentId);
 
-        if (!document || Number(doc.amount) > Number(document.balance)) {
+      const documents = await prisma.document.findMany({
+        where: { id: { in: documentIds } },
+        select: { id: true, balance: true },
+      });
+
+      const docMap = new Map(
+        documents.map((d) => [d.id, Number(d.balance || 0)])
+      );
+
+      for (const doc of data.documents) {
+        const balance = docMap.get(doc.documentId);
+
+        if (balance === undefined) {
           return {
             success: false,
-            error: "El monto aplicado supera el saldo pendiente del documento.",
+            error: "Uno de los documentos seleccionados no existe.",
+          };
+        }
+
+        if (Number(doc.amount) <= 0) {
+          return {
+            success: false,
+            error: "El monto aplicado a un documento debe ser mayor a cero.",
+          };
+        }
+
+        if (Number(doc.amount) - balance > 0.01) {
+          return {
+            success: false,
+            error:
+              "El monto aplicado a un documento supera su saldo pendiente.",
           };
         }
       }
+    }
+
+    // ========================
+    // Reglas por método (ej. CASH)
+    // ========================
+    if (data.method === "CASH") {
+      if (!data.userId) {
+        return {
+          success: false,
+          error: "El usuario es obligatorio cuando el método es Efectivo.",
+        };
+      }
+
+      const hasOpenCashSession = await prisma.cashSession.findFirst({
+        where: {
+          userId: data.userId!,
+          status: "OPEN",
+        },
+      });
+
+      if (!hasOpenCashSession) {
+        return {
+          success: false,
+          error: "No hay una sesión de caja abierta para el usuario.",
+        };
+      }
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error validating transaction data:", error);
+    return {
+      success: false,
+      error:
+        error?.message ||
+        "Error inesperado al validar los datos de la transacción.",
+    };
+  }
+};
+
+export const createTransaction = async (
+  data: CreateTransactionInput,
+  tenantId: string
+): Promise<{ success: boolean; error?: string; data?: TransactionInput }> => {
+  try {
+    const resValidation = await validateTransactionData(data);
+    if (!resValidation.success) {
+      return { success: false, error: resValidation.error };
     }
 
     const parsedData = createTransactionSchema.parse(data);
@@ -73,7 +154,6 @@ export const createTransaction = async (
           reconciled: parsedData.reconciled ?? false,
           reconciledAt: parsedData.reconciledAt ?? null,
           bankAccountId: parsedData.bankAccountId ?? null,
-          cashBoxId: parsedData.cashBoxId ?? null,
           tenantId,
         },
       });
@@ -119,19 +199,41 @@ export const createTransaction = async (
        * 3. Movimiento Caja
        * =========================== */
       if (parsedData.method === "CASH") {
-        if (!parsedData.cashBoxId) throw new Error("Caja no especificada");
-
-        await tx.cashMovement.create({
-          data: {
-            cashBoxId: parsedData.cashBoxId,
-            transactionId: transaction.id,
-            type: isIncome ? "IN" : "OUT",
-            amount,
-            description: parsedData.description ?? "",
-            issueDate: parsedData.issueDate,
-            tenantId,
+        // Obtener la sesión de caja abierta del usuario
+        const cashSession = await tx.cashSession.findFirst({
+          where: {
+            userId: parsedData.userId!,
+            status: "OPEN",
           },
         });
+        if (!cashSession) throw new Error("No hay sesión de caja abierta");
+
+        // Obtener la cuenta contable de la persona
+        const person = await tx.person.findUnique({
+          where: { id: parsedData.personId },
+        });
+        if (!person) throw new Error("Persona no encontrada");
+
+        const counterAccountId = isIncome
+          ? person.accountReceivableId
+          : person.accountPayableId;
+
+        if (!counterAccountId)
+          throw new Error("Cuenta contable de la persona no configurada");
+
+        const cashMovementData: CreateCashMovement = {
+          cashSessionId: cashSession.id,
+          cashBoxId: cashSession.cashBoxId,
+          transactionId: transaction.id,
+          type: isIncome ? "IN" : "OUT",
+          category: "SALE",
+          amount,
+          description: parsedData.description ?? "",
+          accountId: counterAccountId,
+        };
+
+        // Crear el movimiento de caja dentro de la misma transacción
+        await createCashMovementTx(tx, tenantId, cashMovementData);
       }
 
       /* ===========================
@@ -241,6 +343,11 @@ export const updateTransaction = async (
   data: Partial<CreateTransactionInput>
 ): Promise<{ success: boolean; error?: string; data?: TransactionInput }> => {
   try {
+    const resValidation = await validateTransactionData(data);
+    if (!resValidation.success) {
+      return { success: false, error: resValidation.error };
+    }
+
     const parsedData = createTransactionSchema.partial().parse(data);
 
     const transaction = await prisma.transaction.update({
@@ -257,7 +364,6 @@ export const updateTransaction = async (
         reconciled: parsedData.reconciled ?? false,
         reconciledAt: parsedData.reconciledAt ?? null,
         bankAccountId: parsedData.bankAccountId ?? null,
-        cashBoxId: parsedData.cashBoxId ?? null,
       },
     });
 

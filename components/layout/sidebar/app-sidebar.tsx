@@ -113,8 +113,8 @@ const data = {
       items: [
         { title: "Documentos", url: "/documentos" },
         { title: "Todas las Transacciones", url: "/transacciones" },
-        { title: "Cobros", url: "/transacciones?tipo=cobro" },
-        { title: "Pagos", url: "/transacciones?tipo=pago" },
+        { title: "Cobros", url: "/transacciones?type=INCOME" },
+        { title: "Pagos", url: "/transacciones?type=EXPENSE" },
       ],
     },
     {

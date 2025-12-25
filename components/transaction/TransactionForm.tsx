@@ -65,7 +65,6 @@ const initialState: CreateTransactionInput = {
   reconciled: false,
   reconciledAt: null,
   bankAccountId: null,
-  cashBoxId: null,
 };
 
 interface TransactionFormProps {
@@ -196,7 +195,6 @@ export default function TransactionForm({
         reconciled: res.data.reconciled ?? false,
         reconciledAt: res.data.reconciledAt ?? null,
         bankAccountId: res.data.bankAccountId ?? null,
-        cashBoxId: res.data.cashBoxId ?? null,
         documents: documents,
       };
 
@@ -220,9 +218,12 @@ export default function TransactionForm({
       );
       if (!confirm) return;
 
+      // Agregar userId al data a enviar
+      const dataToSubmit = { ...data, userId: session?.user?.id };
+
       const res = modeEdit
-        ? await updateTransaction(transactionId!, data)
-        : await createTransaction(data, tenant.id ?? "");
+        ? await updateTransaction(transactionId!, dataToSubmit)
+        : await createTransaction(dataToSubmit, tenant.id ?? "");
 
       if (!res?.success) {
         setError?.(res?.error || "Error al procesar la solicitud");
@@ -323,37 +324,6 @@ export default function TransactionForm({
                 )}
               />
             </Field>
-
-            {watch("method") === "CASH" && (
-              <Field>
-                <FieldLabel>Caja</FieldLabel>
-                <Controller
-                  name="cashBoxId"
-                  render={({ field }) => (
-                    <Select
-                      value={field.value || ""}
-                      onValueChange={field.onChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona una caja" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {cashBoxes?.map((cb: CashBox) => (
-                          <SelectItem key={cb.id} value={cb.id}>
-                            {cb.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.cashBoxId && (
-                  <span className="text-sm text-destructive">
-                    {errors.cashBoxId.message || "Selecciona una caja válida."}
-                  </span>
-                )}
-              </Field>
-            )}
 
             {watch("method") === "TRANSFER" && (
               <Field>
