@@ -353,12 +353,23 @@ export const updateTransactionTx = async (
    * 2. Aplicar a documentos
    * =========================== */
   if (transaction.documents?.length) {
-    // Eliminar documentos anteriores
-    await tx.transactionDocument.deleteMany({
-      where: { transactionId: transactionId },
+    // 1️⃣ Obtener documentos afectados (antes de borrar)
+    const affectedDocs = await tx.transactionDocument.findMany({
+      where: { transactionId },
+      select: { documentId: true },
     });
 
-    // Aplicar nuevos documentos
+    const affectedIds = new Set<string>([
+      ...affectedDocs.map((d) => d.documentId),
+      ...transaction.documents.map((d) => d.documentId),
+    ]);
+
+    // 2️⃣ Eliminar relaciones anteriores
+    await tx.transactionDocument.deleteMany({
+      where: { transactionId },
+    });
+
+    // 3️⃣ Crear nuevas relaciones
     for (const doc of transaction.documents) {
       await tx.transactionDocument.create({
         data: {
@@ -368,20 +379,28 @@ export const updateTransactionTx = async (
           tenantId,
         },
       });
+    }
 
-      // Actualizar montos en documentos
-      const document = await tx.document.findUnique({
-        where: { id: doc.documentId },
-        select: { total: true, paidAmount: true },
-      });
+    // 4️⃣ Recalcular paidAmount y balance desde cero por documento
+    for (const documentId of affectedIds) {
+      const [document, agg] = await Promise.all([
+        tx.document.findUnique({
+          where: { id: documentId },
+          select: { total: true },
+        }),
+        tx.transactionDocument.aggregate({
+          where: { documentId },
+          _sum: { amount: true },
+        }),
+      ]);
 
       if (!document) throw new Error("Documento no encontrado");
 
-      const paid = Number(document.paidAmount || 0) + Number(doc.amount);
+      const paid = Number(agg._sum.amount || 0);
       const balance = Number(document.total) - paid;
 
       await tx.document.update({
-        where: { id: doc.documentId },
+        where: { id: documentId },
         data: {
           paidAmount: paid,
           balance: Math.max(balance, 0),
