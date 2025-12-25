@@ -7,7 +7,7 @@ import { useSession } from "next-auth/react";
 import {
   createEstablishment,
   updateEstablishment,
-} from "@/actions/establishment";
+} from "@/actions/setting/establishment";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import {
   CreateEstablishment,

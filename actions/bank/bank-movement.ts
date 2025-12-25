@@ -1,16 +1,13 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import {
-  CreateJournalEntryLine,
-  JournalEntryLine,
-} from "@/lib/validations/accounting/journal-entry-line";
-import {
-  CreateJournalEntry,
-  JournalEntry,
-} from "@/lib/validations/accounting/journal_entry";
+import { CreateJournalEntryLine } from "@/lib/validations/accounting/journal-entry-line";
+import { CreateJournalEntry } from "@/lib/validations/accounting/journal_entry";
 import { BankMovement } from "@/lib/validations/bank/bank_movement";
 import { Prisma } from "@/prisma/generated/prisma";
-import { createJournalEntryTx } from "../accounting/journal-entry";
+import {
+  createJournalEntryTx,
+  updateJournalEntryTx,
+} from "../accounting/journal-entry";
 
 export const getAllBankMovements = async (
   tenantId: string,
@@ -86,6 +83,7 @@ export const createBankMovementTx = async (
     data: {
       tenantId,
       bankAccountId: data.bankAccountId,
+      transactionId: data.transactionId || null,
       type: data.type,
       date: data.date,
       amount: data.amount,
@@ -109,34 +107,36 @@ export const createBankMovementTx = async (
         })
       )
     );
+  }
 
-    // Contabilizar los detalles del movimiento bancario aquí si es necesario
-    const journal: CreateJournalEntry = {
-      date: newMovement.date,
-      type: "DEPOSIT",
-      description: newMovement.description ?? "",
-      sourceType: "BANK_MOVEMENT",
-      sourceId: newMovement.id,
-      lines: [],
-    };
+  // Contabilizar los detalles del movimiento bancario aquí si es necesario
+  const journal: CreateJournalEntry = {
+    date: newMovement.date,
+    type: "DEPOSIT",
+    description: newMovement.description ?? "",
+    sourceType: "BANK_MOVEMENT",
+    sourceId: newMovement.id,
+    lines: [],
+  };
 
-    const bankAccount = await tx.bankAccount.findUnique({
-      where: { id: newMovement.bankAccountId },
-    });
-    if (!bankAccount)
-      throw new Error("Cuenta bancaria no encontrada para la transacción");
+  const bankAccount = await tx.bankAccount.findUnique({
+    where: { id: newMovement.bankAccountId },
+  });
+  if (!bankAccount)
+    throw new Error("Cuenta bancaria no encontrada para la transacción");
 
-    /* Asientos contables */
-    // 🏦 Banco
-    const lineBank: CreateJournalEntryLine = {
-      accountId: bankAccount.accountId!,
-      debit: newMovement.type === "IN" ? newMovement.amount : 0,
-      credit: newMovement.type === "OUT" ? newMovement.amount : 0,
-    };
+  /* Asientos contables */
+  // 🏦 Banco
+  const lineBank: CreateJournalEntryLine = {
+    accountId: bankAccount.accountId!,
+    debit: newMovement.type === "IN" ? newMovement.amount : 0,
+    credit: newMovement.type === "OUT" ? newMovement.amount : 0,
+  };
 
-    journal.lines.push(lineBank);
+  journal.lines.push(lineBank);
 
-    // 📄 Detalles del movimiento bancario
+  // 📄 Detalles del movimiento bancario
+  if (data.details) {
     data.details.map(async (detail) => {
       const lineDetail: CreateJournalEntryLine = {
         accountId: detail.accountId,
@@ -145,10 +145,10 @@ export const createBankMovementTx = async (
       };
       journal.lines.push(lineDetail);
     });
-
-    // Crear asiento contable
-    await createJournalEntryTx(tx, tenantId, journal);
   }
+
+  // Crear asiento contable
+  await createJournalEntryTx(tx, tenantId, journal);
 
   return {
     ...newMovement,
@@ -159,9 +159,6 @@ export const createBankMovementTx = async (
   };
 };
 
-/* =========================================================
- * Función pública: abre la transacción y llama a la nueva
- * ========================================================= */
 export const createBankMovement = async (
   tenantId: string,
   data: Omit<BankMovement, "id" | "tenantId" | "createdAt">
@@ -180,15 +177,17 @@ export const createBankMovement = async (
   }
 };
 
-export const updateBankMovement = async (
+export const updateBankMovementTx = async (
+  tx: Prisma.TransactionClient,
   id: string,
   data: Partial<Omit<BankMovement, "id" | "tenantId" | "createdAt">>
 ): Promise<{ success: boolean; error?: string; data?: BankMovement }> => {
   try {
-    const updatedMovement = await prisma.bankMovement.update({
+    const updatedMovement = await tx.bankMovement.update({
       where: { id },
       data: {
         bankAccountId: data.bankAccountId,
+        transactionId: data.transactionId || null,
         type: data.type,
         date: data.date,
         amount: data.amount,
@@ -199,13 +198,13 @@ export const updateBankMovement = async (
 
     // elimina detalles existentes si es necesario
     if (data.details) {
-      await prisma.bankMovementDetail.deleteMany({
+      await tx.bankMovementDetail.deleteMany({
         where: { bankMovementId: id },
       });
 
       // registrar nuevos detalles
       data.details.forEach(async (detail) => {
-        await prisma.bankMovementDetail.create({
+        await tx.bankMovementDetail.create({
           data: {
             tenantId: updatedMovement.tenantId,
             bankMovementId: updatedMovement.id,
@@ -216,6 +215,57 @@ export const updateBankMovement = async (
           },
         });
       });
+    }
+
+    // Contabilizar los detalles del movimiento bancario aquí si es necesario
+    const journal: CreateJournalEntry = {
+      date: updatedMovement.date,
+      type: "DEPOSIT",
+      description: updatedMovement.description ?? "",
+      sourceType: "BANK_MOVEMENT",
+      sourceId: updatedMovement.id,
+      lines: [],
+    };
+
+    const bankAccount = await tx.bankAccount.findUnique({
+      where: { id: updatedMovement.bankAccountId },
+    });
+    if (!bankAccount)
+      throw new Error("Cuenta bancaria no encontrada para la transacción");
+
+    /* Asientos contables */
+    // 🏦 Banco
+    const lineBank: CreateJournalEntryLine = {
+      accountId: bankAccount.accountId!,
+      debit: updatedMovement.type === "IN" ? updatedMovement.amount : 0,
+      credit: updatedMovement.type === "OUT" ? updatedMovement.amount : 0,
+    };
+
+    journal.lines.push(lineBank);
+
+    // 📄 Detalles del movimiento bancario
+    if (data.details) {
+      data.details.map(async (detail) => {
+        const lineDetail: CreateJournalEntryLine = {
+          accountId: detail.accountId,
+          debit: updatedMovement.type === "OUT" ? detail.amount : 0,
+          credit: updatedMovement.type === "IN" ? detail.amount : 0,
+        };
+        journal.lines.push(lineDetail);
+      });
+    }
+
+    const existingJournalEntry = await tx.journalEntry.findFirst({
+      where: {
+        id: updatedMovement.journalEntryId || "",
+      },
+    });
+
+    // Crear asiento contable
+    if (existingJournalEntry) {
+      await updateJournalEntryTx(tx, existingJournalEntry.id, journal);
+    } else {
+      await createJournalEntryTx(tx, updatedMovement.tenantId, journal);
     }
 
     if (!updatedMovement) {
@@ -240,6 +290,21 @@ export const updateBankMovement = async (
       : null;
 
     return { success: true, data: formattedMovement! };
+  } catch (error) {
+    console.error("Error updating bank movement:", error);
+    return { success: false, error: "Error updating bank movement" };
+  }
+};
+
+export const updateBankMovement = async (
+  id: string,
+  data: Partial<Omit<BankMovement, "id" | "tenantId" | "createdAt">>
+): Promise<{ success: boolean; error?: string; data?: BankMovement }> => {
+  try {
+    const result = await prisma.$transaction((tx) =>
+      updateBankMovementTx(tx, id, data)
+    );
+    return result;
   } catch (error) {
     console.error("Error updating bank movement:", error);
     return { success: false, error: "Error updating bank movement" };

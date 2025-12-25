@@ -26,7 +26,7 @@ import {
   deleteInvitation,
   getInvitationsByTenant,
   inviteUser,
-} from "@/actions/tenant-invitation";
+} from "@/actions/setting/tenant-invitation";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 import { changeActiveStatus, getUsers } from "@/actions";
 import { useSession } from "next-auth/react";

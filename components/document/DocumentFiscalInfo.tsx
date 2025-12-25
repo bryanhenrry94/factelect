@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useFormContext } from "react-hook-form";
 
 import { getEmissionPointsByEstablishment, getEstablishments } from "@/actions";
-import { getNextSequenceDocumentNumber } from "@/actions/emission-point-sequence";
+import { getNextSequenceDocumentNumber } from "@/actions/setting/emission-point-sequence";
 
 import {
   CreateDocument,

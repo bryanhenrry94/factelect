@@ -1,6 +1,5 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { CreateDocument, Document } from "@/lib/validations";
 import {
   CreateJournalEntry,
   JournalEntry,
@@ -286,7 +285,8 @@ export const createJournalEntryTx = async (
   }
 };
 
-export const updateJournalEntry = async (
+export const updateJournalEntryTx = async (
+  tx: Prisma.TransactionClient,
   id: string,
   data: Partial<
     Omit<JournalEntry, "id" | "tenantId" | "createdAt" | "updatedAt">
@@ -329,44 +329,42 @@ export const updateJournalEntry = async (
     // TRANSACCIÓN: actualizar asiento + líneas
     // ---------------------------------------
 
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Actualizar journal entry
-      const updated = await tx.journalEntry.update({
-        where: { id },
-        data: {
-          ...journalData,
-          type: journalData.type as $Enums.EntryType | undefined,
-        },
+    // 1. Actualizar journal entry
+    const updated = await tx.journalEntry.update({
+      where: { id },
+      data: {
+        ...journalData,
+        type: journalData.type as $Enums.EntryType | undefined,
+      },
+    });
+
+    if (!updated) {
+      throw new Error("Journal entry not found");
+    }
+
+    // 2. Si vienen nuevas entradas → eliminar y recrear
+    if (lines) {
+      await tx.journalEntryLine.deleteMany({
+        where: { journalEntryId: id },
       });
 
-      if (!updated) {
-        throw new Error("Journal entry not found");
-      }
-
-      // 2. Si vienen nuevas entradas → eliminar y recrear
-      if (lines) {
-        await tx.journalEntryLine.deleteMany({
-          where: { journalEntryId: id },
-        });
-
-        await tx.journalEntryLine.createMany({
-          data: lines.map((e) => ({
-            journalEntryId: id,
-            tenantId: updated.tenantId,
-            accountId: e.accountId,
-            debit: e.debit,
-            credit: e.credit,
-            costCenterId: e.costCenterId || null,
-            personId: e.personId || null,
-          })),
-        });
-      }
-
-      // 3. Retornar el asiento actualizado
-      return tx.journalEntry.findUnique({
-        where: { id },
-        include: { lines: true },
+      await tx.journalEntryLine.createMany({
+        data: lines.map((e) => ({
+          journalEntryId: id,
+          tenantId: updated.tenantId,
+          accountId: e.accountId,
+          debit: e.debit,
+          credit: e.credit,
+          costCenterId: e.costCenterId || null,
+          personId: e.personId || null,
+        })),
       });
+    }
+
+    // 3. Retornar el asiento actualizado
+    const result = await tx.journalEntry.findUnique({
+      where: { id },
+      include: { lines: true },
     });
 
     if (!result) {
@@ -397,6 +395,28 @@ export const updateJournalEntry = async (
   } catch (error) {
     console.error("Error updating journal entry:", error);
     return { success: false, error: "Error updating journal entry" };
+  }
+};
+
+export const updateJournalEntry = async (
+  id: string,
+  data: Partial<
+    Omit<JournalEntry, "id" | "tenantId" | "createdAt" | "updatedAt">
+  >
+): Promise<{ success: boolean; data?: JournalEntry; error?: string }> => {
+  try {
+    const result = await prisma.$transaction((tx) =>
+      updateJournalEntryTx(tx, id, data)
+    );
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    return { success: true, data: result.data };
+  } catch (error: any) {
+    console.error(error);
+    return { success: false, error: error.message };
   }
 };
 

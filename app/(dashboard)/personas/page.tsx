@@ -13,7 +13,7 @@ import {
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { deletePerson, getPersonsByTenant } from "@/actions/person";
+import { deletePerson, getPersonsByTenant } from "@/actions/person/person";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { notifyInfo } from "@/lib/notifications";
 import { getRoleLabel } from "@/utils/person";

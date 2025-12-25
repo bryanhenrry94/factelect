@@ -106,21 +106,18 @@ export default function BankMovementsPage() {
   };
 
   const handleEdit = (m: BankMovement) => {
+    if (m.transactionId) {
+      router.push(`/transacciones/${m.transactionId}/editar`);
+      return;
+    }
+
     router.push(`/bancos/movimientos/${m.id}/editar`);
   };
-
-  /* ========================== */
-  /* Helpers */
-  /* ========================== */
 
   const getSymbol = (t: $Enums.BankMovementType) => (t === "OUT" ? "-" : "+");
 
   const getTypeMovementLabel = (t: $Enums.BankMovementType) =>
     t === "IN" ? "Ingreso" : "Egreso";
-
-  /* ========================== */
-  /* UI */
-  /* ========================== */
 
   return (
     <PageContainer

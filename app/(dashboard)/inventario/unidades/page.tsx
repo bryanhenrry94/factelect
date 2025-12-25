@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { createUnit, deleteUnit, getUnits, updateUnit } from "@/actions/unit";
+import { createUnit, deleteUnit, getUnits, updateUnit } from "@/actions/inventory/unit";
 import { Delete, Edit, Plus, ShoppingBag } from "lucide-react";
 
 /* shadcn */

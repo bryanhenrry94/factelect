@@ -34,7 +34,7 @@ import { useSearchFilter } from "@/hooks/useSearchFilter";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Badge } from "@/components/ui/badge";
 import { Unit } from "@/lib/validations/unit";
-import { getUnits } from "@/actions/unit";
+import { getUnits } from "@/actions/inventory/unit";
 
 export default function ProductsPage() {
   const router = useRouter();

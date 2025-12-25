@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
 import { Tenant, tenantSchema } from "@/lib/validations/tenant";
-import { updateTenant } from "@/actions/tenant";
+import { updateTenant } from "@/actions/setting/tenant";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
 import UploadLogoForm from "../../ui/UploadLogoForm";

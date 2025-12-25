@@ -15,7 +15,7 @@ import CompanyForm from "@/components/setting/company/company-form";
 import SRIConfigForm from "@/components/setting/sri-config-form";
 import { BillingForm } from "@/components/billing/BillingForm";
 
-import { getTenantById } from "@/actions/tenant";
+import { getTenantById } from "@/actions/setting/tenant";
 import { Tenant } from "@/lib/validations/tenant";
 
 /* shadcn */

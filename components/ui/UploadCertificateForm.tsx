@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { uploadCertificateAction } from "@/actions/supabase";
-import { updateCertificatePath } from "@/actions/tenant-sri-config";
+import { updateCertificatePath } from "@/actions/setting/tenant-sri-config";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
 import { Cloud, CloudCheck, CloudUpload } from "lucide-react";

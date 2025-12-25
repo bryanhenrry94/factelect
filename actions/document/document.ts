@@ -485,6 +485,21 @@ export const updateDocumentTx = async (
 
     const balance = data.total - (data.paidAmount || 0);
 
+    // Valida que no tenga transacciones asociadas
+    const associatedTransactions = await tx.transactionDocument.count({
+      where: {
+        documentId: id,
+      },
+    });
+
+    if (associatedTransactions > 0) {
+      return {
+        success: false,
+        error:
+          "No se puede actualizar el documento porque tiene transacciones asociadas",
+      };
+    }
+
     // 1. Actualizar documento
     const updatedDocument = await tx.document.update({
       where: {

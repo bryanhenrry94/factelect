@@ -4,11 +4,29 @@ import {
   CreateTransactionInput,
   createTransactionSchema,
   TransactionInput,
+  UpdateTransactionInput,
 } from "@/lib/validations";
-import { createCashMovementTx } from "./cash/cash-movement";
+import {
+  createCashMovementTx,
+  updateCashMovementTx,
+} from "../cash/cash-movement";
 import { CreateCashMovement } from "@/lib/validations/cash/cash_movement";
 import { CreateBankMovement } from "@/lib/validations/bank/bank_movement";
-import { createBankMovementTx } from "./bank/bank-movement";
+import {
+  createBankMovementTx,
+  updateBankMovementTx,
+} from "../bank/bank-movement";
+import { Prisma } from "@/prisma/generated/prisma";
+
+export type FilterTransactionsParams = {
+  tenantId: string;
+  search?: string;
+  type?: "INCOME" | "EXPENSE";
+  method?: "CASH" | "TRANSFER";
+  personId?: string;
+  fromDate?: string;
+  toDate?: string;
+};
 
 export const validateTransactionData = async (
   data: Partial<CreateTransactionInput>
@@ -297,44 +315,209 @@ export const createTransaction = async (
   }
 };
 
-export const updateTransaction = async (
+export const updateTransactionTx = async (
+  tx: Prisma.TransactionClient,
+  tenantId: string,
   transactionId: string,
-  data: Partial<CreateTransactionInput>
-): Promise<{ success: boolean; error?: string; data?: TransactionInput }> => {
-  try {
-    const resValidation = await validateTransactionData(data);
-    if (!resValidation.success) {
-      return { success: false, error: resValidation.error };
-    }
+  data: UpdateTransactionInput
+): Promise<TransactionInput> => {
+  // Validar que exista
+  const current = await tx.transaction.findUnique({
+    where: { id: transactionId },
+  });
 
-    const parsedData = createTransactionSchema.partial().parse(data);
+  if (!current) {
+    throw new Error("La transacción no existe");
+  }
 
-    const transaction = await prisma.transaction.update({
-      where: { id: transactionId },
-      data: {
-        personId: parsedData.personId,
-        type: parsedData.type,
-        method: parsedData.method,
-        amount: parsedData.amount,
-        issueDate: parsedData.issueDate,
-        reference: parsedData.reference ?? null,
-        description: parsedData.description ?? null,
-        // documents: parsedData.documents,
-        reconciled: parsedData.reconciled ?? false,
-        reconciledAt: parsedData.reconciledAt ?? null,
-        bankAccountId: parsedData.bankAccountId ?? null,
-      },
+  // Actualizar transacción
+  const transaction = await tx.transaction.update({
+    where: { id: transactionId },
+    include: { documents: true },
+    data: {
+      personId: data.personId,
+      type: data.type,
+      method: data.method,
+      amount: data.amount,
+      issueDate: data.issueDate,
+      reference: data.reference || null,
+      description: data.description || null,
+      bankAccountId: data.bankAccountId || null,
+    },
+  });
+
+  const isIncome = transaction.type === "INCOME";
+  const amount = Number(transaction.amount);
+
+  /* ===========================
+   * 2. Aplicar a documentos
+   * =========================== */
+  if (transaction.documents?.length) {
+    // Eliminar documentos anteriores
+    await tx.transactionDocument.deleteMany({
+      where: { transactionId: transactionId },
     });
 
-    const transactionFormatted: TransactionInput = {
-      ...transaction,
-      documents: parsedData.documents || [],
+    // Aplicar nuevos documentos
+    for (const doc of transaction.documents) {
+      await tx.transactionDocument.create({
+        data: {
+          transactionId: transaction.id,
+          documentId: doc.documentId,
+          amount: doc.amount,
+          tenantId,
+        },
+      });
+
+      // Actualizar montos en documentos
+      const document = await tx.document.findUnique({
+        where: { id: doc.documentId },
+        select: { total: true, paidAmount: true },
+      });
+
+      if (!document) throw new Error("Documento no encontrado");
+
+      const paid = Number(document.paidAmount || 0) + Number(doc.amount);
+      const balance = Number(document.total) - paid;
+
+      await tx.document.update({
+        where: { id: doc.documentId },
+        data: {
+          paidAmount: paid,
+          balance: Math.max(balance, 0),
+        },
+      });
+    }
+  }
+
+  /* ===========================
+   * 3. Movimiento Caja + Contabilidad
+   * =========================== */
+  if (transaction.method === "CASH") {
+    // Obtener la sesión de caja abierta del usuario
+    const cashSession = await tx.cashSession.findFirst({
+      where: {
+        userId: data.userId!,
+        status: "OPEN",
+      },
+    });
+    if (!cashSession) throw new Error("No hay sesión de caja abierta");
+
+    // Obtener la cuenta contable de la persona
+    const person = await tx.person.findUnique({
+      where: { id: transaction.personId },
+    });
+    if (!person) throw new Error("Persona no encontrada");
+
+    const counterAccountId = isIncome
+      ? person.accountReceivableId
+      : person.accountPayableId;
+
+    if (!counterAccountId)
+      throw new Error("Cuenta contable de la persona no configurada");
+
+    const cashMovementData: CreateCashMovement = {
+      cashSessionId: cashSession.id,
+      cashBoxId: cashSession.cashBoxId,
+      transactionId: transaction.id,
+      type: isIncome ? "IN" : "OUT",
+      category: "SALE",
+      amount,
+      description: transaction.description ?? "",
+      accountId: counterAccountId,
     };
 
-    return { success: true, data: transactionFormatted };
-  } catch (error) {
+    const existingCashMovement = await tx.cashMovement.findFirst({
+      where: { transactionId: transaction.id },
+    });
+
+    // Crear el movimiento de caja dentro de la misma transacción
+    if (existingCashMovement) {
+      await updateCashMovementTx(
+        tx,
+        tenantId,
+        existingCashMovement.id,
+        cashMovementData
+      );
+    } else {
+      await createCashMovementTx(tx, tenantId, cashMovementData);
+    }
+  }
+
+  /* ===========================
+   * 4. Movimiento Banco + Contabilidad
+   * =========================== */
+  if (transaction.method === "TRANSFER") {
+    if (!transaction.bankAccountId)
+      throw new Error("Cuenta bancaria no especificada");
+
+    const person = await tx.person.findUnique({
+      where: { id: transaction.personId },
+    });
+    if (!person) throw new Error("Persona no encontrada");
+
+    const counterAccountId = isIncome
+      ? person.accountReceivableId
+      : person.accountPayableId;
+
+    if (!counterAccountId)
+      throw new Error("Cuenta contable de la persona no configurada");
+
+    const bankMov: CreateBankMovement = {
+      bankAccountId: transaction.bankAccountId,
+      transactionId: transaction.id,
+      type: isIncome ? "IN" : "OUT",
+      date: transaction.issueDate,
+      amount,
+      description: transaction.description ?? "",
+      details: [
+        {
+          accountId: counterAccountId,
+          amount,
+          description: transaction.description ?? "",
+          costCenterId: null,
+        },
+      ],
+    };
+
+    const existingBankMovement = await tx.bankMovement.findFirst({
+      where: { transactionId: transaction.id },
+    });
+
+    // Crear el movimiento bancario dentro de la misma transacción
+    if (existingBankMovement) {
+      await updateBankMovementTx(tx, existingBankMovement.id, bankMov);
+    } else {
+      await createBankMovementTx(tx, tenantId, bankMov);
+    }
+  }
+
+  return {
+    ...transaction,
+    reference: transaction.reference ?? undefined,
+    description: transaction.description ?? undefined,
+    bankAccountId: transaction.bankAccountId ?? undefined,
+    documents: transaction.documents || [],
+  };
+};
+
+export const updateTransaction = async (
+  tenantId: string,
+  transactionId: string,
+  data: UpdateTransactionInput
+): Promise<{ success: boolean; error?: string; data?: TransactionInput }> => {
+  try {
+    const transaction = await prisma.$transaction((tx) =>
+      updateTransactionTx(tx, tenantId, transactionId, data)
+    );
+
+    return { success: true, data: transaction };
+  } catch (error: any) {
     console.error("Error updating transaction:", error);
-    return { success: false, error: "Error updating transaction" };
+    return {
+      success: false,
+      error: error.message || "Error al actualizar la transacción",
+    };
   }
 };
 
@@ -361,16 +544,6 @@ export const getTransaction = async (
     console.error("Error fetching transaction:", error);
     return { success: false, error: "Error fetching transaction" };
   }
-};
-
-export type FilterTransactionsParams = {
-  tenantId: string;
-  search?: string;
-  type?: "INCOME" | "EXPENSE";
-  method?: "CASH" | "TRANSFER";
-  personId?: string;
-  fromDate?: string;
-  toDate?: string;
 };
 
 export const getTransactions = async (

@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { CloudUpload, FileCheck } from "lucide-react";
 
 import { uploadLogoAction } from "@/actions/supabase";
-import { updateLogoUrl } from "@/actions/tenant";
+import { updateLogoUrl } from "@/actions/setting/tenant";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
 /* shadcn */

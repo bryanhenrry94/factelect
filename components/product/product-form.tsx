@@ -33,7 +33,7 @@ import { Unit } from "@/lib/validations/unit";
 import { ChartOfAccount } from "@/lib/validations";
 
 import { getAllCategories } from "@/actions/inventory/category";
-import { getUnits } from "@/actions/unit";
+import { getUnits } from "@/actions/inventory/unit";
 import { getAccounts } from "@/actions/accounting/chart-of-account";
 import { createProduct, getProductById, updateProduct } from "@/actions";
 

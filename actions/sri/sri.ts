@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { generateXmlSRI } from "./sri-document";
 import { firmarFactura } from "./firma";
-import { getXmlSignedByPath } from "./supabase";
+import { getXmlSignedByPath } from "@/actions/supabase";
 import { enviarComprobanteAlSRI } from "./sri-recepcion";
 import { consultarAutorizacionSRI } from "./sri-autorizacion";
 

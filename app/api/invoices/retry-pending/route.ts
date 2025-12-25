@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { retryPendingAuthorizations } from "@/actions/sri";
+import { retryPendingAuthorizations } from "@/actions/sri/sri";
 
 /**
  * POST /api/invoices/retry-pending

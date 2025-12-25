@@ -7,7 +7,10 @@ import {
   UpdateCashMovement,
 } from "@/lib/validations/cash/cash_movement";
 import { Prisma } from "@/prisma/generated/prisma";
-import { createJournalEntryTx } from "../accounting/journal-entry";
+import {
+  createJournalEntryTx,
+  updateJournalEntryTx,
+} from "../accounting/journal-entry";
 
 export const getAllMovementByCashSessionId = async (
   cashSessionId: string
@@ -145,6 +148,84 @@ export const createCashMovementTx = async (
     transactionId: newCashMovement.transactionId ?? undefined,
     description: newCashMovement.description ?? undefined,
     accountId: newCashMovement.accountId ?? undefined,
+  };
+};
+
+export const updateCashMovementTx = async (
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  id: string,
+  data: CreateCashMovement
+): Promise<CashMovement> => {
+  // Actualizar el movimiento de caja
+  const updatedMovement = await tx.cashMovement.update({
+    where: { id },
+    data: {
+      ...data,
+      tenantId,
+    },
+  });
+
+  const cashBox = await tx.cashBox.findUnique({
+    where: { id: updatedMovement.cashBoxId },
+  });
+
+  if (!cashBox) {
+    throw new Error("Caja no encontrada");
+  }
+
+  if (!cashBox.accountId) {
+    throw new Error("La caja no tiene una cuenta asociada para movimientos");
+  }
+
+  // Obtener la transacción asociada si existe
+  const transaction = await tx.transaction.findUnique({
+    where: { id: updatedMovement.transactionId || "" },
+  });
+
+  const existingJournalEntry = await tx.journalEntry.findFirst({
+    where: {
+      sourceType: "CASH_MOVEMENT",
+      sourceId: updatedMovement.id,
+    },
+  });
+
+  // Contabiliza movimiento de caja
+  const journalEntry: CreateJournalEntry = {
+    type: "SALE",
+    sourceType: "CASH_MOVEMENT",
+    sourceId: updatedMovement.id,
+    date: updatedMovement.createdAt,
+    description: updatedMovement.description || "Movimiento de caja",
+    lines: [
+      {
+        accountId: cashBox.accountId,
+        debit: data.type === "IN" ? updatedMovement.amount : 0,
+        credit: data.type === "OUT" ? updatedMovement.amount : 0,
+      },
+      {
+        accountId: updatedMovement.accountId!,
+        debit: data.type === "IN" ? 0 : updatedMovement.amount,
+        credit: data.type === "OUT" ? 0 : updatedMovement.amount,
+        personId: transaction?.personId || undefined,
+      },
+    ],
+  };
+
+  // Crear o actualizar asiento contable
+  if (existingJournalEntry) {
+    await updateJournalEntryTx(tx, existingJournalEntry.id, journalEntry);
+  } else {
+    await createJournalEntryTx(tx, tenantId, journalEntry);
+  }
+
+  return {
+    ...updatedMovement,
+    cashSessionId: updatedMovement.cashSessionId,
+    cashBoxId: updatedMovement.cashBoxId,
+    transactionId: updatedMovement.transactionId ?? undefined,
+    description: updatedMovement.description ?? undefined,
+    accountId: updatedMovement.accountId ?? undefined,
   };
 };
 

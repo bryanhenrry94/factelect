@@ -21,7 +21,7 @@ import {
 } from "@/actions/inventory/inventory-movement";
 import { getWarehouses } from "@/actions/inventory/warehouse";
 import { getAllProducts } from "@/actions";
-import { getUnits } from "@/actions/unit";
+import { getUnits } from "@/actions/inventory/unit";
 import { getStockByProductAndWarehouse } from "@/actions/inventory/stock";
 
 import { notifyError, notifyInfo } from "@/lib/notifications";

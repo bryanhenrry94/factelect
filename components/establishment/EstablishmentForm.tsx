@@ -8,7 +8,7 @@ import { Establishment } from "@/lib/validations";
 import {
   deleteEstablishment,
   getEstablishments,
-} from "@/actions/establishment";
+} from "@/actions/setting/establishment";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
 import EstablishmentDialog from "./establishment-dialog";

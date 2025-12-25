@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
-import { acceptInvitation, validateToken } from "@/actions/tenant-invitation";
+import { acceptInvitation, validateToken } from "@/actions/setting/tenant-invitation";
 import { notifyInfo } from "@/lib/notifications";
 
 interface InvitationData {

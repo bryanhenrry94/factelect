@@ -50,7 +50,7 @@ import {
 import { CashBox } from "@/lib/validations/cash/cash_box";
 import { BankAccount } from "@/lib/validations/bank/bank_account";
 import { ConfirmDialog } from "../ConfirmDialog";
-import { getTransactionDocuments } from "@/actions/transaction-document";
+import { getTransactionDocuments } from "@/actions/transaction/transaction-document";
 import { TransactionDocumentInput } from "@/lib/validations/transaction-document";
 
 const initialState: CreateTransactionInput = {
@@ -221,9 +221,14 @@ export default function TransactionForm({
       // Agregar userId al data a enviar
       const dataToSubmit = { ...data, userId: session?.user?.id };
 
+      if (!tenant.id) {
+        setError?.("Tenant no encontrado");
+        return;
+      }
+
       const res = modeEdit
-        ? await updateTransaction(transactionId!, dataToSubmit)
-        : await createTransaction(dataToSubmit, tenant.id ?? "");
+        ? await updateTransaction(tenant.id, transactionId!, dataToSubmit)
+        : await createTransaction(dataToSubmit, tenant.id);
 
       if (!res?.success) {
         setError?.(res?.error || "Error al procesar la solicitud");

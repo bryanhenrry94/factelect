@@ -9,7 +9,7 @@ import {
   getEmissionPoint,
   getEmissionPoints,
   updateEmissionPoint,
-} from "@/actions/emission-point";
+} from "@/actions/setting/emission-point";
 import { getEstablishments } from "@/actions";
 import {
   CreateEmissionPoint,
@@ -55,7 +55,7 @@ import {
 } from "../ui/table";
 import { initialSequences } from "./initialSequence";
 import { getDocumentTypeLabelV2 } from "@/utils/document";
-import { getEmissionPointSequences } from "@/actions/emission-point-sequence";
+import { getEmissionPointSequences } from "@/actions/setting/emission-point-sequence";
 
 interface EmissionPointDialogProps {
   open: boolean;

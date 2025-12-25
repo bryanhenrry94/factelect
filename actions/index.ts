@@ -1,17 +1,17 @@
 export * from "./auth";
-export * from "./person";
+export * from "./person/person";
 export * from "./dashboard";
-export * from "./emission-point";
-export * from "./establishment";
-export * from "./firma";
+export * from "./setting/emission-point";
+export * from "./setting/establishment";
+export * from "./sri/firma";
 export * from "./inventory/product";
 // export * from "./sri-autorizacion"; ← aquí importas `soap`
-export * from "./sri-document";
+export * from "./sri/sri-document";
 // export * from "./sri-recepcion"; ← aquí importas `soap`
-export * from "./sri";
+export * from "./sri/sri";
 export * from "./supabase";
-export * from "./tenant-sri-config";
-export * from "./tenant";
+export * from "./setting/tenant-sri-config";
+export * from "./setting/tenant";
 export * from "./setting/user";
-export * from "./transaction";
+export * from "./transaction/transaction";
 export * from "./document/document";
