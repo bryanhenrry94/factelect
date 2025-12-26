@@ -311,3 +311,67 @@ export const getWithholdingByBaseDocument = async (
     };
   }
 };
+
+export const deleteWithholding = async (
+  id: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    await prisma.$transaction(async (tx) => {
+      // 1️⃣ Obtener la retención con su documento
+      const withholding = await tx.withholding.findUnique({
+        where: { id },
+        include: { document: true },
+      });
+
+      if (!withholding) {
+        throw new Error("Retención no encontrada");
+      }
+
+      const withholdingDocumentId = withholding.documentId;
+      const baseDocumentId = withholding.document.relatedDocumentId;
+
+      // 2️⃣ Eliminar detalles
+      await tx.withholdingDetail.deleteMany({
+        where: { withholdingId: id },
+      });
+
+      // 3️⃣ Eliminar la cabecera de retención
+      await tx.withholding.delete({
+        where: { id },
+      });
+
+      // 4️⃣ Eliminar el documento de retención (AHORA sí se puede)
+      await tx.document.delete({
+        where: { id: withholdingDocumentId },
+      });
+
+      // 5️⃣ (Opcional) Actualizar documento base si necesitas reflejar algo
+      if (baseDocumentId) {
+        const baseDocument = await tx.document.findUnique({
+          where: { id: baseDocumentId },
+        });
+
+        if (baseDocument) {
+          const newBalance =
+            baseDocument.total - (baseDocument.paidAmount || 0);
+
+          await tx.document.update({
+            where: { id: baseDocument.id },
+            data: {
+              totalWithheld: 0,
+              balance: newBalance,
+            },
+          });
+        }
+      }
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("deleteWithholding error:", error);
+    return {
+      success: false,
+      error: error.message || "Error eliminando la retención",
+    };
+  }
+};

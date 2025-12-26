@@ -15,6 +15,7 @@ import {
   getJournalEntriesDocumentData,
 } from "../accounting/journal-entry";
 import { CreateJournalEntry } from "@/lib/validations/accounting/journal_entry";
+import { deleteWithholding } from "../withholding/withholding";
 
 export interface DocumentFilter {
   tenantId: string;
@@ -161,6 +162,42 @@ export const deleteDocument = async (
   id: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
+    const document = await prisma.document.findUnique({
+      where: { id },
+    });
+
+    if (!document) {
+      return { success: false, error: "Documento no encontrado" };
+    }
+
+    if (document.documentType === "INVOICE") {
+      // valida si es retencion
+      const associatedWithholdings = await prisma.withholding.count({
+        where: {
+          documentId: id,
+        },
+      });
+      if (associatedWithholdings > 0) {
+        return {
+          success: false,
+          error:
+            "No se puede eliminar el documento porque tiene retenciones asociadas",
+        };
+      }
+    }
+
+    if (document.documentType === "WITHHOLDING") {
+      const withholding = await prisma.withholding.findFirst({
+        where: { documentId: id },
+      });
+
+      if (withholding) {
+        // Elimina la retención asociada y documento de retención
+        await deleteWithholding(withholding.id);
+        return { success: true };
+      }
+    }
+
     await prisma.document.delete({
       where: { id },
     });
