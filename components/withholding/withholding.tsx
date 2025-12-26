@@ -8,10 +8,6 @@ import {
   WithholdingCreate,
   WithholdingCreateSchema,
 } from "@/lib/validations/withholding/withholding";
-import {
-  WithholdingDetailCreate,
-  WithholdingTypeEnum,
-} from "@/lib/validations/withholding/withholding-detail";
 
 import {
   FormField,
@@ -50,6 +46,7 @@ import {
 } from "@/actions/withholding/withholding";
 
 import { DocumentFiscalInfo } from "../document/DocumentFiscalInfo";
+import { useSession } from "next-auth/react";
 
 const emptyDetail: any = {
   id: "",
@@ -76,22 +73,44 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
   documentId,
   withholdingId,
 }) => {
+  const { data: session } = useSession();
+
   const methods = useForm<WithholdingCreate>({
     resolver: zodResolver(WithholdingCreateSchema),
     defaultValues: {
-      documentId, // 👈 factura relacionada
+      documentId,
       issueDate: new Date(),
       totalWithheld: 0,
       details: [emptyDetail],
       document: {
-        entityType,
-        documentType: "WITHHOLDING",
+        id: "",
+        tenantId: "",
+        entityType: entityType,
+        documentType: "INVOICE",
+        status: "DRAFT",
+        number: "",
+        authorizationNumber: null,
+        authorizedAt: null,
         issueDate: new Date(),
-      } as any,
+        subtotal: 0,
+        taxTotal: 0,
+        discount: 0,
+        total: 0,
+        paidAmount: 0,
+        balance: 0,
+        relatedDocumentId: null,
+      },
     },
   });
 
-  const { control, handleSubmit, reset, watch, setValue } = methods;
+  const {
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors },
+  } = methods;
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -126,9 +145,11 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
   /* ================= submit ================= */
   const onSubmit = async (data: WithholdingCreate) => {
     try {
+      if (!session?.user?.tenantId) return;
+
       const res = withholdingId
-        ? await updateWithholding(withholdingId, data)
-        : await createWithholding(data);
+        ? await updateWithholding(withholdingId, documentId, data)
+        : await createWithholding(session.user.tenantId, documentId, data);
 
       if (!res.success) {
         notifyError(res.error || "Error al guardar retención");
@@ -154,7 +175,7 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
               Importar XML
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <FormField
               control={control}
               name="issueDate"
@@ -164,6 +185,7 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
                   <FormControl>
                     <Input
                       type="date"
+                      required
                       value={
                         field.value
                           ? new Date(field.value).toISOString().slice(0, 10)
@@ -178,36 +200,20 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
 
             <FormField
               control={control}
-              name="document.series"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Serie</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="000-000"
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={control}
               name="document.number"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Número</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="000000000"
+                      required
+                      placeholder="000-000-000000000"
                       {...field}
                       value={field.value ?? ""}
                       onChange={field.onChange}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -221,10 +227,13 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
                   <FormControl>
                     <Input
                       {...field}
+                      required
+                      placeholder="0000000000000000000000000000000000000000000000000"
                       value={field.value ?? ""}
                       onChange={field.onChange}
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -237,13 +246,13 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
                   <FormLabel>Fecha autorización</FormLabel>
                   <FormControl>
                     <Input
-                      type="datetime-local"
+                      type="date"
                       value={
                         field.value
-                          ? new Date(field.value).toISOString().slice(0, 16)
+                          ? new Date(field.value).toISOString().slice(0, 10)
                           : ""
                       }
-                      onChange={(e) => field.onChange(e.target.value)}
+                      onChange={(e) => field.onChange(new Date(e.target.value))}
                     />
                   </FormControl>
                 </FormItem>
@@ -312,6 +321,10 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
                                   `details.${idx}.percentage`,
                                   code.percentage
                                 );
+                                setValue(
+                                  `details.${idx}.accountId`,
+                                  code.accountId
+                                );
                               }
                             }}
                           >
@@ -347,11 +360,8 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {WithholdingTypeEnum.options.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
+                            <SelectItem value={"IVA"}>IVA</SelectItem>
+                            <SelectItem value={"SOURCE"}>Fuente</SelectItem>
                           </SelectContent>
                         </Select>
                       )}

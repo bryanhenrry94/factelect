@@ -420,7 +420,6 @@ model Document {
 
   // 📌 Datos fiscales básicos (también para docs recibidos)
   number     String?  // 001-001-000012345
-  series     String?  // 001-001
   accessKey  String?  // clave de acceso SRI
   authorizationNumber String? // autorización SRI
   authorizedAt                                    DateTime?
@@ -443,6 +442,7 @@ model Document {
   // - Facturas: pagos aplicados
   // - Retenciones: normalmente = total
   paidAmount                                      Float                 @map("paid_amount")                                         @default(0)
+  totalWithheld                                   Float                 @map("total_withheld")                                      @default(0)
   balance                                         Float                                                                             @default(0)
 
   //                                              Auditoría
@@ -463,7 +463,7 @@ model Document {
   relatedDocuments                                Document[]            @relation("DocumentRelation")
   withholdings                                    Withholding[]
 
-  @@unique([tenantId,                             number])
+  // @@unique([tenantId,                             number])
   @@index([tenantId])
   @@index([personId])
   @@map("document")
@@ -564,7 +564,7 @@ model Withholding {
   issueDate     DateTime
 
   //            totales
-  totalWithheld Decimal
+  totalWithheld Float
 
   createdAt     DateTime             @default(now())
 

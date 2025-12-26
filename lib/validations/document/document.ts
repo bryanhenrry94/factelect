@@ -31,7 +31,6 @@ export const documentSchema = z.object({
 
   // 📌 Datos fiscales básicos (también para docs recibidos)
   number: z.string().nullable().optional(), // 001-001-000012345
-  series: z.string().nullable().optional(), // 001-001
   accessKey: z.string().nullable().optional(), // clave de acceso SRI
   authorizationNumber: z.string().nullable().optional(), // autorización SRI
   authorizedAt: z.date().nullable().optional(), // DateTime?
@@ -45,6 +44,7 @@ export const documentSchema = z.object({
   discount: z.number(),
   total: z.number(),
   paidAmount: z.number(),
+  totalWithheld: z.number(),
   balance: z.number(),
 
   description: z.string().nullable().optional(),
@@ -86,7 +86,6 @@ export const documentResponseSchema = documentSchema.extend({
     })
     .optional(),
   documentFiscalInfo: DocumentFiscalInfoSchema.optional(),
-  documentNumber: z.string().optional(),
   withholding: documentSchema.optional(),
 });
 

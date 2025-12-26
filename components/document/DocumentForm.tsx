@@ -53,6 +53,9 @@ import InvoicePDF from "../pdf/InvoicePDF";
 import { pdf } from "@react-pdf/renderer";
 import { WithholdingForm } from "../withholding/withholding";
 import { WithholdingCode } from "@/lib/validations/withholding/withholding-code";
+import { getWithholdingByBaseDocument } from "@/actions/withholding/withholding";
+import { Withholding } from "@/lib/validations/withholding/withholding";
+import { useSession } from "next-auth/react";
 
 const initialItemsState: CreateDocumentItem[] = [
   {
@@ -125,13 +128,13 @@ export default function DocumentForm({
   withholdingCodes,
 }: DocumentFormProps) {
   const router = useRouter();
-  const { tenant } = useTenant();
+  const { data: session } = useSession();
 
   const [error, setError] = useState<string | null>(null);
   const [modeEdit, setModeEdit] = useState(!!documentId);
   const [tab, setTab] = useState("items");
 
-  const [withholdingId, setWithholdingId] = useState<string | null>(null);
+  const [withholding, setWithholding] = useState<Withholding | null>(null);
 
   const methods = useForm<CreateDocument>({
     resolver: zodResolver(createDocumentSchema),
@@ -160,12 +163,14 @@ export default function DocumentForm({
       const itemsRes = await getDocumentItems(res.data.id!);
       const fiscalRes = await getDocumentFiscalInfo(res.data.id!);
       const paymentsRes = await getDocumentPayments(res.data.id!);
-      const resDocWithholding = await getDocumentWithholding(res.data.id!);
+      const resDocWithholding = await getWithholdingByBaseDocument(
+        res.data.id!
+      );
 
       if (resDocWithholding.success && resDocWithholding.data) {
-        setWithholdingId(resDocWithholding.data.id);
+        setWithholding(resDocWithholding.data);
       } else {
-        setWithholdingId(null);
+        setWithholding(null);
       }
 
       reset({
@@ -196,10 +201,7 @@ export default function DocumentForm({
 
   const onSubmit = async (data: CreateDocument) => {
     try {
-      if (!tenant?.ruc) {
-        setError("RUC de la empresa no encontrado.");
-        return;
-      }
+      if (!session?.user.tenantId) return;
 
       const confirm = await ConfirmDialog.confirm(
         "Confirmación",
@@ -208,8 +210,8 @@ export default function DocumentForm({
       if (!confirm) return;
 
       const res = modeEdit
-        ? await updateDocument(tenant.id, documentId!, data)
-        : await createDocument(tenant.id, data);
+        ? await updateDocument(session.user.tenantId, documentId!, data)
+        : await createDocument(session.user.tenantId, data);
 
       if (!res?.success) {
         setError(res?.error || "Error al guardar documento");
@@ -231,6 +233,8 @@ export default function DocumentForm({
 
   const handleSendToSRI = async () => {
     try {
+      if (!session?.user.tenantId) return;
+
       const confirm = await ConfirmDialog.confirm(
         "Confirmación",
         "¿Está seguro de que desea enviar este documento al SRI?"
@@ -238,7 +242,7 @@ export default function DocumentForm({
       if (!confirm) return;
 
       // Lógica para enviar el documento al SRI
-      const response = await sendToSRI(documentId!, tenant!.id);
+      const response = await sendToSRI(documentId!, session.user.tenantId);
 
       if (response.success) {
         notifyInfo("Documento enviado al SRI correctamente");
@@ -351,7 +355,7 @@ export default function DocumentForm({
                     withholdingCodes={withholdingCodes}
                     entityType={watch("entityType")}
                     documentId={documentId}
-                    withholdingId={withholdingId || undefined}
+                    withholdingId={withholding?.id || undefined}
                   />
                 )}
               </TabsContent>

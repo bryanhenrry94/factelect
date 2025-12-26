@@ -104,7 +104,7 @@ const CustomRow: React.FC<CustomRowProps> = memo(({ field, index, remove }) => {
                 <SelectContent>
                   {documents.map((doc: DocumentResponse) => (
                     <SelectItem key={doc.id} value={doc.id}>
-                      {`FACT ${doc.documentNumber}`}
+                      {`FACT ${doc.number}`}
                     </SelectItem>
                   ))}
                 </SelectContent>

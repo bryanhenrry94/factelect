@@ -125,16 +125,6 @@ export const getDocuments = async (
     const formattedDocuments: DocumentResponse[] = documents.map((doc) => {
       const { person, documentFiscalInfo, number, dueDate, description } = doc;
 
-      const establishmentCode = documentFiscalInfo?.establishment.code ?? "";
-      const emissionPointCode = documentFiscalInfo?.emissionPoint.code ?? "";
-      const sequence =
-        documentFiscalInfo?.sequence?.toString().padStart(9, "0") ?? "";
-
-      const documentNumber =
-        establishmentCode && emissionPointCode && sequence
-          ? `${establishmentCode}-${emissionPointCode}-${sequence}`
-          : undefined;
-
       const fullname = person
         ? person.firstName
           ? `${person.firstName} ${person.lastName}`
@@ -149,6 +139,7 @@ export const getDocuments = async (
         dueDate: dueDate || undefined,
         description: description || undefined,
         documentFiscalInfo: documentFiscalInfo || undefined,
+        totalWithheld: doc.totalWithheld,
         person: person
           ? {
               id: person.id,
@@ -156,7 +147,6 @@ export const getDocuments = async (
               fullname,
             }
           : undefined,
-        documentNumber,
       };
     });
 
@@ -345,7 +335,7 @@ export const createDocumentTx = async (
 
     // 3. Fiscal Info + actualizar secuencia
     if (data.fiscalInfo) {
-      await tx.documentFiscalInfo.create({
+      const newFiscalInfo = await tx.documentFiscalInfo.create({
         data: {
           documentId: newDocument.id,
           establishmentId: data.fiscalInfo.establishmentId,
@@ -367,6 +357,43 @@ export const createDocumentTx = async (
           currentSequence: data.fiscalInfo.sequence + 1,
         },
       });
+
+      const existingFiscal = await tx.documentFiscalInfo.findUnique({
+        where: { id: newFiscalInfo.id },
+        include: {
+          establishment: true,
+          emissionPoint: true,
+        },
+      });
+
+      if (
+        !existingFiscal?.establishment?.code ||
+        !existingFiscal?.emissionPoint?.code ||
+        existingFiscal.sequence == null
+      ) {
+        return {
+          success: false,
+          error: "Información fiscal incompleta para actualizar el número",
+        };
+      }
+
+      const seq = Number(existingFiscal.sequence);
+      if (Number.isNaN(seq)) {
+        throw new Error("Secuencia fiscal inválida");
+      }
+
+      const number = `${existingFiscal.establishment.code}-${
+        existingFiscal.emissionPoint.code
+      }-${seq.toString().padStart(9, "0")}`;
+
+      console.log("number: ", number);
+
+      if (data.number !== number) {
+        await tx.document.update({
+          where: { id: newDocument.id },
+          data: { number },
+        });
+      }
     }
 
     // 4. Payments
@@ -595,6 +622,10 @@ export const updateDocumentTx = async (
     if (data.fiscalInfo) {
       const existingFiscal = await tx.documentFiscalInfo.findUnique({
         where: { documentId: id },
+        include: {
+          establishment: true,
+          emissionPoint: true,
+        },
       });
 
       if (existingFiscal) {
@@ -608,6 +639,36 @@ export const updateDocumentTx = async (
             sriStatus: data.fiscalInfo.sriStatus,
           },
         });
+
+        // Actualizar número si es necesario
+        if (
+          !existingFiscal?.establishment?.code ||
+          !existingFiscal?.emissionPoint?.code ||
+          existingFiscal.sequence == null
+        ) {
+          return {
+            success: false,
+            error: "Información fiscal incompleta para actualizar el número",
+          };
+        }
+
+        const seq = Number(existingFiscal.sequence);
+        if (Number.isNaN(seq)) {
+          throw new Error("Secuencia fiscal inválida");
+        }
+
+        const number = `${existingFiscal.establishment.code}-${
+          existingFiscal.emissionPoint.code
+        }-${seq.toString().padStart(9, "0")}`;
+
+        console.log("number: ", number);
+
+        if (data.number !== number) {
+          await tx.document.update({
+            where: { id },
+            data: { number },
+          });
+        }
       } else {
         await tx.documentFiscalInfo.create({
           data: {
@@ -696,12 +757,6 @@ export const getDocument = async (
       return { success: false, error: "Documento no encontrado" };
     }
 
-    const documentNumber = `${
-      document.documentFiscalInfo?.establishment.code
-    }-${
-      document.documentFiscalInfo?.emissionPoint.code
-    }-${document.documentFiscalInfo?.sequence.toString().padStart(9, "0")}`;
-
     const formattedDocument: DocumentResponse = {
       ...document,
       entityType: document.entityType,
@@ -721,7 +776,6 @@ export const getDocument = async (
       createdAt: document.createdAt,
       updatedAt: document.updatedAt,
       documentFiscalInfo: document.documentFiscalInfo || undefined,
-      documentNumber: documentNumber,
       person: document.person
         ? {
             id: document.person.id,

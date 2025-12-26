@@ -651,6 +651,9 @@ export const deleteTransaction = async (
 
       for (const cm of cashMovements) {
         if (cm.journalEntryId) {
+          await tx.journalEntryLine.deleteMany({
+            where: { journalEntryId: cm.journalEntryId },
+          });
           await tx.journalEntry.delete({
             where: { id: cm.journalEntryId },
           });
@@ -668,6 +671,9 @@ export const deleteTransaction = async (
 
       for (const bm of bankMovements) {
         if (bm.journalEntryId) {
+          await tx.journalEntryLine.deleteMany({
+            where: { journalEntryId: bm.journalEntryId },
+          });
           await tx.journalEntry.delete({
             where: { id: bm.journalEntryId },
           });

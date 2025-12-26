@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { DocumentResponse } from "@/lib/validations";
 import { deleteDocument, getDocuments, getPersonsByTenant } from "@/actions";
@@ -50,8 +50,6 @@ export default function DocumentsPage() {
   const { data: session, status } = useSession();
   const [documents, setDocuments] = useState<DocumentResponse[]>([]);
   const [persons, setPersons] = useState<PersonInput[]>([]);
-  const params = useSearchParams();
-  console.log("Search params:", params.get("type"));
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -282,6 +280,7 @@ export default function DocumentsPage() {
                     <TableHead>Impuesto</TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead>Pagos</TableHead>
+                    <TableHead>Retención</TableHead>
                     <TableHead>Saldo</TableHead>
                     <TableHead className="text-center">Autorizado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
@@ -315,7 +314,7 @@ export default function DocumentsPage() {
                           >
                             <div className="font-normal text-sm">
                               {getDocumentTypeLabel(document.documentType)} -{" "}
-                              {document.documentNumber}
+                              {document.number}
                             </div>
                           </Link>
                         </TableCell>
@@ -333,6 +332,9 @@ export default function DocumentsPage() {
                         <TableCell>{formatCurrency(document.total)}</TableCell>
                         <TableCell>
                           {formatCurrency(document.paidAmount)}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(document.totalWithheld)}
                         </TableCell>
                         <TableCell>
                           {formatCurrency(document.balance)}
