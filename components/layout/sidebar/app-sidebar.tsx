@@ -19,6 +19,8 @@ import {
   Building,
   Settings,
   ShoppingBag,
+  Tractor,
+  Truck,
 } from "lucide-react";
 
 import { NavMain } from "@/components/layout/sidebar/nav-main";
@@ -76,15 +78,18 @@ const data = {
         },
       ],
     },
-
     {
       title: "Ventas",
       url: "#",
       icon: PiggyBank,
       items: [
         {
-          title: "Ventas",
+          title: "Facturas",
           url: "/documentos?type=CUSTOMER&documentType=INVOICE",
+        },
+        {
+          title: "Notas crédito/débito",
+          url: "/documentos",
         },
       ],
     },
@@ -94,8 +99,38 @@ const data = {
       icon: ShoppingBag,
       items: [
         {
-          title: "Compras",
+          title: "Facturas proveedor",
           url: "/documentos?type=SUPPLIER&documentType=INVOICE",
+        },
+        {
+          title: "Notas crédito/débito",
+          url: "/documentos",
+        },
+        {
+          title: "Liquidaciones de compra",
+          url: "/documentos?type=SUPPLIER&documentType=PURCHASE_SETTLEMENT",
+        },
+      ],
+    },
+    {
+      title: "Retenciones",
+      url: "/retenciones",
+      icon: Map,
+      items: [
+        {
+          title: "Retenciones",
+          url: "/documentos?documentType=WITHHOLDING",
+        },
+      ],
+    },
+    {
+      title: "Guias de Remisión",
+      url: "/guias-remision",
+      icon: Truck,
+      items: [
+        {
+          title: "Guias de Remisión",
+          url: "/documentos?documentType=REMISSION_GUIDE",
         },
       ],
     },

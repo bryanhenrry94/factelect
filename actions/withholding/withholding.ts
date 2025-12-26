@@ -312,6 +312,50 @@ export const getWithholdingByBaseDocument = async (
   }
 };
 
+export const getWithholdingByDocumentId = async (
+  documentId: string
+): Promise<{ success: boolean; data?: Withholding; error?: string }> => {
+  try {
+    const withholding = await prisma.withholding.findFirst({
+      where: {
+        documentId,
+      },
+      include: {
+        document: true,
+        details: true,
+      },
+    });
+
+    if (!withholding) {
+      return { success: false, error: "retención no encontrada" };
+    }
+
+    const withholdingMapped: Withholding = {
+      ...withholding,
+      issueDate: new Date(withholding.issueDate),
+      createdAt: new Date(withholding.createdAt),
+      document: {
+        ...withholding.document,
+        issueDate: new Date(withholding.document.issueDate),
+        number: withholding.document.number || "",
+        authorizedAt: withholding.document.authorizedAt
+          ? new Date(withholding.document.authorizedAt)
+          : null,
+      },
+      details: withholding.details.map((detail) => ({
+        ...detail,
+      })),
+    };
+
+    return { success: true, data: withholdingMapped };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || "Error al consultar la retención",
+    };
+  }
+};
+
 export const deleteWithholding = async (
   id: string
 ): Promise<{ success: boolean; error?: string }> => {

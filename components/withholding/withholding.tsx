@@ -65,6 +65,7 @@ export type WithholdingFormProps = {
   entityType: "CUSTOMER" | "SUPPLIER";
   documentId: string; // 👈 factura base
   withholdingId?: string;
+  showHeader?: boolean;
 };
 
 export const WithholdingForm: React.FC<WithholdingFormProps> = ({
@@ -72,6 +73,7 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
   entityType,
   documentId,
   withholdingId,
+  showHeader = true,
 }) => {
   const { data: session } = useSession();
 
@@ -167,106 +169,112 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
     <FormProvider {...methods}>
       <div className="space-y-6">
         {/* ================= Cabecera ================= */}
-        <div className="rounded-lg border p-4 space-y-4 bg-muted/30">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium">Datos de la retención</h3>
-            <Button type="button" variant="secondary" size="sm">
-              <Import className="mr-2 h-4 w-4" />
-              Importar XML
-            </Button>
+        {showHeader && (
+          <div className="rounded-lg border p-4 space-y-4 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium">Datos de la retención</h3>
+              <Button type="button" variant="secondary" size="sm">
+                <Import className="mr-2 h-4 w-4" />
+                Importar XML
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <FormField
+                control={control}
+                name="issueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fecha de emisión</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        required
+                        value={
+                          field.value
+                            ? new Date(field.value).toISOString().slice(0, 10)
+                            : ""
+                        }
+                        onChange={(e) =>
+                          field.onChange(new Date(e.target.value))
+                        }
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="document.number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número</FormLabel>
+                    <FormControl>
+                      <Input
+                        required
+                        placeholder="000-000-000000000"
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="document.authorizationNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nro. autorización SRI</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        required
+                        placeholder="0000000000000000000000000000000000000000000000000"
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="document.authorizedAt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fecha autorización</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        value={
+                          field.value
+                            ? new Date(field.value).toISOString().slice(0, 10)
+                            : ""
+                        }
+                        onChange={(e) =>
+                          field.onChange(new Date(e.target.value))
+                        }
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {entityType === "SUPPLIER" && (
+              <DocumentFiscalInfo
+                modeEdit={!!withholdingId}
+                documentType="WITHHOLDING"
+              />
+            )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <FormField
-              control={control}
-              name="issueDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fecha de emisión</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="date"
-                      required
-                      value={
-                        field.value
-                          ? new Date(field.value).toISOString().slice(0, 10)
-                          : ""
-                      }
-                      onChange={(e) => field.onChange(new Date(e.target.value))}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={control}
-              name="document.number"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Número</FormLabel>
-                  <FormControl>
-                    <Input
-                      required
-                      placeholder="000-000-000000000"
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={control}
-              name="document.authorizationNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nro. autorización SRI</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      required
-                      placeholder="0000000000000000000000000000000000000000000000000"
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={control}
-              name="document.authorizedAt"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fecha autorización</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="date"
-                      value={
-                        field.value
-                          ? new Date(field.value).toISOString().slice(0, 10)
-                          : ""
-                      }
-                      onChange={(e) => field.onChange(new Date(e.target.value))}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-
-          {entityType === "SUPPLIER" && (
-            <DocumentFiscalInfo
-              modeEdit={!!withholdingId}
-              documentType="WITHHOLDING"
-            />
-          )}
-        </div>
+        )}
 
         {/* ================= Detalles ================= */}
         <div className="rounded-lg border p-4 space-y-4">

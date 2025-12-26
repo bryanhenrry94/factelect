@@ -53,7 +53,10 @@ import InvoicePDF from "../pdf/InvoicePDF";
 import { pdf } from "@react-pdf/renderer";
 import { WithholdingForm } from "../withholding/withholding";
 import { WithholdingCode } from "@/lib/validations/withholding/withholding-code";
-import { getWithholdingByBaseDocument } from "@/actions/withholding/withholding";
+import {
+  getWithholdingByBaseDocument,
+  getWithholdingByDocumentId,
+} from "@/actions/withholding/withholding";
 import { Withholding } from "@/lib/validations/withholding/withholding";
 import { useSession } from "next-auth/react";
 
@@ -98,6 +101,7 @@ const initialState: CreateDocument = {
   discount: 0,
   total: 0,
   paidAmount: 0,
+  totalWithheld: 0,
   balance: 0,
   description: undefined,
   items: initialItemsState,
@@ -135,6 +139,7 @@ export default function DocumentForm({
   const [tab, setTab] = useState("items");
 
   const [withholding, setWithholding] = useState<Withholding | null>(null);
+  const [showHeader, setShowHeader] = useState(true);
 
   const methods = useForm<CreateDocument>({
     resolver: zodResolver(createDocumentSchema),
@@ -163,11 +168,19 @@ export default function DocumentForm({
       const itemsRes = await getDocumentItems(res.data.id!);
       const fiscalRes = await getDocumentFiscalInfo(res.data.id!);
       const paymentsRes = await getDocumentPayments(res.data.id!);
-      const resDocWithholding = await getWithholdingByBaseDocument(
-        res.data.id!
-      );
 
-      if (resDocWithholding.success && resDocWithholding.data) {
+      let resDocWithholding;
+
+      if (res.data.documentType === "INVOICE") {
+        // La factura es el documento base
+        resDocWithholding = await getWithholdingByBaseDocument(res.data.id!);
+      } else if (res.data.documentType === "WITHHOLDING") {
+        // Ya estoy sobre el documento de la retención
+        resDocWithholding = await getWithholdingByDocumentId(res.data.id!);
+        setShowHeader(false);
+      }
+
+      if (resDocWithholding?.success && resDocWithholding.data) {
         setWithholding(resDocWithholding.data);
       } else {
         setWithholding(null);
@@ -324,7 +337,11 @@ export default function DocumentForm({
                 </AlertDescription>
               </Alert>
             )}
-            <DocumentInfo modeEdit={modeEdit} persons={persons} />
+            <DocumentInfo
+              modeEdit={modeEdit}
+              persons={persons}
+              onChangeTab={setTab}
+            />
           </CardContent>
         </Card>
 
@@ -339,10 +356,23 @@ export default function DocumentForm({
           <CardContent>
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList>
-                <TabsTrigger value="items">Productos / Servicios</TabsTrigger>
+                {watch("documentType") === "INVOICE" && (
+                  <TabsTrigger value="items">Productos / Servicios</TabsTrigger>
+                )}
+
+                {watch("documentType") === "WITHHOLDING" && (
+                  <TabsTrigger value="withholding">Retención</TabsTrigger>
+                )}
+
                 {/* <TabsTrigger value="accounts">Cuentas</TabsTrigger> */}
-                <TabsTrigger value="withholding">Retención</TabsTrigger>
-                <TabsTrigger value="payments">Formas de Pago</TabsTrigger>
+
+                {watch("documentType") === "INVOICE" && (
+                  <TabsTrigger value="withholding">Retención</TabsTrigger>
+                )}
+
+                {watch("documentType") === "INVOICE" && (
+                  <TabsTrigger value="payments">Formas de Pago</TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="items">
@@ -356,6 +386,7 @@ export default function DocumentForm({
                     entityType={watch("entityType")}
                     documentId={documentId}
                     withholdingId={withholding?.id || undefined}
+                    showHeader={showHeader}
                   />
                 )}
               </TabsContent>
@@ -367,7 +398,7 @@ export default function DocumentForm({
           </CardContent>
         </Card>
 
-        <TotalsSection />
+        {watch("documentType") === "INVOICE" && <TotalsSection />}
       </form>
     </FormProvider>
   );
