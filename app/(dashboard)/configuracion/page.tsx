@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/card";
 import TeamFormPage from "@/components/setting/team/team-form-page";
 import AccountingSettingForm from "@/components/accounting/accounting-setting-form";
+import { WithholdingCodeList } from "@/components/withholding/withholding-code-list";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
@@ -113,6 +114,8 @@ export default function SettingsPage() {
             {/* Contabilidad */}
             <TabsContent value="accounting" className="mt-0">
               <AccountingSettingForm />
+              
+              <WithholdingCodeList />
             </TabsContent>
 
             {/* Billing */}

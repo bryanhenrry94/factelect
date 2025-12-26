@@ -988,3 +988,35 @@ export const validateDocument = async (
 
   return { success: true };
 };
+
+export const getDocumentWithholding = async (
+  documentId: string
+): Promise<{
+  success: boolean;
+  data?: any;
+  error?: string;
+}> => {
+  try {
+    const document = await prisma.document.findFirst({
+      where: { relatedDocumentId: documentId, documentType: "WITHHOLDING" },
+      include: {
+        person: true,
+        items: {
+          include: { product: true },
+        },
+      },
+    });
+
+    if (!document) {
+      return { success: false, error: "Documento no encontrado" };
+    }
+
+    return { success: true, data: document };
+  } catch (error) {
+    console.error("Error al obtener datos de retención del documento:", error);
+    return {
+      success: false,
+      error: "Error al obtener datos de retención del documento",
+    };
+  }
+};

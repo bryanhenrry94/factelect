@@ -23,11 +23,22 @@ export const documentSchema = z.object({
   tenantId: z.string(),
   entityType: entityTypeEnum,
   documentType: documentTypeEnum,
-  number: z.string().nullable().optional(),
+
   issueDate: z.date(),
   dueDate: z.date().nullable().optional(),
   status: documentStatusEnum,
   personId: z.string(),
+
+  // 📌 Datos fiscales básicos (también para docs recibidos)
+  number: z.string().nullable().optional(), // 001-001-000012345
+  series: z.string().nullable().optional(), // 001-001
+  accessKey: z.string().nullable().optional(), // clave de acceso SRI
+  authorizationNumber: z.string().nullable().optional(), // autorización SRI
+  authorizedAt: z.date().nullable().optional(), // DateTime?
+
+  // Para relacionar con facturas base
+  relatedDocumentId: z.string().nullable().optional(),
+  relatedDocument: z.any().optional(), // Document? (relation, use z.any() or a proper schema if available)
 
   subtotal: z.number(),
   taxTotal: z.number(),
@@ -76,6 +87,7 @@ export const documentResponseSchema = documentSchema.extend({
     .optional(),
   documentFiscalInfo: DocumentFiscalInfoSchema.optional(),
   documentNumber: z.string().optional(),
+  withholding: documentSchema.optional(),
 });
 
 export type Document = z.infer<typeof documentSchema>;

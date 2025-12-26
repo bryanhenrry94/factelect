@@ -70,6 +70,10 @@ model Tenant {
   tenantInvitations        TenantInvitation[]
   accountingSetting        AccountingSetting[]
 
+  withholdings             Withholding[]
+  withholdingDetails       WithholdingDetail[]
+  withholdingCodes         WithholdingCode[]
+
   @@map("tenant")
 }
 
@@ -144,7 +148,6 @@ model EmissionPointSequence {
   @@unique([emissionPointId, documentType])
   @@map("emission_point_sequence")
 }
-
 
 model User {
   id                  String               @map("id")                   @id @default(cuid())
@@ -405,43 +408,62 @@ model WarehouseTransferItem {
 }
 
 model Document {
-  id                  String                                                                            @id @default(cuid())
-  tenantId            String                @map("tenant_id")
-  entityType          EntityType                                                                        @default(CUSTOMER) // Cliente | Proveedor
-  documentType        DocumentType
-  number              String?
-  issueDate           DateTime              @map("issue_date")                                          @default(now())
-  dueDate             DateTime?             @map("due_date")                                            @default(now())
-  status              DocumentStatus                                                                    @default(DRAFT) // draft | confirmed | canceled
-  personId            String                @map("person_id") // Cliente (opcional si es venta abierta)
+  id                                              String                                                                            @id @default(cuid())
+  tenantId                                        String                @map("tenant_id")
+  entityType                                      EntityType                                                                        @default(CUSTOMER) // Cliente | Proveedor
+  documentType                                    DocumentType
+  issueDate                                       DateTime              @map("issue_date")                                          @default(now())
+  dueDate                                         DateTime?             @map("due_date")                                            @default(now())
+  status                                          DocumentStatus                                                                    @default(DRAFT) // draft | confirmed | canceled
+  personId                                        String                @map("person_id") // Cliente (opcional si es venta abierta)
+  description                                     String?               @map("description")
 
-  //                  Totales
-  subtotal            Float                                                                             @default(0)
-  taxTotal            Float                 @map("tax_total")                                           @default(0)
-  discount            Float                                                                             @default(0)
-  total               Float                                                                             @default(0)
-  paidAmount          Float                 @map("paid_amount")                                         @default(0)
-  balance             Float                                                                             @default(0)
+  // 📌 Datos fiscales básicos (también para docs recibidos)
+  number     String?  // 001-001-000012345
+  series     String?  // 001-001
+  accessKey  String?  // clave de acceso SRI
+  authorizationNumber String? // autorización SRI
+  authorizedAt                                    DateTime?
 
-  description         String?               @map("description")
+  // Para relacionar con facturas base
+  relatedDocumentId                               String?
+  relatedDocument                                 Document?             @relation("DocumentRelation", fields: [relatedDocumentId], references: [id])
 
-  //                  Auditoría
-  createdAt           DateTime              @map("created_at")                                          @default(now())
-  updatedAt           DateTime              @map("updated_at")                                          @updatedAt
+  // Totales (aplican principalmente a facturas)
+  subtotal                                        Float                                                                             @default(0)
+  taxTotal                                        Float                 @map("tax_total")                                           @default(0)
+  discount                                        Float                                                                             @default(0)
 
-  //                  Relaciones
-  tenant              Tenant                @relation(fields: [tenantId], references: [id])
-  person              Person                @relation(fields: [personId], references: [id])
+  // Total del documento:
+  // - Facturas: total a cobrar/pagar
+  // - Retenciones: total retenido
+  total                                           Float                                                                             @default(0)
 
-  items               DocumentItem[]
-  taxes               DocumentTax[]
+  //                                              Cartera:
+  // - Facturas: pagos aplicados
+  // - Retenciones: normalmente = total
+  paidAmount                                      Float                 @map("paid_amount")                                         @default(0)
+  balance                                         Float                                                                             @default(0)
 
-  documentFiscalInfo  DocumentFiscalInfo?
-  documentPayments    DocumentPayment[]
-  inventoryMovement   InventoryMovement[]
-  transactionDocument TransactionDocument[]
+  //                                              Auditoría
+  createdAt                                       DateTime              @map("created_at")                                          @default(now())
+  updatedAt                                       DateTime              @map("updated_at")                                          @updatedAt
 
-  @@unique([tenantId, number])
+  //                                              Relaciones
+  tenant                                          Tenant                @relation(fields: [tenantId], references: [id])
+  person                                          Person                @relation(fields: [personId], references: [id])
+
+  items                                           DocumentItem[]
+  taxes                                           DocumentTax[]
+
+  documentFiscalInfo                              DocumentFiscalInfo?
+  documentPayments                                DocumentPayment[]
+  inventoryMovement                               InventoryMovement[]
+  transactionDocument                             TransactionDocument[]
+  relatedDocuments                                Document[]            @relation("DocumentRelation")
+  withholdings                                    Withholding[]
+
+  @@unique([tenantId,                             number])
   @@index([tenantId])
   @@index([personId])
   @@map("document")
@@ -531,16 +553,70 @@ model DocumentPayment {
   @@map("document_payment")
 }
 
-model Retention {
-  id         String                            @id @default(cuid())
-  tenantId   String        @map("tenant_id")
-  documentId String        @map("document_id")
-  type       RetentionType
-  percentage Float
-  base       Float
-  amount     Float
+model Withholding {
+  id            String               @id @default(uuid())
+  tenantId      String
+  tenant        Tenant              @relation(fields: [tenantId], references: [id])
 
-  @@map("retention")
+  documentId    String
+  document      Document            @relation(fields: [documentId], references: [id])
+
+  issueDate     DateTime
+
+  //            totales
+  totalWithheld Decimal
+
+  createdAt     DateTime             @default(now())
+
+  details       WithholdingDetail[]
+  @@map("withholding")
+}
+
+model WithholdingDetail {
+  id             String           @id @default(uuid())
+
+  tenantId       String
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+
+  withholdingId  String
+  withholding    Withholding     @relation(fields: [withholdingId], references: [id])
+
+  codeId         String
+  code           WithholdingCode @relation(fields: [codeId], references: [id])
+
+  type           WithholdingType
+
+  baseAmount     Float
+  percentage     Float
+  withheldAmount Float
+
+  accountId      String?
+  account        ChartOfAccount? @relation(fields: [accountId], references: [id])
+  @@map("withholding_detail")
+}
+
+model WithholdingCode {
+  id                                                     String               @id @default(uuid())
+  tenantId   String? // null = catálogo base del sistema
+  tenant                                                 Tenant?             @relation(fields: [tenantId], references: [id])
+
+  type                                                   WithholdingType
+  code        String   // ej: "332", "441"
+  description                                            String
+
+  percentage                                             Float
+  active                                                 Boolean              @default(true)
+
+  // cuenta contable por defecto
+  accountId                                              String?
+  account                                                ChartOfAccount?     @relation(fields: [accountId], references: [id])
+
+  createdAt                                              DateTime             @default(now())
+
+  withholdings                                           WithholdingDetail[]
+
+  @@unique([tenantId, type, code])
+  @@map("withholding_code")
 }
 
 model PasswordResetToken {
@@ -876,9 +952,6 @@ model PersonIdentification {
   @@map("person_identification")
 }
 
-// ------------------------------
-// CATÁLOGO DE CUENTAS
-// ------------------------------
 model ChartOfAccountTemplate {
   id          String       @id @default(uuid())
   code        String
@@ -916,13 +989,12 @@ model ChartOfAccount {
   bankTransaction            BankTransaction[]
   bankMovementDetail         BankMovementDetail[]
   accountingSetting          AccountingSetting[]
+  withholdingDetail          WithholdingDetail[]
+  withholdingCode            WithholdingCode[]
 
   @@map("chart_of_account")
 }
 
-// ------------------------------
-// COMPROBANTES CONTABLES
-// ------------------------------
 model JournalEntry {
   id            String                                 @id @default(uuid())
   tenantId      String             @map("tenant_id")
@@ -946,9 +1018,6 @@ model JournalEntry {
   @@map("journal_entry")
 }
 
-// ------------------------------
-// LÍNEAS DEL ASIENTO CONTABLE
-// ------------------------------
 model JournalEntryLine {
   id             String                                  @id @default(uuid())
   tenantId       String         @map("tenant_id")
@@ -971,9 +1040,6 @@ model JournalEntryLine {
   @@map("journal_entry_line")
 }
 
-// ------------------------------
-// CENTROS DE COSTO
-// ------------------------------
 model CostCenter {
   id                  String                                 @id @default(uuid())
   tenantId            String               @map("tenant_id")
@@ -1003,10 +1069,6 @@ model AccountingSetting {
   @@map("accounting_setting")
 }
 
-
-// ------------------------------
-// IMPUESTOS (IVA, retenciones, etc.)
-// ------------------------------
 model Tax {
   id       String                    @id @default(uuid())
   tenantId String  @map("tenant_id")
@@ -1016,9 +1078,6 @@ model Tax {
   @@map("tax")
 }
 
-// ------------------------------
-// MOVIMIENTOS DE CUENTAS BANCARIAS (para conciliación)
-// ------------------------------
 model BankTransaction {
   id          String                            @id @default(uuid())
   tenantId    String         @map("tenant_id")
@@ -1134,9 +1193,6 @@ enum ProductType {
   SERVICE
 }
 
-// ------------------------------
-// ENUMS
-// ------------------------------
 enum AccountType {
   ASSET // Activos
   LIABILITY // Pasivos
@@ -1153,7 +1209,6 @@ enum DocumentType {
   WITHHOLDING      // Comprobante de retención
   REMISSION_GUIDE  // Guía de remisión
 }
-
 
 enum EntryType {
   PURCHASE           // Compra
@@ -1183,11 +1238,6 @@ enum BankAccountType {
   OTHER
 }
 
-enum RetentionType {
-  IVA
-  RENTA
-}
-
 enum PersonKind {
   NATURAL
   LEGAL
@@ -1209,11 +1259,6 @@ enum CashMovementCategory {
   OTHER
 }
 
-enum MovementLineType {
-  DEBIT
-  CREDIT
-}
-
 enum ContributorType {
   NATURAL
   SOCIETY
@@ -1229,10 +1274,10 @@ enum TaxRegime {
 
 enum AccountingKey {
   VAT_SALES        // IVA sobre ventas (débito fiscal)
-  VAT_PURCHASES    // IVA sobre compras (crédito fiscal)
-  RETENTION_VAT    // Retención de IVA
-  RETENTION_SOURCE // Retención en la fuente
-  CASH_DEFAULT     // Caja general
-  BANK_DEFAULT     // Banco por defecto
-  ROUNDING         // Diferencias por redondeo
+  VAT_PURCHASES    // IVA sobre compras (crédito fiscal)  
+}
+
+enum WithholdingType {
+  IVA
+  SOURCE
 }

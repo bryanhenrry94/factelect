@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/breadcrumb";
 import Link from "next/link";
 import { SlashIcon } from "lucide-react";
+import { WithholdingCode } from "@/lib/validations/withholding/withholding-code";
+import { getAllWithholdingCodes } from "@/actions/withholding/withholding-code";
 
 export default function SaleNewPage() {
   const { data: session } = useSession();
@@ -32,6 +34,9 @@ export default function SaleNewPage() {
   const [persons, setPersons] = useState<PersonInput[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [withholdingCodes, setWithholdingCodes] = useState<WithholdingCode[]>(
+    []
+  );
 
   useEffect(() => {
     if (!session?.user?.tenantId) return;
@@ -42,15 +47,19 @@ export default function SaleNewPage() {
         isCustomer: true,
       };
 
-      const [clients, productsRes, warehousesRes] = await Promise.all([
-        getPersonsByTenant(filter),
-        getAllProducts(session.user.tenantId),
-        getWarehouses(session.user.tenantId),
-      ]);
+      const [clients, productsRes, warehousesRes, withholdingCodesRes] =
+        await Promise.all([
+          getPersonsByTenant(filter),
+          getAllProducts(session.user.tenantId),
+          getWarehouses(session.user.tenantId),
+          getAllWithholdingCodes(session.user.tenantId),
+        ]);
 
       if (clients.success) setPersons(clients.data);
       if (productsRes.success) setProducts(productsRes.data);
       if (warehousesRes.success) setWarehouses(warehousesRes.data);
+      if (withholdingCodesRes.success)
+        setWithholdingCodes(withholdingCodesRes.data);
     };
 
     fetchData();
@@ -90,6 +99,7 @@ export default function SaleNewPage() {
           persons={persons}
           warehouses={warehouses}
           products={products}
+          withholdingCodes={withholdingCodes}
         />
       </div>
     </PageContainer>

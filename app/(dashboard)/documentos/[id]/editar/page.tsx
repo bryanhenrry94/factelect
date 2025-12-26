@@ -26,6 +26,8 @@ import { Warehouse } from "@/lib/validations/inventory/warehouse";
 
 import Link from "next/link";
 import { SlashIcon } from "lucide-react";
+import { WithholdingCode } from "@/lib/validations/withholding/withholding-code";
+import { getAllWithholdingCodes } from "@/actions/withholding/withholding-code";
 
 export default function DocumentEditPage() {
   const { data: session } = useSession();
@@ -34,6 +36,9 @@ export default function DocumentEditPage() {
   const [persons, setPersons] = useState<PersonInput[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [withholdingCodes, setWithholdingCodes] = useState<WithholdingCode[]>(
+    []
+  );
 
   useEffect(() => {
     if (!session?.user?.tenantId) return;
@@ -44,15 +49,20 @@ export default function DocumentEditPage() {
     };
 
     const fetchData = async () => {
-      const [personsRes, productsRes, warehousesRes] = await Promise.all([
-        getPersonsByTenant(personFilter),
-        getAllProducts(session.user.tenantId),
-        getWarehouses(session.user.tenantId),
-      ]);
+      const [personsRes, productsRes, warehousesRes, withholdingCodesRes] =
+        await Promise.all([
+          getPersonsByTenant(personFilter),
+          getAllProducts(session.user.tenantId),
+          getWarehouses(session.user.tenantId),
+          getAllWithholdingCodes(session.user.tenantId),
+        ]);
 
       if (personsRes.success) setPersons(personsRes.data);
       if (productsRes.success) setProducts(productsRes.data);
       if (warehousesRes.success) setWarehouses(warehousesRes.data);
+      if (withholdingCodesRes.success) {
+        setWithholdingCodes(withholdingCodesRes.data);
+      }
     };
 
     fetchData();
@@ -93,6 +103,7 @@ export default function DocumentEditPage() {
           persons={persons}
           warehouses={warehouses}
           products={products}
+          withholdingCodes={withholdingCodes}
         />
       </div>
     </PageContainer>

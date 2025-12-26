@@ -28,6 +28,7 @@ import {
   CreateDocument,
   CreateDocumentItem,
   createDocumentSchema,
+  Document,
   DocumentPayment,
   Product,
 } from "@/lib/validations";
@@ -39,6 +40,7 @@ import {
   createDocument,
   getDocument,
   getDocumentItems,
+  getDocumentWithholding,
   getInvoiceDataForPDF,
   sendToSRI,
   updateDocument,
@@ -49,6 +51,8 @@ import { $Enums } from "@/prisma/generated/prisma";
 import { ConfirmDialog } from "../ConfirmDialog";
 import InvoicePDF from "../pdf/InvoicePDF";
 import { pdf } from "@react-pdf/renderer";
+import { WithholdingForm } from "../withholding/withholding";
+import { WithholdingCode } from "@/lib/validations/withholding/withholding-code";
 
 const initialItemsState: CreateDocumentItem[] = [
   {
@@ -110,6 +114,7 @@ interface DocumentFormProps {
   persons: PersonInput[];
   warehouses: Warehouse[];
   products: Product[];
+  withholdingCodes: WithholdingCode[];
 }
 
 export default function DocumentForm({
@@ -117,6 +122,7 @@ export default function DocumentForm({
   persons,
   warehouses,
   products,
+  withholdingCodes,
 }: DocumentFormProps) {
   const router = useRouter();
   const { tenant } = useTenant();
@@ -124,6 +130,8 @@ export default function DocumentForm({
   const [error, setError] = useState<string | null>(null);
   const [modeEdit, setModeEdit] = useState(!!documentId);
   const [tab, setTab] = useState("items");
+
+  const [withholdingId, setWithholdingId] = useState<string | null>(null);
 
   const methods = useForm<CreateDocument>({
     resolver: zodResolver(createDocumentSchema),
@@ -134,10 +142,13 @@ export default function DocumentForm({
     handleSubmit,
     reset,
     formState: { errors },
+    watch,
   } = methods;
 
   useEffect(() => {
-    if (documentId) loadDocument();
+    if (documentId) {
+      loadDocument();
+    }
   }, [documentId]);
 
   const loadDocument = async () => {
@@ -149,9 +160,17 @@ export default function DocumentForm({
       const itemsRes = await getDocumentItems(res.data.id!);
       const fiscalRes = await getDocumentFiscalInfo(res.data.id!);
       const paymentsRes = await getDocumentPayments(res.data.id!);
+      const resDocWithholding = await getDocumentWithholding(res.data.id!);
+
+      if (resDocWithholding.success && resDocWithholding.data) {
+        setWithholdingId(resDocWithholding.data.id);
+      } else {
+        setWithholdingId(null);
+      }
 
       reset({
         ...res.data,
+        relatedDocumentId: res.data.relatedDocumentId || null,
         items:
           itemsRes.data?.map((i) => ({
             warehouseId: i.warehouseId,
@@ -305,22 +324,44 @@ export default function DocumentForm({
           </CardContent>
         </Card>
 
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList>
-            <TabsTrigger value="items">Productos / Servicios</TabsTrigger>
-            <TabsTrigger value="accounts">Cuentas</TabsTrigger>
-            <TabsTrigger value="retention">Retención</TabsTrigger>
-            <TabsTrigger value="payments">Formas de Pago</TabsTrigger>
-          </TabsList>
+        <Card>
+          <CardHeader>
+            <CardTitle>Detalles del Documento</CardTitle>
+            <CardDescription>
+              Agregue los productos o servicios que conforman este documento.
+            </CardDescription>
+          </CardHeader>
 
-          <TabsContent value="items">
-            <ItemsTable warehouses={warehouses} products={products} />
-          </TabsContent>
+          <CardContent>
+            <Tabs value={tab} onValueChange={setTab}>
+              <TabsList>
+                <TabsTrigger value="items">Productos / Servicios</TabsTrigger>
+                {/* <TabsTrigger value="accounts">Cuentas</TabsTrigger> */}
+                <TabsTrigger value="withholding">Retención</TabsTrigger>
+                <TabsTrigger value="payments">Formas de Pago</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="payments">
-            <PaymentMethodsTable />
-          </TabsContent>
-        </Tabs>
+              <TabsContent value="items">
+                <ItemsTable warehouses={warehouses} products={products} />
+              </TabsContent>
+
+              <TabsContent value="withholding">
+                {documentId && (
+                  <WithholdingForm
+                    withholdingCodes={withholdingCodes}
+                    entityType={watch("entityType")}
+                    documentId={documentId}
+                    withholdingId={withholdingId || undefined}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="payments">
+                <PaymentMethodsTable />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
 
         <TotalsSection />
       </form>

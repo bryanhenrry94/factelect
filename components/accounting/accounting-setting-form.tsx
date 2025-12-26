@@ -39,12 +39,7 @@ import { z } from "zod";
 ========================= */
 export enum AccountingKey {
   VAT_SALES = "VAT_SALES",
-  VAT_PURCHASES = "VAT_PURCHASES",
-  RETENTION_VAT = "RETENTION_VAT",
-  RETENTION_SOURCE = "RETENTION_SOURCE",
-  CASH_DEFAULT = "CASH_DEFAULT",
-  BANK_DEFAULT = "BANK_DEFAULT",
-  ROUNDING = "ROUNDING",
+  VAT_PURCHASES = "VAT_PURCHASES",  
 }
 
 /* =========================
@@ -55,12 +50,7 @@ const ACCOUNTING_KEYS = [
   {
     key: AccountingKey.VAT_PURCHASES,
     label: "IVA sobre compras (crédito fiscal)",
-  },
-  { key: AccountingKey.RETENTION_VAT, label: "Retención de IVA" },
-  { key: AccountingKey.RETENTION_SOURCE, label: "Retención en la fuente" },
-  { key: AccountingKey.CASH_DEFAULT, label: "Caja general" },
-  { key: AccountingKey.BANK_DEFAULT, label: "Banco por defecto" },
-  { key: AccountingKey.ROUNDING, label: "Diferencias por redondeo" },
+  },  
 ] as const;
 
 /* =========================
@@ -195,7 +185,7 @@ export default function AccountingSettingForm() {
               ))}
             </div>
 
-            <div className="pt-4">
+            <div>
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting
                   ? "Guardando..."
