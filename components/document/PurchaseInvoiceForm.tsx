@@ -15,10 +15,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import HeaderActions from "./HeaderActions";
 import ItemsTable from "./ItemsTable";
-import TotalsSection from "./sales/TotalsSection";
-import { PaymentMethodsTable } from "./sales/PaymentMethodsTable";
+import TotalsSection from "./invoice/TotalsSection";
+import { PaymentMethodsTable } from "./invoice/PaymentMethodsTable";
 
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
@@ -47,7 +46,7 @@ import { $Enums } from "@/prisma/generated/prisma";
 import { ConfirmDialog } from "./../ConfirmDialog";
 import InvoicePDF from "./../pdf/InvoicePDF";
 import { pdf } from "@react-pdf/renderer";
-import { WithholdingForm } from "./../withholding/withholding";
+import { WithholdingView } from "./invoice/WithholdingView";
 import { WithholdingCode } from "@/lib/validations/withholding/withholding-code";
 import { getWithholdingByBaseDocument } from "@/actions/withholding/withholding";
 import { Withholding } from "@/lib/validations/withholding/withholding";
@@ -499,7 +498,7 @@ export const PurchaseInvoiceForm: React.FC<PurchaseInvoiceFormProps> = ({
 
               <TabsContent value="withholding">
                 {documentId && (
-                  <WithholdingForm
+                  <WithholdingView
                     withholdingCodes={withholdingCodes}
                     entityType={watch("entityType")}
                     documentId={documentId}

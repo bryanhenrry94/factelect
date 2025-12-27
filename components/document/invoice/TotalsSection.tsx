@@ -42,6 +42,9 @@ export default function InvoiceTotalsSection() {
   const total =
     subtotal15 + subtotal5 + subtotal0 + iva15 + iva5 + ice - discount;
 
+  // console.log("items", items);
+  // console.log("total", total);
+
   // -------------------------
   // SYNC TOTAL TO FORM
   // -------------------------
@@ -75,6 +78,7 @@ export default function InvoiceTotalsSection() {
       {/* TOTALS */}
       <Card>
         <CardContent className="p-4">
+          {"Totales" + watch("total")}
           <Table>
             <TableBody>
               <TableRow>

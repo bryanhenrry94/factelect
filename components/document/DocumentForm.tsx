@@ -50,7 +50,7 @@ import { $Enums } from "@/prisma/generated/prisma";
 import { ConfirmDialog } from "../ConfirmDialog";
 import InvoicePDF from "../pdf/InvoicePDF";
 import { pdf } from "@react-pdf/renderer";
-import { WithholdingForm } from "../withholding/withholding";
+import { WithholdingForm } from "./invoice/WithholdingView";
 import { WithholdingCode } from "@/lib/validations/withholding/withholding-code";
 import {
   getWithholdingByBaseDocument,

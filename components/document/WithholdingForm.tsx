@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormProvider, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
@@ -15,52 +14,30 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import HeaderActions from "./HeaderActions";
-import ItemsTable from "./ItemsTable";
-import TotalsSection from "./sales/TotalsSection";
-import { PaymentMethodsTable } from "./sales/PaymentMethodsTable";
-
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
 import {
   CreateDocument,
-  CreateDocumentItem,
   createDocumentSchema,
   DocumentResponse,
-  Product,
 } from "@/lib/validations";
 import { PersonInput } from "@/lib/validations/person/person";
-import { Warehouse } from "@/lib/validations/inventory/warehouse";
 import { CreateDocumentFiscalInfo } from "@/lib/validations/document/document-fiscal-info";
 
 import {
   createDocument,
   DocumentFilter,
-  getAllProducts,
   getDocument,
-  getDocumentItems,
   getDocuments,
-  getInvoiceDataForPDF,
   getPersonsByTenant,
-  sendToSRI,
   updateDocument,
 } from "@/actions";
-import { getDocumentFiscalInfo } from "@/actions/document/document-fiscal-info";
-import { getDocumentPayments } from "@/actions/document/document-payment";
 import { $Enums } from "@/prisma/generated/prisma";
 import { ConfirmDialog } from "../ConfirmDialog";
-import InvoicePDF from "../pdf/InvoicePDF";
-import { pdf } from "@react-pdf/renderer";
-// import { WithholdingForm } from "../withholding/withholding";
 import { WithholdingCode } from "@/lib/validations/withholding/withholding-code";
-import {
-  getWithholdingByBaseDocument,
-  getWithholdingByDocumentId,
-} from "@/actions/withholding/withholding";
-import { Withholding } from "@/lib/validations/withholding/withholding";
+import { getWithholdingByDocumentId } from "@/actions/withholding/withholding";
 import { useSession } from "next-auth/react";
 import { PersonFilter } from "@/types";
-import { getWarehouses } from "@/actions/inventory/warehouse";
 import { getAllWithholdingCodes } from "@/actions/withholding/withholding-code";
 import {
   FormControl,
@@ -132,7 +109,7 @@ const initialState: CreateDocument = {
   balance: 0,
   description: undefined,
   items: null,
-  fiscalInfo: initialFiscalInfoState,
+  fiscalInfo: null,
   withholding: {
     id: "",
     documentId: "",
@@ -151,6 +128,9 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
 }) => {
   const router = useRouter();
   const { data: session } = useSession();
+  const params = useSearchParams();
+
+  const documentIdFromParams = params.get("documentId") || null;
 
   const [persons, setPersons] = useState<PersonInput[]>([]);
   const [document, setDocument] = useState<DocumentResponse | null>(null);
@@ -233,6 +213,37 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
       loadDocument();
     }
   }, [documentId]);
+
+  useEffect(() => {
+    if (documentIdFromParams) {
+      const loadBaseDocument = async () => {
+        try {
+          const res = await getDocument(documentIdFromParams);
+          if (!res.success || !res.data) {
+            return notifyError("Error al cargar documento base");
+          }
+
+          // set document info
+          const newState: CreateDocument = {
+            ...initialState,
+            personId: res.data.personId,
+            issueDate: new Date(),
+            entityType: res.data.entityType,
+            documentType: $Enums.DocumentType.WITHHOLDING,
+            description: `Retención por documento ${res.data.number}`,
+            relatedDocumentId: res.data.id,
+          };
+          reset(newState);
+
+          setDocument(res.data);
+        } catch {
+          notifyError("Error al cargar documento base");
+        }
+      };
+
+      loadBaseDocument();
+    }
+  }, [documentIdFromParams]);
 
   const loadDocument = async () => {
     try {

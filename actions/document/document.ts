@@ -604,7 +604,19 @@ export const updateDocumentTx = async (
       };
     }
 
-    const balance = data.total - (data.paidAmount || 0);
+    // recalcula saldo del documento
+    const paidAmount = await tx.transactionDocument.aggregate({
+      where: { documentId: id },
+      _sum: { amount: true },
+    });
+
+    const document = await tx.document.findFirst({
+      where: { id },
+    });
+
+    const totalPaid = paidAmount._sum.amount || 0;
+    const totalWithheld = document?.totalWithheld || 0;
+    const balance = data.total - totalPaid - totalWithheld;
 
     // 1. Actualizar documento
     const updatedDocument = await tx.document.update({
@@ -625,9 +637,9 @@ export const updateDocumentTx = async (
         taxTotal: data.taxTotal,
         discount: data.discount,
         total: data.total,
-        paidAmount: data.paidAmount,
+        paidAmount: totalPaid,
         totalWithheld: data.totalWithheld || 0,
-        balance,
+        balance: balance,
         description: data.description || undefined,
         relatedDocumentId: data.relatedDocumentId || undefined,
       },
