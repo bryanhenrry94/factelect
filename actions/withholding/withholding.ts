@@ -4,8 +4,45 @@ import {
   Withholding,
   WithholdingCreate,
 } from "@/lib/validations/withholding/withholding";
+import { Prisma } from "@/prisma/generated/prisma";
 
 export const createWithholding = async (
+  tenantId: string,
+  documentId: string,
+  data: WithholdingCreate
+): Promise<{ success: boolean; data?: any; error?: string }> => {
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const withhelding = await createWithholdingTx(
+        tx,
+        tenantId,
+        documentId,
+        data
+      );
+
+      return withhelding;
+    });
+
+    // valida que los campos obligatorios estén presentes, documentId es el ID del documento relacionado
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || "El ID del documento es obligatorio",
+      };
+    }
+
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error("createWithholding error:", error);
+    return {
+      success: false,
+      error: "Error al crear la retención",
+    };
+  }
+};
+
+export const createWithholdingTx = async (
+  tx: Prisma.TransactionClient,
   tenantId: string,
   documentId: string,
   data: WithholdingCreate
@@ -14,6 +51,13 @@ export const createWithholding = async (
     // valida que los campos obligatorios estén presentes, documentId es el ID del documento relacionado
     if (!documentId) {
       return { success: false, error: "El ID del documento es obligatorio" };
+    }
+
+    if (!data) {
+      return {
+        success: false,
+        error: "Los datos de la retención son obligatorios",
+      };
     }
 
     // la retención debe tener al menos un detalle
@@ -27,90 +71,41 @@ export const createWithholding = async (
       0
     );
 
-    const result = await prisma.$transaction(async (tx) => {
-      // Obtener el documento relacionado para validar existencia y obtener datos necesarios
-      const baseDocument = await tx.document.findUnique({
-        where: { id: documentId, tenantId },
-      });
-
-      if (!baseDocument) {
-        return { success: false, error: "Documento base no encontrado" };
-      }
-
-      // Calcula el balance restando el monto pagado del total del documento base
-      const balance =
-        baseDocument.total - (baseDocument.paidAmount || 0) - totalWithheld;
-
-      // Actualiza el campo totalWithheld en el documento
-      await tx.document.update({
-        where: { id: documentId },
-        data: {
-          totalWithheld: totalWithheld,
-          balance: balance,
-        },
-      });
-
-      // Verificar que el documento relacionado exista
-      const relatedDocument = await tx.document.findUnique({
-        where: { id: documentId, tenantId },
-      });
-
-      if (!relatedDocument) {
-        return { success: false, error: "Documento no encontrado" };
-      }
-
-      // registra el documento de retención
-      const newDocument = await tx.document.create({
-        data: {
-          tenantId,
-          entityType: relatedDocument.entityType,
-          documentType: "WITHHOLDING", // Tipo de documento de retención
-          issueDate: data.issueDate,
-          status: "DRAFT", // Estado inicial
-          personId: relatedDocument.personId,
-          number: data.document.number,
-          authorizationNumber: data.document.authorizationNumber ?? null,
-          authorizedAt: data.document.authorizedAt
-            ? new Date(data.document.authorizedAt)
-            : null,
-          subtotal: 0,
-          taxTotal: 0,
-          discount: 0,
-          total: totalWithheld,
-          paidAmount: totalWithheld,
-          balance: 0,
-          relatedDocumentId: relatedDocument.id, // Vincula la retencion con el documento original
-        },
-      });
-
-      // Cabecera de retención
-      const withholding = await tx.withholding.create({
-        data: {
-          tenantId,
-          issueDate: data.issueDate,
-          documentId: newDocument.id,
-          totalWithheld,
-        },
-      });
-
-      // Detalles (bulk)
-      await tx.withholdingDetail.createMany({
-        data: data.details.map((detail) => ({
-          tenantId,
-          withholdingId: withholding.id,
-          codeId: detail.codeId,
-          type: detail.type,
-          baseAmount: detail.baseAmount,
-          percentage: detail.percentage,
-          withheldAmount: detail.withheldAmount,
-          accountId: detail.accountId,
-        })),
-      });
-
-      return withholding;
+    // Cabecera de retención
+    const withholding = await tx.withholding.create({
+      data: {
+        tenantId,
+        issueDate: data.issueDate,
+        documentId: documentId,
+        totalWithheld,
+      },
     });
 
-    return { success: true, data: result };
+    // Detalles (bulk)
+    await tx.withholdingDetail.createMany({
+      data: data.details.map((detail) => ({
+        tenantId,
+        withholdingId: withholding.id,
+        codeId: detail.codeId,
+        type: detail.type,
+        baseAmount: detail.baseAmount,
+        percentage: detail.percentage,
+        withheldAmount: detail.withheldAmount,
+        accountId: detail.accountId,
+      })),
+    });
+
+    // actualiza el total en documento de retencion
+    await tx.document.update({
+      where: { id: documentId },
+      data: {
+        total: totalWithheld,
+        paidAmount: totalWithheld,
+        balance: 0,
+      },
+    });
+
+    return { success: true, data: withholding };
   } catch (error: any) {
     console.error("createWithholding error:", error);
     return {
@@ -122,98 +117,11 @@ export const createWithholding = async (
 
 export const updateWithholding = async (
   id: string,
-  documentId: string,
-  data: WithholdingCreate
+  data: Partial<Withholding>
 ): Promise<{ success: boolean; data?: any; error?: string }> => {
   try {
     return await prisma.$transaction(async (tx) => {
-      // 1️⃣ Obtener la retención actual
-      const existing = await tx.withholding.findUnique({
-        where: { id },
-      });
-
-      if (!existing) {
-        throw new Error("Retención no encontrada");
-      }
-
-      // 2️⃣ Validar documento base (factura)
-      const baseDocument = await tx.document.findUnique({
-        where: { id: documentId },
-      });
-
-      if (!baseDocument) {
-        throw new Error("Documento base no encontrado");
-      }
-
-      if (!data.document) {
-        throw new Error("Datos del documento de retención son obligatorios");
-      }
-
-      // 3️⃣ Recalcular total retenido
-      const totalWithheld = data.details.reduce(
-        (sum, d) => sum + Number(d.withheldAmount || 0),
-        0
-      );
-
-      // Calcula el balance restando el monto pagado del total del documento base
-      const balance =
-        baseDocument.total - (baseDocument.paidAmount || 0) - totalWithheld;
-
-      // Actualiza el campo totalWithheld en el documento
-      await tx.document.update({
-        where: { id: baseDocument.id },
-        data: {
-          totalWithheld: totalWithheld,
-          balance: balance,
-        },
-      });
-
-      // 4️⃣ Actualizar documento de la retención (NO la factura)
-      const updatedDocument = await tx.document.update({
-        where: { id: existing.documentId },
-        data: {
-          issueDate: data.issueDate,
-          number: data.document.number ?? null,
-          authorizationNumber: data.document.authorizationNumber ?? null,
-          authorizedAt: data.document.authorizedAt
-            ? new Date(data.document.authorizedAt)
-            : null,
-          total: totalWithheld,
-          paidAmount: totalWithheld,
-          balance: 0,
-          relatedDocumentId: baseDocument.id, // 👉 vínculo a la factura
-        },
-      });
-
-      // 5️⃣ Actualizar cabecera de retención
-      const updatedWithholding = await tx.withholding.update({
-        where: { id },
-        data: {
-          issueDate: data.issueDate,
-          totalWithheld,
-          documentId: updatedDocument.id,
-        },
-      });
-
-      // 6️⃣ Reemplazar detalles
-      await tx.withholdingDetail.deleteMany({
-        where: { withholdingId: id },
-      });
-
-      if (data.details.length > 0) {
-        await tx.withholdingDetail.createMany({
-          data: data.details.map((detail) => ({
-            tenantId: updatedWithholding.tenantId,
-            withholdingId: updatedWithholding.id,
-            codeId: detail.codeId,
-            type: detail.type,
-            baseAmount: detail.baseAmount,
-            percentage: detail.percentage,
-            withheldAmount: detail.withheldAmount,
-            accountId: detail.accountId,
-          })),
-        });
-      }
+      const updatedWithholding = await updateWithholdingTx(tx, id, data);
 
       return { success: true, data: updatedWithholding };
     });
@@ -226,6 +134,112 @@ export const updateWithholding = async (
   }
 };
 
+export const updateWithholdingTx = async (
+  tx: Prisma.TransactionClient,
+  id: string,
+  data: Partial<Withholding>
+): Promise<{ success: boolean; data?: any; error?: string }> => {
+  try {
+    // Obtener la retención existente
+    const existing = await tx.withholding.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw new Error("Retención no encontrada");
+    }
+
+    // Obtener el documento base relacionado
+    const baseDocument = await tx.document.findUnique({
+      where: { id: existing.documentId },
+    });
+
+    if (!baseDocument) {
+      throw new Error("Documento base no encontrado");
+    }
+
+    if (!data.details || data.details.length === 0) {
+      return { success: false, error: "La retención debe tener detalles" };
+    }
+
+    // Recalcular total retenido
+    const totalWithheld = data.details.reduce(
+      (sum, d) => sum + Number(d.withheldAmount || 0),
+      0
+    );
+
+    // Actualiza el campo totalWithheld en el documento
+    await tx.document.update({
+      where: { id: baseDocument.id },
+      data: {
+        total: totalWithheld,
+        totalWithheld: totalWithheld,
+        balance: 0,
+      },
+    });
+
+    // Si el documento base tiene un documento relacionado, actualizarlo también
+    if (baseDocument.relatedDocumentId) {
+      const relatedDocument = await tx.document.findUnique({
+        where: { id: baseDocument.relatedDocumentId || "" },
+      });
+
+      if (relatedDocument) {
+        const balance =
+          relatedDocument.total -
+          (relatedDocument.paidAmount || 0) -
+          totalWithheld;
+
+        await tx.document.update({
+          where: { id: relatedDocument.id },
+          data: {
+            totalWithheld: totalWithheld,
+            balance: balance,
+          },
+        });
+      }
+    }
+
+    // Actualizar cabecera de retención
+    const updatedWithholding = await tx.withholding.update({
+      where: { id },
+      data: {
+        issueDate: data.issueDate,
+        totalWithheld,
+        documentId: baseDocument.id,
+      },
+    });
+
+    // Reemplazar detalles
+    await tx.withholdingDetail.deleteMany({
+      where: { withholdingId: id },
+    });
+
+    if (data.details.length > 0) {
+      await tx.withholdingDetail.createMany({
+        data: data.details.map((detail) => ({
+          tenantId: updatedWithholding.tenantId,
+          withholdingId: updatedWithholding.id,
+          codeId: detail.codeId,
+          type: detail.type,
+          baseAmount: detail.baseAmount,
+          percentage: detail.percentage,
+          withheldAmount: detail.withheldAmount,
+          accountId: detail.accountId,
+        })),
+      });
+    }
+
+    return { success: true, data: updatedWithholding };
+  } catch (error: any) {
+    console.error("createWithholding error:", error);
+    return {
+      success: false,
+      error: "Error al crear la retención",
+    };
+  }
+};
+
 export const getWithholding = async (
   id: string
 ): Promise<{ success: boolean; data?: Withholding; error?: string }> => {
@@ -233,7 +247,11 @@ export const getWithholding = async (
     const withholding = await prisma.withholding.findUnique({
       where: { id },
       include: {
-        document: true,
+        document: {
+          include: {
+            documentFiscalInfo: true,
+          },
+        },
         details: true,
       },
     });
@@ -253,6 +271,11 @@ export const getWithholding = async (
         authorizedAt: withholding.document.authorizedAt
           ? new Date(withholding.document.authorizedAt)
           : null,
+        fiscalInfo: withholding.document.documentFiscalInfo
+          ? {
+              ...withholding.document.documentFiscalInfo,
+            }
+          : undefined,
       },
       details: withholding.details.map((detail) => ({
         ...detail,
@@ -277,7 +300,11 @@ export const getWithholdingByBaseDocument = async (
         },
       },
       include: {
-        document: true,
+        document: {
+          include: {
+            documentFiscalInfo: true,
+          },
+        },
         details: true,
       },
     });
@@ -297,6 +324,11 @@ export const getWithholdingByBaseDocument = async (
         authorizedAt: withholding.document.authorizedAt
           ? new Date(withholding.document.authorizedAt)
           : null,
+        fiscalInfo: withholding.document.documentFiscalInfo
+          ? {
+              ...withholding.document.documentFiscalInfo,
+            }
+          : undefined,
       },
       details: withholding.details.map((detail) => ({
         ...detail,

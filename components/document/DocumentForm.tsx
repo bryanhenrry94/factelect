@@ -173,7 +173,6 @@ export default function DocumentForm({
   const [tab, setTab] = useState("items");
 
   const [withholding, setWithholding] = useState<Withholding | null>(null);
-  const [showHeader, setShowHeader] = useState(true);
 
   const methods = useForm<CreateDocument>({
     resolver: zodResolver(createDocumentSchema),
@@ -203,16 +202,9 @@ export default function DocumentForm({
       const fiscalRes = await getDocumentFiscalInfo(res.data.id!);
       const paymentsRes = await getDocumentPayments(res.data.id!);
 
-      let resDocWithholding;
-
-      if (res.data.documentType === "INVOICE") {
-        // La factura es el documento base
-        resDocWithholding = await getWithholdingByBaseDocument(res.data.id!);
-      } else if (res.data.documentType === "WITHHOLDING") {
-        // Ya estoy sobre el documento de la retención
-        resDocWithholding = await getWithholdingByDocumentId(res.data.id!);
-        setShowHeader(false);
-      }
+      const resDocWithholding = await getWithholdingByBaseDocument(
+        res.data.id!
+      );
 
       if (resDocWithholding?.success && resDocWithholding.data) {
         setWithholding(resDocWithholding.data);
@@ -257,7 +249,7 @@ export default function DocumentForm({
       if (!confirm) return;
 
       const res = modeEdit
-        ? await updateDocument(session.user.tenantId, documentId!, data)
+        ? await updateDocument(documentId!, data)
         : await createDocument(session.user.tenantId, data);
 
       if (!res?.success) {
@@ -420,7 +412,6 @@ export default function DocumentForm({
                     entityType={watch("entityType")}
                     documentId={documentId}
                     withholdingId={withholding?.id || undefined}
-                    showHeader={showHeader}
                   />
                 )}
               </TabsContent>

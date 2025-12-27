@@ -15,7 +15,11 @@ import {
   getJournalEntriesDocumentData,
 } from "../accounting/journal-entry";
 import { CreateJournalEntry } from "@/lib/validations/accounting/journal_entry";
-import { deleteWithholding } from "../withholding/withholding";
+import {
+  createWithholdingTx,
+  deleteWithholding,
+  updateWithholdingTx,
+} from "../withholding/withholding";
 
 export interface DocumentFilter {
   tenantId: string;
@@ -25,6 +29,7 @@ export interface DocumentFilter {
   documentType?: $Enums.DocumentType;
   dateFrom?: Date;
   dateTo?: Date;
+  withoutWithholding?: boolean;
 }
 
 export const getDocuments = async (
@@ -49,6 +54,10 @@ export const getDocuments = async (
 
     if (params.documentType) {
       where.documentType = params.documentType;
+    }
+
+    if (params.withoutWithholding) {
+      where.totalWithheld = 0;
     }
 
     if (params.dateFrom || params.dateTo) {
@@ -222,32 +231,7 @@ export const createDocument = async (
         throw new Error(resultDocument.error || "Error creando el documento");
       }
 
-      // 2️⃣ Obtener datos para asiento contable
-      const resJournalData = await getJournalEntriesDocumentData(
-        tx,
-        resultDocument.data.id
-      );
-
-      if (!resJournalData.success || !resJournalData.data) {
-        throw new Error(
-          resJournalData.error ||
-            "Error obteniendo datos para el asiento contable"
-        );
-      }
-
-      const journalData: CreateJournalEntry | null =
-        resJournalData.success && resJournalData.data
-          ? resJournalData.data
-          : null;
-
-      if (!journalData) {
-        throw new Error("Error obteniendo datos para el asiento contable");
-      }
-
-      // 3️⃣ Crear asiento contable
-      const journal = await createJournalEntryTx(tx, tenantId, journalData);
-
-      return { document: resultDocument.data, journal };
+      return { document: resultDocument.data };
     });
 
     return { success: true, data: result.document };
@@ -273,21 +257,6 @@ export const createDocumentTx = async (
 
     const balance = data.total - (data.paidAmount || 0);
 
-    // Valida que el detalle del documento no tenga campos vacios
-    for (const item of data.items) {
-      if (
-        !item.warehouseId ||
-        !item.productId ||
-        item.quantity <= 0 ||
-        item.unitPrice < 0
-      ) {
-        return {
-          success: false,
-          error: "El detalle del documento contiene campos vacíos o inválidos",
-        };
-      }
-    }
-
     // 1. Crear documento
     const newDocument = await tx.document.create({
       data: {
@@ -295,6 +264,8 @@ export const createDocumentTx = async (
         entityType: data.entityType,
         documentType: data.documentType as $Enums.DocumentType,
         number: data.number || undefined,
+        authorizationNumber: data.authorizationNumber || undefined,
+        authorizedAt: data.authorizedAt || undefined,
         issueDate: data.issueDate,
         dueDate: data.dueDate || undefined,
         status: data.status,
@@ -302,76 +273,18 @@ export const createDocumentTx = async (
         subtotal: data.subtotal,
         taxTotal: data.taxTotal,
         discount: data.discount,
+        totalWithheld: data.totalWithheld || 0,
         total: data.total,
         paidAmount: data.paidAmount,
         balance,
         description: data.description || undefined,
+        relatedDocumentId: data.relatedDocumentId || undefined,
       },
     });
 
-    // 2. Items
-    if (data.items?.length) {
-      await tx.documentItem.createMany({
-        data: data.items.map((item) => ({
-          ...item,
-          documentId: newDocument.id,
-        })),
-        skipDuplicates: true,
-      });
-    }
-
-    // registra impuestos si vienen
-    if (data.taxTotal > 0 && data.items?.length) {
-      // Crear impuestos agrupados si existen
-      const taxMap: Record<string, CreateDocumentTax> = {};
-
-      data.items.forEach((item) => {
-        if (!item.tax || item.tax === "NO_IVA") return;
-
-        // Mapea tu enum interno a códigos SRI
-        const taxCodeMap: Record<
-          string,
-          { code: string; percentage_code: string }
-        > = {
-          IVA_0: { code: "2", percentage_code: "0" },
-          IVA_5: { code: "2", percentage_code: "5" },
-          IVA_12: { code: "2", percentage_code: "2" },
-          IVA_14: { code: "2", percentage_code: "3" },
-          IVA_15: { code: "2", percentage_code: "4" },
-          EXENTO_IVA: { code: "2", percentage_code: "6" },
-        };
-
-        const sriTax = taxCodeMap[item.tax];
-        if (!sriTax) return;
-
-        const key = `${sriTax.code}-${sriTax.percentage_code}`;
-
-        if (!taxMap[key]) {
-          taxMap[key] = {
-            code: sriTax.code,
-            percentage_code: sriTax.percentage_code,
-            base: 0,
-            amount: 0,
-            documentId: newDocument.id, // ya lo puedes poner aquí
-          };
-        }
-
-        taxMap[key].base += Number(item.subtotal || 0);
-        taxMap[key].amount += Number(item.taxAmount || 0);
-      });
-
-      const taxesToCreate = Object.values(taxMap);
-
-      if (taxesToCreate.length) {
-        await tx.documentTax.createMany({
-          data: taxesToCreate,
-          skipDuplicates: true,
-        });
-      }
-    }
-
-    // 3. Fiscal Info + actualizar secuencia
+    // 2. Si tiene info fiscal, crearla y actualizar secuencia
     if (data.fiscalInfo) {
+      // Crear info fiscal
       const newFiscalInfo = await tx.documentFiscalInfo.create({
         data: {
           documentId: newDocument.id,
@@ -383,6 +296,7 @@ export const createDocumentTx = async (
         },
       });
 
+      // Actualizar secuencia en emissionPointSequence
       await tx.emissionPointSequence.update({
         where: {
           emissionPointId_documentType: {
@@ -395,6 +309,7 @@ export const createDocumentTx = async (
         },
       });
 
+      // Actualizar número si es necesario
       const existingFiscal = await tx.documentFiscalInfo.findUnique({
         where: { id: newFiscalInfo.id },
         include: {
@@ -423,8 +338,6 @@ export const createDocumentTx = async (
         existingFiscal.emissionPoint.code
       }-${seq.toString().padStart(9, "0")}`;
 
-      console.log("number: ", number);
-
       if (data.number !== number) {
         await tx.document.update({
           where: { id: newDocument.id },
@@ -433,15 +346,146 @@ export const createDocumentTx = async (
       }
     }
 
-    // 4. Payments
-    if (data.documentPayments?.length) {
-      await tx.documentPayment.createMany({
-        data: data.documentPayments.map((p) => ({
-          ...p,
-          documentId: newDocument.id,
-        })),
-        skipDuplicates: true,
-      });
+    // 3. Registros para INVOICE
+    if (data.documentType === "INVOICE") {
+      if (data.items?.length) {
+        await tx.documentItem.createMany({
+          data: data.items.map((item) => ({
+            ...item,
+            documentId: newDocument.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      // registra impuestos si vienen
+      if (data.taxTotal > 0 && data.items?.length) {
+        // Crear impuestos agrupados si existen
+        const taxMap: Record<string, CreateDocumentTax> = {};
+
+        data.items.forEach((item) => {
+          if (!item.tax || item.tax === "NO_IVA") return;
+
+          // Mapea tu enum interno a códigos SRI
+          const taxCodeMap: Record<
+            string,
+            { code: string; percentage_code: string }
+          > = {
+            IVA_0: { code: "2", percentage_code: "0" },
+            IVA_5: { code: "2", percentage_code: "5" },
+            IVA_12: { code: "2", percentage_code: "2" },
+            IVA_14: { code: "2", percentage_code: "3" },
+            IVA_15: { code: "2", percentage_code: "4" },
+            EXENTO_IVA: { code: "2", percentage_code: "6" },
+          };
+
+          const sriTax = taxCodeMap[item.tax];
+          if (!sriTax) return;
+
+          const key = `${sriTax.code}-${sriTax.percentage_code}`;
+
+          if (!taxMap[key]) {
+            taxMap[key] = {
+              code: sriTax.code,
+              percentage_code: sriTax.percentage_code,
+              base: 0,
+              amount: 0,
+              documentId: newDocument.id, // ya lo puedes poner aquí
+            };
+          }
+
+          taxMap[key].base += Number(item.subtotal || 0);
+          taxMap[key].amount += Number(item.taxAmount || 0);
+        });
+
+        const taxesToCreate = Object.values(taxMap);
+
+        if (taxesToCreate.length) {
+          await tx.documentTax.createMany({
+            data: taxesToCreate,
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      // 4. Payments
+      if (data.documentPayments?.length) {
+        await tx.documentPayment.createMany({
+          data: data.documentPayments.map((p) => ({
+            ...p,
+            documentId: newDocument.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      // 5. Crear asiento contable
+      const resJournalData = await getJournalEntriesDocumentData(
+        tx,
+        newDocument.id
+      );
+
+      if (!resJournalData.success || !resJournalData.data) {
+        throw new Error(
+          resJournalData.error ||
+            "Error obteniendo datos para el asiento contable"
+        );
+      }
+
+      const journalData: CreateJournalEntry | null =
+        resJournalData.success && resJournalData.data
+          ? resJournalData.data
+          : null;
+
+      if (!journalData) {
+        throw new Error("Error obteniendo datos para el asiento contable");
+      }
+
+      // Crear asiento contable
+      await createJournalEntryTx(tx, tenantId, journalData);
+    }
+
+    // 4. Registros para WITHHOLDING
+    if (data.documentType === "WITHHOLDING" && data.withholding) {
+      // crea la retención asociada al documento
+      const resWithholding = await createWithholdingTx(
+        tx,
+        tenantId,
+        newDocument.id,
+        data.withholding
+      );
+
+      if (!resWithholding.success) {
+        return {
+          success: false,
+          error: resWithholding.error || "Error creando la retención",
+        };
+      }
+
+      // Calcula el balance restando el monto pagado del total del documento base
+      const newWithholding = resWithholding.data!;
+      const totalWithheld = newWithholding.totalWithheld || 0;
+
+      // si tiene documento relacionado, actualiza el total retenido en el documento base
+      if (data.relatedDocumentId!) {
+        // obtiene el documento relacionado
+        const relatedDoc = await tx.document.findUnique({
+          where: { id: data.relatedDocumentId! },
+        });
+
+        if (relatedDoc) {
+          const balance =
+            relatedDoc.total - (relatedDoc.paidAmount || 0) - totalWithheld;
+
+          await tx.document.update({
+            where: { id: data.relatedDocumentId! },
+            data: {
+              totalWithheld: totalWithheld,
+              balance: balance,
+            },
+          });
+        }
+      }
     }
 
     // Se formatea solo al final, fuera de la transacción
@@ -461,13 +505,12 @@ export const createDocumentTx = async (
 };
 
 export const updateDocument = async (
-  tenantId: string,
   id: string,
   data: CreateDocument
 ): Promise<{ success: boolean; data?: DocumentResponse; error?: string }> => {
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // 1️⃣ Actualizar documento
+      // Actualizar documento
       const resultDocument = await updateDocumentTx(tx, id, data);
 
       if (!resultDocument.success || !resultDocument.data) {
@@ -476,51 +519,7 @@ export const updateDocument = async (
         );
       }
 
-      // 2️⃣ Obtener datos para asiento contable
-      const resJournalData = await getJournalEntriesDocumentData(
-        tx,
-        resultDocument.data.id
-      );
-
-      if (!resJournalData.success || !resJournalData.data) {
-        throw new Error(
-          resJournalData.error ||
-            "Error obteniendo datos para el asiento contable"
-        );
-      }
-
-      // 2️⃣ Obtener datos para asiento contable
-      const journalData: CreateJournalEntry | null =
-        resJournalData.success && resJournalData.data
-          ? resJournalData.data
-          : null;
-
-      if (!journalData) {
-        throw new Error("Error obteniendo datos para el asiento contable");
-      }
-
-      // Valida si el documento ya tiene un asiento contable asociado
-      const existingJournals = await tx.journalEntry.findMany({
-        where: {
-          sourceType: "DOCUMENT",
-          sourceId: resultDocument.data.id,
-        },
-      });
-
-      // Si ya existe un asiento, eliminarlo antes de crear uno nuevo
-      for (const journal of existingJournals) {
-        await tx.journalEntryLine.deleteMany({
-          where: { journalEntryId: journal.id },
-        });
-        await tx.journalEntry.delete({
-          where: { id: journal.id },
-        });
-      }
-
-      // 3️⃣ Crear asiento contable
-      const journal = await createJournalEntryTx(tx, tenantId, journalData);
-
-      return { document: resultDocument.data, journal };
+      return { document: resultDocument.data };
     });
 
     return { success: true, data: result.document };
@@ -547,8 +546,6 @@ export const updateDocumentTx = async (
       };
     }
 
-    const balance = data.total - (data.paidAmount || 0);
-
     // Valida que no tenga transacciones asociadas
     const associatedTransactions = await tx.transactionDocument.count({
       where: {
@@ -564,6 +561,8 @@ export const updateDocumentTx = async (
       };
     }
 
+    const balance = data.total - (data.paidAmount || 0);
+
     // 1. Actualizar documento
     const updatedDocument = await tx.document.update({
       where: {
@@ -573,6 +572,8 @@ export const updateDocumentTx = async (
         entityType: data.entityType,
         documentType: data.documentType as $Enums.DocumentType,
         number: data.number || undefined,
+        authorizationNumber: data.authorizationNumber || undefined,
+        authorizedAt: data.authorizedAt || undefined,
         issueDate: data.issueDate,
         dueDate: data.dueDate || undefined,
         status: data.status,
@@ -582,78 +583,12 @@ export const updateDocumentTx = async (
         discount: data.discount,
         total: data.total,
         paidAmount: data.paidAmount,
+        totalWithheld: data.totalWithheld || 0,
         balance,
         description: data.description || undefined,
+        relatedDocumentId: data.relatedDocumentId || undefined,
       },
     });
-
-    // 2. Reemplazar items
-    await tx.documentItem.deleteMany({
-      where: { documentId: id },
-    });
-
-    if (data.items?.length) {
-      await tx.documentItem.createMany({
-        data: data.items.map((item) => ({
-          ...item,
-          documentId: id,
-        })),
-      });
-    }
-
-    // registra impuestos si vienen
-    if (data.taxTotal > 0 && data.items?.length) {
-      await tx.documentTax.deleteMany({
-        where: { documentId: id },
-      });
-
-      // Crear impuestos agrupados si existen
-      const taxMap: Record<string, CreateDocumentTax> = {};
-
-      data.items.forEach((item) => {
-        if (!item.tax || item.tax === "NO_IVA") return;
-
-        // Mapea tu enum interno a códigos SRI
-        const taxCodeMap: Record<
-          string,
-          { code: string; percentage_code: string }
-        > = {
-          IVA_0: { code: "2", percentage_code: "0" },
-          IVA_5: { code: "2", percentage_code: "5" },
-          IVA_12: { code: "2", percentage_code: "2" },
-          IVA_14: { code: "2", percentage_code: "3" },
-          IVA_15: { code: "2", percentage_code: "4" },
-          EXENTO_IVA: { code: "2", percentage_code: "6" },
-        };
-
-        const sriTax = taxCodeMap[item.tax];
-        if (!sriTax) return;
-
-        const key = `${sriTax.code}-${sriTax.percentage_code}`;
-
-        if (!taxMap[key]) {
-          taxMap[key] = {
-            code: sriTax.code,
-            percentage_code: sriTax.percentage_code,
-            base: 0,
-            amount: 0,
-            documentId: updatedDocument.id, // ya lo puedes poner aquí
-          };
-        }
-
-        taxMap[key].base += Number(item.subtotal || 0);
-        taxMap[key].amount += Number(item.taxAmount || 0);
-      });
-
-      const taxesToCreate = Object.values(taxMap);
-
-      if (taxesToCreate.length) {
-        await tx.documentTax.createMany({
-          data: taxesToCreate,
-          skipDuplicates: true,
-        });
-      }
-    }
 
     // 3. Fiscal Info (update o create)
     if (data.fiscalInfo) {
@@ -725,18 +660,180 @@ export const updateDocumentTx = async (
       });
     }
 
-    // 4. Reemplazar payments
-    await tx.documentPayment.deleteMany({
-      where: { documentId: id },
-    });
-
-    if (data.documentPayments?.length) {
-      await tx.documentPayment.createMany({
-        data: data.documentPayments.map((p) => ({
-          ...p,
-          documentId: id,
-        })),
+    // Si es INVOICE
+    if (data.documentType === "INVOICE") {
+      // 1. Reemplazar items
+      await tx.documentItem.deleteMany({
+        where: { documentId: id },
       });
+
+      if (data.items?.length) {
+        await tx.documentItem.createMany({
+          data: data.items.map((item) => ({
+            ...item,
+            documentId: id,
+          })),
+        });
+      }
+
+      // 2. Registrar impuestos si vienen
+      if (data.taxTotal > 0 && data.items?.length) {
+        await tx.documentTax.deleteMany({
+          where: { documentId: id },
+        });
+
+        // Crear impuestos agrupados si existen
+        const taxMap: Record<string, CreateDocumentTax> = {};
+
+        data.items.forEach((item) => {
+          if (!item.tax || item.tax === "NO_IVA") return;
+
+          // Mapea tu enum interno a códigos SRI
+          const taxCodeMap: Record<
+            string,
+            { code: string; percentage_code: string }
+          > = {
+            IVA_0: { code: "2", percentage_code: "0" },
+            IVA_5: { code: "2", percentage_code: "5" },
+            IVA_12: { code: "2", percentage_code: "2" },
+            IVA_14: { code: "2", percentage_code: "3" },
+            IVA_15: { code: "2", percentage_code: "4" },
+            EXENTO_IVA: { code: "2", percentage_code: "6" },
+          };
+
+          const sriTax = taxCodeMap[item.tax];
+          if (!sriTax) return;
+
+          const key = `${sriTax.code}-${sriTax.percentage_code}`;
+
+          if (!taxMap[key]) {
+            taxMap[key] = {
+              code: sriTax.code,
+              percentage_code: sriTax.percentage_code,
+              base: 0,
+              amount: 0,
+              documentId: updatedDocument.id, // ya lo puedes poner aquí
+            };
+          }
+
+          taxMap[key].base += Number(item.subtotal || 0);
+          taxMap[key].amount += Number(item.taxAmount || 0);
+        });
+
+        const taxesToCreate = Object.values(taxMap);
+
+        if (taxesToCreate.length) {
+          await tx.documentTax.createMany({
+            data: taxesToCreate,
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      // 3. Reemplazar payments
+      await tx.documentPayment.deleteMany({
+        where: { documentId: id },
+      });
+
+      if (data.documentPayments?.length) {
+        await tx.documentPayment.createMany({
+          data: data.documentPayments.map((p) => ({
+            ...p,
+            documentId: id,
+          })),
+        });
+      }
+
+      // 4. Actualizar asiento contable
+      const resJournalData = await getJournalEntriesDocumentData(
+        tx,
+        updatedDocument.id
+      );
+
+      if (!resJournalData.success || !resJournalData.data) {
+        throw new Error(
+          resJournalData.error ||
+            "Error obteniendo datos para el asiento contable"
+        );
+      }
+
+      // registrar asiento contable
+      const journalData: CreateJournalEntry | null =
+        resJournalData.success && resJournalData.data
+          ? resJournalData.data
+          : null;
+
+      if (!journalData) {
+        throw new Error("Error obteniendo datos para el asiento contable");
+      }
+
+      // Valida si el documento ya tiene un asiento contable asociado
+      const existingJournals = await tx.journalEntry.findMany({
+        where: {
+          sourceType: "DOCUMENT",
+          sourceId: updatedDocument.id,
+        },
+      });
+
+      // Si ya existe un asiento, eliminarlo antes de crear uno nuevo
+      for (const journal of existingJournals) {
+        await tx.journalEntryLine.deleteMany({
+          where: { journalEntryId: journal.id },
+        });
+        await tx.journalEntry.delete({
+          where: { id: journal.id },
+        });
+      }
+
+      // 4. Actualizar asiento contable
+      await createJournalEntryTx(tx, updatedDocument.tenantId, journalData);
+    }
+
+    // 4. Registros para WITHHOLDING
+    if (data.documentType === "WITHHOLDING" && data.withholding) {
+      const withholdingData = {
+        ...data.withholding,
+        id: data.withholding.id ?? undefined,
+      };
+
+      // crea la retención asociada al documento
+      const resWithholding = await updateWithholdingTx(
+        tx,
+        withholdingData.id!,
+        withholdingData
+      );
+
+      if (!resWithholding.success) {
+        return {
+          success: false,
+          error: resWithholding.error || "Error creando la retención",
+        };
+      }
+
+      // Calcula el balance restando el monto pagado del total del documento base
+      const newWithholding = resWithholding.data!;
+      const totalWithheld = newWithholding.totalWithheld || 0;
+
+      // si tiene documento relacionado, actualiza el total retenido en el documento base
+      if (data.relatedDocumentId!) {
+        // obtiene el documento relacionado
+        const relatedDoc = await tx.document.findUnique({
+          where: { id: data.relatedDocumentId! },
+        });
+
+        if (relatedDoc) {
+          const balance =
+            relatedDoc.total - (relatedDoc.paidAmount || 0) - totalWithheld;
+
+          await tx.document.update({
+            where: { id: data.relatedDocumentId! },
+            data: {
+              totalWithheld: totalWithheld,
+              balance: balance,
+            },
+          });
+        }
+      }
     }
 
     const formattedDocument: DocumentResponse = {
@@ -1063,17 +1160,19 @@ export const validateDocument = async (
   }
 
   // Valida que el detalle del documento no tenga campos vacíos
-  for (const item of data.items) {
-    if (
-      !item.warehouseId ||
-      !item.productId ||
-      item.quantity <= 0 ||
-      item.unitPrice < 0
-    ) {
-      return {
-        success: false,
-        error: "El detalle del documento contiene campos vacíos o inválidos",
-      };
+  if (data.items) {
+    for (const item of data.items) {
+      if (
+        !item.warehouseId ||
+        !item.productId ||
+        item.quantity <= 0 ||
+        item.unitPrice < 0
+      ) {
+        return {
+          success: false,
+          error: "El detalle del documento contiene campos vacíos o inválidos",
+        };
+      }
     }
   }
 

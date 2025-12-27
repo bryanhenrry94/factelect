@@ -461,7 +461,7 @@ model Document {
   inventoryMovement                               InventoryMovement[]
   transactionDocument                             TransactionDocument[]
   relatedDocuments                                Document[]            @relation("DocumentRelation")
-  withholdings                                    Withholding[]
+  withholding                                     Withholding?
 
   // @@unique([tenantId,                             number])
   @@index([tenantId])
@@ -558,8 +558,9 @@ model Withholding {
   tenantId      String
   tenant        Tenant              @relation(fields: [tenantId], references: [id])
 
-  documentId    String
+  documentId    String               @unique
   document      Document            @relation(fields: [documentId], references: [id])
+
 
   issueDate     DateTime
 

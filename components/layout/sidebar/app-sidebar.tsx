@@ -127,7 +127,7 @@ const data = {
       items: [
         {
           title: "Retenciones",
-          url: "/documentos?documentType=WITHHOLDING",
+          url: "/retenciones",
         },
       ],
     },

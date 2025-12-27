@@ -392,37 +392,6 @@ export default function DocumentInfo({
           )}
         />
       </div>
-
-      {/* ===================== INFO FISCAL ===================== */}
-      <div className="mt-4">
-        {watch("entityType") === "CUSTOMER" &&
-          watch("documentType") === "INVOICE" && (
-            <DocumentFiscalInfo
-              modeEdit={modeEdit}
-              documentType={watch("documentType") || "INVOICE"}
-            />
-          )}
-
-        {watch("entityType") === "SUPPLIER" &&
-          watch("documentType") === "WITHHOLDING" && (
-            <DocumentFiscalInfo
-              modeEdit={modeEdit}
-              documentType={watch("documentType") || "WITHHOLDING"}
-            />
-          )}
-
-        {watch("entityType") === "SUPPLIER" &&
-          watch("documentType") === "INVOICE" && (
-            <AuthorizathionForm documents={documents} />
-          )}
-
-        {watch("entityType") === "CUSTOMER" &&
-          watch("documentType") === "WITHHOLDING" && (
-            <>
-              <AuthorizathionForm documents={documents} />
-            </>
-          )}
-      </div>
     </div>
   );
 }

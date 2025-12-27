@@ -5,6 +5,10 @@ import {
   DocumentFiscalInfoSchema,
 } from "./document-fiscal-info";
 import { createDocumentPaymentSchema } from "./document-payment";
+import {
+  WithholdingCreateSchema,
+  WithholdingUpdateSchema,
+} from "../withholding/withholding";
 
 export const entityTypeEnum = z.enum(["CUSTOMER", "SUPPLIER"]);
 export const documentTypeEnum = z.enum([
@@ -53,8 +57,9 @@ export const documentSchema = z.object({
   updatedAt: z.date().default(() => new Date()),
 
   // Relations (for response schemas)
-  items: z.array(createDocumentItemSchema).optional(),
+  items: z.array(createDocumentItemSchema).optional().nullable(),
   documentPayments: z.array(createDocumentPaymentSchema).optional(),
+  withholding: WithholdingCreateSchema.optional().nullable(),
 
   taxes: z.array(z.any()).optional(), // Replace z.any() with your DocumentTax schema
   transactions: z.array(z.any()).optional(), // Replace z.any() with your Transaction schema
@@ -69,13 +74,13 @@ export const createDocumentSchema = documentSchema
     updatedAt: true,
   })
   .extend({
-    items: z
-      .array(createDocumentItemSchema)
-      .min(1, "El detalle de items es obligatorio"),
-    fiscalInfo: createDocumentFiscalInfoSchema.optional(),
+    fiscalInfo: createDocumentFiscalInfoSchema.optional().nullable(),
+    withholding: WithholdingCreateSchema.optional().nullable(),
   });
 
-export const updateDocumentSchema = createDocumentSchema.partial();
+export const updateDocumentSchema = createDocumentSchema.partial().extend({
+  withholding: WithholdingUpdateSchema.optional().nullable(),
+});
 
 export const documentResponseSchema = documentSchema.extend({
   person: z

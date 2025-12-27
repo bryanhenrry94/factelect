@@ -47,6 +47,22 @@ import {
 
 import { DocumentFiscalInfo } from "../document/DocumentFiscalInfo";
 import { useSession } from "next-auth/react";
+import { CreateDocumentFiscalInfo } from "@/lib/validations/document/document-fiscal-info";
+
+const initialFiscalInfoState: CreateDocumentFiscalInfo = {
+  documentId: "",
+  establishmentId: "",
+  emissionPointId: "",
+  sequence: 0,
+  accessKey: "",
+  authorization: "",
+  authorizationDate: new Date(),
+  sriStatus: "DRAFT",
+  environment: "TEST",
+  generatedXmlUrl: "",
+  authorizedXmlUrl: "",
+  pdfUrl: "",
+};
 
 const emptyDetail: any = {
   id: "",
@@ -65,7 +81,6 @@ export type WithholdingFormProps = {
   entityType: "CUSTOMER" | "SUPPLIER";
   documentId: string; // 👈 factura base
   withholdingId?: string;
-  showHeader?: boolean;
 };
 
 export const WithholdingForm: React.FC<WithholdingFormProps> = ({
@@ -73,7 +88,6 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
   entityType,
   documentId,
   withholdingId,
-  showHeader = true,
 }) => {
   const { data: session } = useSession();
 
@@ -88,7 +102,7 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
         id: "",
         tenantId: "",
         entityType: entityType,
-        documentType: "INVOICE",
+        documentType: $Enums.DocumentType.WITHHOLDING,
         status: "DRAFT",
         number: "",
         authorizationNumber: null,
@@ -101,6 +115,7 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
         paidAmount: 0,
         balance: 0,
         relatedDocumentId: null,
+        fiscalInfo: entityType === "CUSTOMER" ? null : initialFiscalInfoState,
       },
     },
   });
@@ -149,9 +164,14 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
     try {
       if (!session?.user?.tenantId) return;
 
+      const saveData = {
+        ...data,
+        id: withholdingId ?? undefined,
+      };
+
       const res = withholdingId
-        ? await updateWithholding(withholdingId, documentId, data)
-        : await createWithholding(session.user.tenantId, documentId, data);
+        ? await updateWithholding(withholdingId, saveData)
+        : await createWithholding(session.user.tenantId, documentId, saveData);
 
       if (!res.success) {
         notifyError(res.error || "Error al guardar retención");
@@ -164,117 +184,140 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
     }
   };
 
+  // Observe
+  const fiscalInfo = watch("document.fiscalInfo");
+
   /* ================= UI ================= */
   return (
     <FormProvider {...methods}>
       <div className="space-y-6">
         {/* ================= Cabecera ================= */}
-        {showHeader && (
-          <div className="rounded-lg border p-4 space-y-4 bg-muted/30">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium">Datos de la retención</h3>
-              <Button type="button" variant="secondary" size="sm">
-                <Import className="mr-2 h-4 w-4" />
-                Importar XML
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <FormField
-                control={control}
-                name="issueDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fecha de emisión</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="date"
-                        required
-                        value={
-                          field.value
-                            ? new Date(field.value).toISOString().slice(0, 10)
-                            : ""
-                        }
-                        onChange={(e) =>
-                          field.onChange(new Date(e.target.value))
-                        }
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+        {/* {JSON.stringify(errors)} */}
+        <div className="rounded-lg border p-4 space-y-4 bg-muted/30">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium">Datos de la retención</h3>
+            <Button type="button" variant="secondary" size="sm">
+              <Import className="mr-2 h-4 w-4" />
+              Importar XML
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <FormField
+              control={control}
+              name="issueDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fecha de emisión</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      required
+                      value={
+                        field.value
+                          ? new Date(field.value).toISOString().slice(0, 10)
+                          : ""
+                      }
+                      onChange={(e) => field.onChange(new Date(e.target.value))}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={control}
-                name="document.number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número</FormLabel>
-                    <FormControl>
-                      <Input
-                        required
-                        placeholder="000-000-000000000"
-                        {...field}
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {entityType === "CUSTOMER" && (
+              <>
+                <FormField
+                  control={control}
+                  name="document.number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Número</FormLabel>
+                      <FormControl>
+                        <Input
+                          required
+                          placeholder="000-000-000000000"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={control}
-                name="document.authorizationNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nro. autorización SRI</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        required
-                        placeholder="0000000000000000000000000000000000000000000000000"
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={control}
+                  name="document.authorizationNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nro. autorización SRI</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          required
+                          placeholder="0000000000000000000000000000000000000000000000000"
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={control}
-                name="document.authorizedAt"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fecha autorización</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="date"
-                        value={
-                          field.value
-                            ? new Date(field.value).toISOString().slice(0, 10)
-                            : ""
-                        }
-                        onChange={(e) =>
-                          field.onChange(new Date(e.target.value))
-                        }
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {entityType === "SUPPLIER" && (
-              <DocumentFiscalInfo
-                modeEdit={!!withholdingId}
-                documentType="WITHHOLDING"
-              />
+                <FormField
+                  control={control}
+                  name="document.authorizedAt"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fecha autorización</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          value={
+                            field.value
+                              ? new Date(field.value).toISOString().slice(0, 10)
+                              : ""
+                          }
+                          onChange={(e) =>
+                            field.onChange(new Date(e.target.value))
+                          }
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </>
             )}
           </div>
-        )}
+
+          {entityType === "SUPPLIER" && (
+            <DocumentFiscalInfo
+              documentType={
+                (watch("document.documentType") as $Enums.DocumentType) ||
+                $Enums.DocumentType.INVOICE
+              }
+              modeEdit={!!withholdingId}
+              value={{
+                establishmentId: fiscalInfo?.establishmentId || "",
+                emissionPointId: fiscalInfo?.emissionPointId || "",
+                sequence: fiscalInfo?.sequence || 0,
+              }}
+              onChange={(vals) => {
+                if (!withholdingId) {
+                  setValue("document.fiscalInfo", {
+                    ...fiscalInfo,
+                    ...vals,
+                    sriStatus: fiscalInfo?.sriStatus || "DRAFT",
+                    environment: fiscalInfo?.environment || "TEST",
+                    documentId: fiscalInfo?.documentId || "",
+                  });
+                }
+              }}
+            />
+          )}
+        </div>
 
         {/* ================= Detalles ================= */}
         <div className="rounded-lg border p-4 space-y-4">
@@ -320,6 +363,7 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
                               const code = withholdingCodes.find(
                                 (c) => c.id === val
                               );
+
                               if (code) {
                                 setValue(
                                   `details.${idx}.type`,

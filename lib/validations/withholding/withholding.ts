@@ -1,38 +1,44 @@
 import { z } from "zod";
 import { WithholdingDetailCreateSchema } from "./withholding-detail";
+import { createDocumentFiscalInfoSchema } from "../document/document-fiscal-info";
 
 export const WithholdingSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().cuid(),
   tenantId: z.string(),
   documentId: z.string(),
   issueDate: z.date(),
   totalWithheld: z.number(),
   createdAt: z.date(),
-  document: z.object({
-    id: z.string(),
-    tenantId: z.string(),
-    entityType: z.enum(["CUSTOMER", "SUPPLIER"]),
-    documentType: z.string(),
-    status: z.string(),
-    number: z.string().min(1, { message: "El número es obligatorio" }),
-    authorizationNumber: z.string().nullable().optional(),
-    authorizedAt: z.date().nullable().optional(),
-    issueDate: z.date(),
-    subtotal: z.number(),
-    taxTotal: z.number(),
-    discount: z.number(),
-    total: z.number(),
-    paidAmount: z.number(),
-    balance: z.number(),
-    relatedDocumentId: z.string().nullable().optional(),
-  }),
+  document: z
+    .object({
+      id: z.string(),
+      tenantId: z.string(),
+      entityType: z.enum(["CUSTOMER", "SUPPLIER"]),
+      documentType: z.string(),
+      status: z.string(),
+      number: z.string(),
+      authorizationNumber: z.string().nullable().optional(),
+      authorizedAt: z.date().nullable().optional(),
+      issueDate: z.date(),
+      subtotal: z.number(),
+      taxTotal: z.number(),
+      discount: z.number(),
+      total: z.number(),
+      paidAmount: z.number(),
+      balance: z.number(),
+      relatedDocumentId: z.string().nullable().optional(),
+      fiscalInfo: createDocumentFiscalInfoSchema.optional().nullable(),
+    })
+    .optional()
+    .nullable(),
   details: z.array(WithholdingDetailCreateSchema),
 });
 
 export const WithholdingCreateSchema = WithholdingSchema.omit({
-  id: true,
   tenantId: true,
   createdAt: true,
+}).extend({
+  id: z.string().cuid().optional().nullable(),
 });
 
 export const WithholdingUpdateSchema = WithholdingSchema.partial();

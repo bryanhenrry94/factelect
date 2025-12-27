@@ -138,11 +138,11 @@ const initialState: CreateDocument = {
   ],
 };
 
-interface DocumentFormProps {
+interface SalesInvoideFormProps {
   documentId?: string;
 }
 
-export const SalesInvoiceForm: React.FC<DocumentFormProps> = ({
+export const SalesInvoiceForm: React.FC<SalesInvoideFormProps> = ({
   documentId,
 }) => {
   const router = useRouter();
@@ -187,7 +187,6 @@ export const SalesInvoiceForm: React.FC<DocumentFormProps> = ({
   const [tab, setTab] = useState("items");
 
   const [withholding, setWithholding] = useState<Withholding | null>(null);
-  const [showHeader, setShowHeader] = useState(true);
 
   const methods = useForm<CreateDocument>({
     resolver: zodResolver(createDocumentSchema),
@@ -200,6 +199,7 @@ export const SalesInvoiceForm: React.FC<DocumentFormProps> = ({
     formState: { errors },
     control,
     watch,
+    setValue,
   } = methods;
 
   useEffect(() => {
@@ -221,17 +221,9 @@ export const SalesInvoiceForm: React.FC<DocumentFormProps> = ({
       const itemsRes = await getDocumentItems(res.data.id!);
       const fiscalRes = await getDocumentFiscalInfo(res.data.id!);
       const paymentsRes = await getDocumentPayments(res.data.id!);
-
-      let resDocWithholding;
-
-      if (res.data.documentType === "INVOICE") {
-        // La factura es el documento base
-        resDocWithholding = await getWithholdingByBaseDocument(res.data.id!);
-      } else if (res.data.documentType === "WITHHOLDING") {
-        // Ya estoy sobre el documento de la retención
-        resDocWithholding = await getWithholdingByDocumentId(res.data.id!);
-        setShowHeader(false);
-      }
+      const resDocWithholding = await getWithholdingByBaseDocument(
+        res.data.id!
+      );
 
       if (resDocWithholding?.success && resDocWithholding.data) {
         setWithholding(resDocWithholding.data);
@@ -276,7 +268,7 @@ export const SalesInvoiceForm: React.FC<DocumentFormProps> = ({
       if (!confirm) return;
 
       const res = modeEdit
-        ? await updateDocument(session.user.tenantId, documentId!, data)
+        ? await updateDocument(documentId!, data)
         : await createDocument(session.user.tenantId, data);
 
       if (!res?.success) {
@@ -287,7 +279,7 @@ export const SalesInvoiceForm: React.FC<DocumentFormProps> = ({
       notifyInfo(
         `Documento ${modeEdit ? "actualizado" : "creado"} correctamente`
       );
-      router.push(`/documentos/${res.data?.id}/editar`);
+      router.push(`/ventas/${res.data?.id}/editar`);
     } catch {
       setError("Error inesperado al guardar");
     }
@@ -352,6 +344,7 @@ export const SalesInvoiceForm: React.FC<DocumentFormProps> = ({
 
   // observe
   const selectedPersonId = watch("personId");
+  const fiscalInfo = watch("fiscalInfo");
 
   const selectedPerson = useMemo(
     () => persons.find((p) => p.id === selectedPersonId),
@@ -399,59 +392,70 @@ export const SalesInvoiceForm: React.FC<DocumentFormProps> = ({
               </Alert>
             )}
 
-            <div>
-              {/* ===================== DATOS GENERALES ===================== */}
-              <div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Fecha */}
-                  <FormField
-                    control={control}
-                    name="issueDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fecha de emisión</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="date"
-                            disabled={modeEdit}
-                            value={
-                              field.value
-                                ? new Date(field.value)
-                                    .toISOString()
-                                    .substring(0, 10)
-                                : ""
-                            }
-                            onChange={(e) =>
-                              field.onChange(new Date(e.target.value))
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+            {/* ===================== DATOS GENERALES ===================== */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Fecha */}
+              <FormField
+                control={control}
+                name="issueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fecha de emisión</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        disabled={modeEdit}
+                        value={
+                          field.value
+                            ? new Date(field.value)
+                                .toISOString()
+                                .substring(0, 10)
+                            : ""
+                        }
+                        onChange={(e) =>
+                          field.onChange(new Date(e.target.value))
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* ===================== PERSONA ===================== */}
-              <div className="mt-4">
-                <PersonSelectField
-                  control={control}
-                  name="personId"
-                  label="Cliente"
-                  persons={persons}
-                  selectedPerson={selectedPerson}
-                  onAddPerson={handleAddPerson}
-                />
-              </div>
+              <PersonSelectField
+                control={control}
+                name="personId"
+                label="Cliente"
+                persons={persons}
+                selectedPerson={selectedPerson}
+                onAddPerson={handleAddPerson}
+              />
+            </div>
 
-              {/* ===================== INFO FISCAL ===================== */}
-              <div className="mt-4">
-                <DocumentFiscalInfo
-                  modeEdit={modeEdit}
-                  documentType={watch("documentType") || "INVOICE"}
-                />
-              </div>
+            {/* ===================== INFO FISCAL ===================== */}
+            <div className="mt-4">
+              <DocumentFiscalInfo
+                documentType={
+                  (watch("documentType") as $Enums.DocumentType) ||
+                  $Enums.DocumentType.INVOICE
+                }
+                modeEdit={modeEdit}
+                value={{
+                  establishmentId: fiscalInfo?.establishmentId || "",
+                  emissionPointId: fiscalInfo?.emissionPointId || "",
+                  sequence: fiscalInfo?.sequence || 0,
+                }}
+                onChange={(vals) => {
+                  setValue("fiscalInfo", {
+                    ...fiscalInfo,
+                    ...vals,
+                    sriStatus: fiscalInfo?.sriStatus || "DRAFT",
+                    environment: fiscalInfo?.environment || "TEST",
+                    documentId: fiscalInfo?.documentId || "",
+                  });
+                }}
+              />
             </div>
           </CardContent>
         </Card>
@@ -484,7 +488,6 @@ export const SalesInvoiceForm: React.FC<DocumentFormProps> = ({
                     entityType={watch("entityType")}
                     documentId={documentId}
                     withholdingId={withholding?.id || undefined}
-                    showHeader={showHeader}
                   />
                 )}
               </TabsContent>

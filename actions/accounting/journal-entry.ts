@@ -519,6 +519,7 @@ export const getJournalEntriesDocumentData = async (
     );
   }
 
+  // Construir el asiento contable
   const journalData: CreateJournalEntry = {
     date: document.issueDate,
     description: document.description || "-",
@@ -528,18 +529,20 @@ export const getJournalEntriesDocumentData = async (
     lines: [
       // Ejemplo:
       // Debe: CxC
-      // Haber: Ingresos
-      {
-        accountId:
-          document.entityType === "CUSTOMER"
-            ? person.accountReceivableId!
-            : person.accountPayableId!,
-        debit: document.total,
-        credit: 0,
-        personId: document.personId,
-      },
+      // Haber: Ingresos por ventas (agrupar por cuenta de ingresos si es necesario)
+      // Haber: IVA por pagar (si aplica)
     ],
   };
+
+  journalData.lines.push({
+    accountId:
+      document.entityType === "CUSTOMER"
+        ? person.accountReceivableId!
+        : person.accountPayableId!,
+    debit: document.total,
+    credit: 0,
+    personId: document.personId,
+  });
 
   if (!document.items || document.items.length === 0) {
     return {

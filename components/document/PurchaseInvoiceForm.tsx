@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/card";
 
 import HeaderActions from "./HeaderActions";
-import DocumentInfo from "./DocumentInfo";
 import ItemsTable from "./ItemsTable";
 import TotalsSection from "./sales/TotalsSection";
 import { PaymentMethodsTable } from "./sales/PaymentMethodsTable";
@@ -31,7 +30,6 @@ import {
 } from "@/lib/validations";
 import { PersonInput } from "@/lib/validations/person/person";
 import { Warehouse } from "@/lib/validations/inventory/warehouse";
-import { CreateDocumentFiscalInfo } from "@/lib/validations/document/document-fiscal-info";
 
 import {
   createDocument,
@@ -51,10 +49,7 @@ import InvoicePDF from "./../pdf/InvoicePDF";
 import { pdf } from "@react-pdf/renderer";
 import { WithholdingForm } from "./../withholding/withholding";
 import { WithholdingCode } from "@/lib/validations/withholding/withholding-code";
-import {
-  getWithholdingByBaseDocument,
-  getWithholdingByDocumentId,
-} from "@/actions/withholding/withholding";
+import { getWithholdingByBaseDocument } from "@/actions/withholding/withholding";
 import { Withholding } from "@/lib/validations/withholding/withholding";
 import { useSession } from "next-auth/react";
 import { PersonFilter } from "@/types";
@@ -69,7 +64,6 @@ import {
 } from "./../ui/form";
 import { Input } from "./../ui/input";
 
-import { DocumentFiscalInfo } from "./DocumentFiscalInfo";
 import { PersonSelectField } from "./../forms/PersonSelectField";
 
 const initialItemsState: CreateDocumentItem[] = [
@@ -87,25 +81,10 @@ const initialItemsState: CreateDocumentItem[] = [
   },
 ];
 
-const initialFiscalInfoState: CreateDocumentFiscalInfo = {
-  documentId: "",
-  establishmentId: "",
-  emissionPointId: "",
-  sequence: 0,
-  accessKey: "",
-  authorization: "",
-  authorizationDate: new Date(),
-  sriStatus: "DRAFT",
-  environment: "TEST",
-  generatedXmlUrl: "",
-  authorizedXmlUrl: "",
-  pdfUrl: "",
-};
-
 const initialState: CreateDocument = {
   personId: "",
   issueDate: new Date(),
-  entityType: "CUSTOMER",
+  entityType: $Enums.EntityType.SUPPLIER,
   documentType: "INVOICE",
   status: $Enums.DocumentStatus.DRAFT,
   subtotal: 0,
@@ -117,7 +96,7 @@ const initialState: CreateDocument = {
   balance: 0,
   description: undefined,
   items: initialItemsState,
-  fiscalInfo: initialFiscalInfoState,
+  fiscalInfo: null,
   documentPayments: [
     {
       paymentMethod: "20",
@@ -151,7 +130,7 @@ export const PurchaseInvoiceForm: React.FC<PurchaseInvoiceFormProps> = ({
     const fetchData = async () => {
       const filter: PersonFilter = {
         tenantId: session.user.tenantId,
-        isCustomer: true,
+        isSupplier: true,
       };
 
       const [clients, productsRes, warehousesRes, withholdingCodesRes] =
@@ -177,7 +156,6 @@ export const PurchaseInvoiceForm: React.FC<PurchaseInvoiceFormProps> = ({
   const [tab, setTab] = useState("items");
 
   const [withholding, setWithholding] = useState<Withholding | null>(null);
-  const [showHeader, setShowHeader] = useState(true);
 
   const methods = useForm<CreateDocument>({
     resolver: zodResolver(createDocumentSchema),
@@ -211,17 +189,9 @@ export const PurchaseInvoiceForm: React.FC<PurchaseInvoiceFormProps> = ({
       const itemsRes = await getDocumentItems(res.data.id!);
       const fiscalRes = await getDocumentFiscalInfo(res.data.id!);
       const paymentsRes = await getDocumentPayments(res.data.id!);
-
-      let resDocWithholding;
-
-      if (res.data.documentType === "INVOICE") {
-        // La factura es el documento base
-        resDocWithholding = await getWithholdingByBaseDocument(res.data.id!);
-      } else if (res.data.documentType === "WITHHOLDING") {
-        // Ya estoy sobre el documento de la retención
-        resDocWithholding = await getWithholdingByDocumentId(res.data.id!);
-        setShowHeader(false);
-      }
+      const resDocWithholding = await getWithholdingByBaseDocument(
+        res.data.id!
+      );
 
       if (resDocWithholding?.success && resDocWithholding.data) {
         setWithholding(resDocWithholding.data);
@@ -245,7 +215,7 @@ export const PurchaseInvoiceForm: React.FC<PurchaseInvoiceFormProps> = ({
             subtotal: i.subtotal,
             total: i.total,
           })) ?? initialItemsState,
-        fiscalInfo: fiscalRes.data ?? initialFiscalInfoState,
+        fiscalInfo: fiscalRes.data ?? null,
         documentPayments: paymentsRes.data ?? [],
       });
 
@@ -266,7 +236,7 @@ export const PurchaseInvoiceForm: React.FC<PurchaseInvoiceFormProps> = ({
       if (!confirm) return;
 
       const res = modeEdit
-        ? await updateDocument(session.user.tenantId, documentId!, data)
+        ? await updateDocument(documentId!, data)
         : await createDocument(session.user.tenantId, data);
 
       if (!res?.success) {
@@ -277,7 +247,7 @@ export const PurchaseInvoiceForm: React.FC<PurchaseInvoiceFormProps> = ({
       notifyInfo(
         `Documento ${modeEdit ? "actualizado" : "creado"} correctamente`
       );
-      router.push(`/documentos/${res.data?.id}/editar`);
+      router.push(`/compras/${res.data?.id}/editar`);
     } catch {
       setError("Error inesperado al guardar");
     }
@@ -370,12 +340,14 @@ export const PurchaseInvoiceForm: React.FC<PurchaseInvoiceFormProps> = ({
         <Card>
           <CardHeader>
             <CardTitle>
-              {modeEdit ? "Editar Factura de Venta" : "Nueva Factura de Venta"}
+              {modeEdit
+                ? "Editar Factura de Compra"
+                : "Nueva Factura de Compra"}
             </CardTitle>
             <CardDescription>
               {modeEdit
-                ? "Modifique la información de la factura de venta."
-                : "Complete la información para crear una nueva factura de venta."}
+                ? "Modifique la información de la factura de compra."
+                : "Complete la información para crear una nueva factura de compra."}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -389,59 +361,100 @@ export const PurchaseInvoiceForm: React.FC<PurchaseInvoiceFormProps> = ({
               </Alert>
             )}
 
-            <div>
-              {/* ===================== DATOS GENERALES ===================== */}
-              <div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Fecha */}
-                  <FormField
-                    control={control}
-                    name="issueDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fecha de emisión</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="date"
-                            disabled={modeEdit}
-                            value={
-                              field.value
-                                ? new Date(field.value)
-                                    .toISOString()
-                                    .substring(0, 10)
-                                : ""
-                            }
-                            onChange={(e) =>
-                              field.onChange(new Date(e.target.value))
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+            {/* ===================== DATOS GENERALES ===================== */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Fecha */}
+              <FormField
+                control={control}
+                name="issueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fecha de emisión</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        disabled={modeEdit}
+                        value={
+                          field.value
+                            ? new Date(field.value)
+                                .toISOString()
+                                .substring(0, 10)
+                            : ""
+                        }
+                        onChange={(e) =>
+                          field.onChange(new Date(e.target.value))
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* ===================== PERSONA ===================== */}
-              <div className="mt-4">
-                <PersonSelectField
-                  control={control}
-                  name="personId"
-                  label="Cliente"
-                  persons={persons}
-                  selectedPerson={selectedPerson}
-                  onAddPerson={handleAddPerson}
-                />
-              </div>
+              <PersonSelectField
+                control={control}
+                name="personId"
+                label="Proveedor"
+                persons={persons}
+                selectedPerson={selectedPerson}
+                onAddPerson={handleAddPerson}
+              />
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
               {/* ===================== INFO FISCAL ===================== */}
-              <div className="mt-4">
-                <DocumentFiscalInfo
-                  modeEdit={modeEdit}
-                  documentType={watch("documentType") || "INVOICE"}
-                />
-              </div>
+              <FormField
+                control={control}
+                name="number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número de documento</FormLabel>
+                    <Input
+                      placeholder="000-000-000000000"
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="authorizationNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número de autorización</FormLabel>
+                    <Input
+                      placeholder="0000000000000000000000000000000000000000000000000"
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="authorizedAt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fecha de autorización</FormLabel>
+                    <Input
+                      type="date"
+                      value={
+                        field.value
+                          ? new Date(field.value).toISOString().substring(0, 10)
+                          : ""
+                      }
+                      onChange={(e) => field.onChange(new Date(e.target.value))}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
           </CardContent>
         </Card>
@@ -474,7 +487,6 @@ export const PurchaseInvoiceForm: React.FC<PurchaseInvoiceFormProps> = ({
                     entityType={watch("entityType")}
                     documentId={documentId}
                     withholdingId={withholding?.id || undefined}
-                    showHeader={showHeader}
                   />
                 )}
               </TabsContent>
