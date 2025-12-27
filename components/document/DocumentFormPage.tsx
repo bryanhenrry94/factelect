@@ -1,5 +1,5 @@
 import { $Enums } from "@/prisma/generated/prisma";
-import { SalesInvoiceForm } from "./invoice/SalesInvoiceForm";
+import { SalesInvoiceForm } from "./SalesInvoiceForm";
 import { PurchaseInvoiceForm } from "./PurchaseInvoiceForm";
 import { WithholdingForm } from "./WithholdingForm";
 import { RemissionGuideForm } from "./RemissionGuideForm";

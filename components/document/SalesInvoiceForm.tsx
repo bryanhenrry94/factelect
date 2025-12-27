@@ -15,11 +15,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import HeaderActions from "../HeaderActions";
-import DocumentInfo from "../DocumentInfo";
-import ItemsTable from "../ItemsTable";
-import TotalsSection from "./TotalsSection";
-import { PaymentMethodsTable } from "./PaymentMethodsTable";
+import HeaderActions from "./HeaderActions";
+import DocumentInfo from "./DocumentInfo";
+import ItemsTable from "./ItemsTable";
+import TotalsSection from "./sales/TotalsSection";
+import { PaymentMethodsTable } from "./sales/PaymentMethodsTable";
 
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
@@ -46,10 +46,10 @@ import {
 import { getDocumentFiscalInfo } from "@/actions/document/document-fiscal-info";
 import { getDocumentPayments } from "@/actions/document/document-payment";
 import { $Enums } from "@/prisma/generated/prisma";
-import { ConfirmDialog } from "../../ConfirmDialog";
-import InvoicePDF from "../../pdf/InvoicePDF";
+import { ConfirmDialog } from "../ConfirmDialog";
+import InvoicePDF from "../pdf/InvoicePDF";
 import { pdf } from "@react-pdf/renderer";
-import { WithholdingForm } from "../../withholding/withholding";
+import { WithholdingForm } from "../withholding/withholding";
 import { WithholdingCode } from "@/lib/validations/withholding/withholding-code";
 import {
   getWithholdingByBaseDocument,
@@ -66,10 +66,10 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "../../ui/form";
-import { Input } from "../../ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
-import { Button } from "../../ui/button";
+} from "../ui/form";
+import { Input } from "../ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown, UserPlus } from "lucide-react";
 import {
@@ -78,9 +78,9 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
-} from "../../ui/command";
-import { DocumentFiscalInfo } from "../DocumentFiscalInfo";
-import { PersonSelectField } from "../../forms/PersonSelectField";
+} from "../ui/command";
+import { DocumentFiscalInfo } from "./DocumentFiscalInfo";
+import { PersonSelectField } from "../forms/PersonSelectField";
 
 const initialItemsState: CreateDocumentItem[] = [
   {

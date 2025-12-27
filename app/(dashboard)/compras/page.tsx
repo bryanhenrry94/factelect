@@ -43,7 +43,7 @@ import { getDocumentTypeLabel } from "@/utils/document";
 import { $Enums } from "@/prisma/generated/prisma";
 import Link from "next/link";
 
-export default function SalesPage() {
+export default function PurchasesPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [documents, setDocuments] = useState<DocumentResponse[]>([]);
@@ -63,7 +63,7 @@ export default function SalesPage() {
       tenantId: session?.user?.tenantId || "",
       search: search || undefined,
       personId: person !== "none" ? person : undefined,
-      entityType: $Enums.EntityType.CUSTOMER,
+      entityType: $Enums.EntityType.SUPPLIER,
       documentType: $Enums.DocumentType.INVOICE,
       dateFrom: dateFrom ? new Date(dateFrom) : undefined,
       dateTo: dateTo ? new Date(dateTo) : undefined,
@@ -81,7 +81,7 @@ export default function SalesPage() {
       if (!session?.user?.tenantId) return;
       const res = await getPersonsByTenant({
         tenantId: session.user.tenantId,
-        isCustomer: true,
+        isSupplier: true,
       });
       if (res.success && res.data) {
         setPersons(res.data);
@@ -112,11 +112,11 @@ export default function SalesPage() {
   };
 
   const handleEdit = (id: string) => {
-    router.push(`/ventas/${id}/editar`);
+    router.push(`/compras/${id}/editar`);
   };
 
   const handleAdd = () => {
-    router.push("/ventas/nuevo");
+    router.push("/compras/nuevo");
   };
 
   useEffect(() => {
@@ -153,10 +153,10 @@ export default function SalesPage() {
 
             {/* Persona */}
             <Field>
-              <FieldLabel>Cliente</FieldLabel>
+              <FieldLabel>Proveedor</FieldLabel>
               <Select value={person} onValueChange={setPerson}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Cliente" />
+                  <SelectValue placeholder="Proveedor" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Todos</SelectItem>
@@ -197,9 +197,9 @@ export default function SalesPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
-            <CardTitle>Facturas de Venta</CardTitle>
+            <CardTitle>Facturas de Compra</CardTitle>
             <CardDescription>
-              Lista de facturas de venta creadas en el sistema.
+              Lista de facturas de compra creadas en el sistema.
             </CardDescription>
           </div>
           <Button onClick={handleAdd} size="sm">
@@ -257,7 +257,7 @@ export default function SalesPage() {
                         </TableCell>
                         <TableCell>
                           <Link
-                            href={`/ventas/${document.id}/editar`}
+                            href={`/compras/${document.id}/editar`}
                             className="underline hover:text-primary"
                           >
                             <div className="font-normal text-sm">

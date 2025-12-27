@@ -18,8 +18,8 @@ import {
 import HeaderActions from "./HeaderActions";
 import DocumentInfo from "./DocumentInfo";
 import ItemsTable from "./ItemsTable";
-import TotalsSection from "./invoice/TotalsSection";
-import { PaymentMethodsTable } from "./invoice/PaymentMethodsTable";
+import TotalsSection from "./sales/TotalsSection";
+import { PaymentMethodsTable } from "./sales/PaymentMethodsTable";
 
 import useTenant from "@/hooks/useTenant";
 import { notifyError, notifyInfo } from "@/lib/notifications";
@@ -28,8 +28,6 @@ import {
   CreateDocument,
   CreateDocumentItem,
   createDocumentSchema,
-  Document,
-  DocumentPayment,
   Product,
 } from "@/lib/validations";
 import { PersonInput } from "@/lib/validations/person/person";
@@ -41,7 +39,6 @@ import {
   getAllProducts,
   getDocument,
   getDocumentItems,
-  getDocumentWithholding,
   getInvoiceDataForPDF,
   getPersonsByTenant,
   sendToSRI,

@@ -84,11 +84,11 @@ const data = {
       icon: PiggyBank,
       items: [
         {
-          title: "Nueva Factura",
+          title: "Nueva Venta",
           url: "/ventas/nuevo",
         },
         {
-          title: "Facturas",
+          title: "Facturas de Venta",
           url: "/ventas",
         },
         {
@@ -103,8 +103,12 @@ const data = {
       icon: ShoppingBag,
       items: [
         {
-          title: "Facturas proveedor",
-          url: "/documentos?type=SUPPLIER&documentType=INVOICE",
+          title: "Nueva Compra",
+          url: "/compras/nuevo",
+        },
+        {
+          title: "Facturas de Compra",
+          url: "/compras",
         },
         {
           title: "Notas crédito/débito",
@@ -112,7 +116,7 @@ const data = {
         },
         {
           title: "Liquidaciones de compra",
-          url: "/documentos?type=SUPPLIER&documentType=PURCHASE_SETTLEMENT",
+          url: "/documentos",
         },
       ],
     },
