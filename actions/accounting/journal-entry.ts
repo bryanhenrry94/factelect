@@ -260,6 +260,8 @@ export const createJournalEntryTx = async (
     const totalDebit = data.lines.reduce((sum, e) => sum + (e.debit ?? 0), 0);
     const totalCredit = data.lines.reduce((sum, e) => sum + (e.credit ?? 0), 0);
 
+    console.log("Total Debit:", totalDebit, "Total Credit:", totalCredit);
+
     if (totalDebit !== totalCredit) {
       return {
         success: false,
@@ -275,6 +277,7 @@ export const createJournalEntryTx = async (
         };
       }
       if ((entry.debit ?? 0) === 0 && (entry.credit ?? 0) === 0) {
+        console.log("Invalid line found:", entry);
         return {
           success: false,
           error: "Cada línea debe tener un valor en Débito o Crédito",
@@ -293,6 +296,8 @@ export const createJournalEntryTx = async (
         sourceId: data.sourceId,
       },
     });
+
+    console.log("Created journal entry:", newJournal);
 
     await tx.journalEntryLine.createMany({
       data: data.lines.map((e) => ({
@@ -466,7 +471,38 @@ export const updateJournalEntry = async (
   }
 };
 
-export const getJournalEntriesDocumentData = async (
+export const getJournalEntriesByDocument = async (
+  tx: Prisma.TransactionClient,
+  documentId: string
+): Promise<{ success: boolean; error?: string; data?: CreateJournalEntry }> => {
+  const document = await tx.document.findUnique({
+    where: { id: documentId },
+  });
+
+  if (!document) {
+    return { success: false, error: "Documento no encontrado" };
+  }
+
+  switch (document.documentType) {
+    case "INVOICE":
+      return getJournalEntriesInvoice(tx, documentId);
+
+    case "WITHHOLDING":
+      return getJournalEntriesWithholding(tx, documentId);
+
+    // futuros:
+    // case "CREDIT_NOTE":
+    // case "DEBIT_NOTE":
+
+    default:
+      return {
+        success: false,
+        error: `No existe lógica contable para el tipo de documento: ${document.documentType}`,
+      };
+  }
+};
+
+export const getJournalEntriesInvoice = async (
   tx: Prisma.TransactionClient,
   documentId: string
 ): Promise<{ success: boolean; error?: string; data?: CreateJournalEntry }> => {
@@ -534,15 +570,23 @@ export const getJournalEntriesDocumentData = async (
     ],
   };
 
-  journalData.lines.push({
-    accountId:
-      document.entityType === "CUSTOMER"
-        ? person.accountReceivableId!
-        : person.accountPayableId!,
-    debit: document.total,
-    credit: 0,
-    personId: document.personId,
-  });
+  if (document.entityType === "CUSTOMER") {
+    // Venta → CxC al DEBE
+    journalData.lines.push({
+      accountId: person.accountReceivableId!,
+      debit: document.total,
+      credit: 0,
+      personId: document.personId,
+    });
+  } else {
+    // Compra → CxP al HABER
+    journalData.lines.push({
+      accountId: person.accountPayableId!,
+      debit: 0,
+      credit: document.total,
+      personId: document.personId,
+    });
+  }
 
   if (!document.items || document.items.length === 0) {
     return {
@@ -583,22 +627,34 @@ export const getJournalEntriesDocumentData = async (
   }
 
   for (const [accountId, total] of salesMap.entries()) {
-    journalData.lines.push({
-      accountId,
-      debit: 0,
-      credit: total,
-    });
+    if (document.entityType === "CUSTOMER") {
+      // Venta → ingresos al HABER
+      journalData.lines.push({
+        accountId,
+        debit: 0,
+        credit: total,
+      });
+    } else {
+      // Compra → gasto/inventario al DEBE
+      journalData.lines.push({
+        accountId,
+        debit: total,
+        credit: 0,
+      });
+    }
   }
 
-  const settings = await tx.accountingSetting.findMany({
-    where: { tenantId: document.tenantId },
-  });
-
-  const VAT_SALES_SETTING = settings.find((s) => s.key === "VAT_SALES");
-  const VAT_PURCHASES_SETTING = settings.find((s) => s.key === "VAT_PURCHASES");
-
-  // Valida que existan las cuentas de IVA en la configuración
+  // Haber: IVA por pagar
   if (document.taxTotal && document.taxTotal > 0) {
+    const settings = await tx.accountingSetting.findMany({
+      where: { tenantId: document.tenantId },
+    });
+
+    const VAT_SALES_SETTING = settings.find((s) => s.key === "VAT_SALES");
+    const VAT_PURCHASES_SETTING = settings.find(
+      (s) => s.key === "VAT_PURCHASES"
+    );
+    
     if (document.entityType === "CUSTOMER" && !VAT_SALES_SETTING?.accountId) {
       return {
         success: false,
@@ -617,20 +673,153 @@ export const getJournalEntriesDocumentData = async (
           "No se ha configurado la cuenta para IVA sobre compras en la configuración contable",
       };
     }
+
+    if (document.entityType === "CUSTOMER") {
+      // Venta → IVA por pagar al HABER
+      journalData.lines.push({
+        accountId: VAT_SALES_SETTING!.accountId!,
+        debit: 0,
+        credit: document.taxTotal,
+      });
+    } else {
+      // Compra → IVA crédito al DEBE
+      journalData.lines.push({
+        accountId: VAT_PURCHASES_SETTING!.accountId!,
+        debit: document.taxTotal,
+        credit: 0,
+      });
+    }
   }
 
-  const accountId =
-    document.entityType === "CUSTOMER"
-      ? VAT_SALES_SETTING?.accountId
-      : VAT_PURCHASES_SETTING?.accountId;
+  return { success: true, data: journalData };
+};
 
-  // Haber: IVA por pagar
-  if (document.taxTotal && document.taxTotal > 0) {
+export const getJournalEntriesWithholding = async (
+  tx: Prisma.TransactionClient,
+  documentId: string
+): Promise<{ success: boolean; error?: string; data?: CreateJournalEntry }> => {
+  const withholding = await tx.withholding.findFirst({
+    where: { documentId },
+    include: {
+      document: true,
+      details: true,
+    },
+  });
+
+  if (!withholding) {
+    return {
+      success: false,
+      error: "No existe una retención asociada a este documento",
+    };
+  }
+
+  const { document: doc, details } = withholding;
+
+  if (!details || details.length === 0) {
+    return {
+      success: false,
+      error: "La retención no tiene detalles registrados",
+    };
+  }
+
+  // ✅ Validar cuentas contables en cada detalle
+  const invalidDetail = details.find((d) => !d.accountId);
+  if (invalidDetail) {
+    return {
+      success: false,
+      error:
+        "Todos los detalles de la retención deben tener una cuenta contable definida",
+    };
+  }
+
+  const person = await tx.person.findUnique({
+    where: { id: doc.personId },
+  });
+
+  if (!person) {
+    return {
+      success: false,
+      error: "Persona no encontrada para el documento de retención",
+    };
+  }
+
+  // ✅ Validar CxC / CxP según tipo
+  let counterAccountId: string | null = null;
+
+  if (doc.entityType === "CUSTOMER") {
+    counterAccountId = person.accountReceivableId ?? null;
+    if (!counterAccountId) {
+      return {
+        success: false,
+        error:
+          "La persona asociada al documento no tiene cuenta por cobrar definida",
+      };
+    }
+  }
+
+  if (doc.entityType === "SUPPLIER") {
+    counterAccountId = person.accountPayableId ?? null;
+    if (!counterAccountId) {
+      return {
+        success: false,
+        error:
+          "La persona asociada al documento no tiene cuenta por pagar definida",
+      };
+    }
+  }
+
+  if (!counterAccountId) {
+    return {
+      success: false,
+      error: "Tipo de entidad no soportado para retenciones",
+    };
+  }
+
+  // ✅ Total retenido desde detalles
+  const totalWithheld = details.reduce((sum, d) => sum + d.withheldAmount, 0);
+
+  if (totalWithheld <= 0) {
+    return {
+      success: false,
+      error: "El total retenido debe ser mayor a cero",
+    };
+  }
+
+  const journalData: CreateJournalEntry = {
+    date: doc.issueDate,
+    description: `Retención ${doc.number ?? ""}`.trim(),
+    type: doc.entityType === "CUSTOMER" ? "SALE" : "PURCHASE",
+    sourceType: "DOCUMENT",
+    sourceId: doc.id,
+    lines: [],
+  };
+
+  // 🧾 Debe: CxC o CxP (disminuye lo que me deben / debo)
+  journalData.lines.push({
+    accountId: counterAccountId,
+    debit: totalWithheld,
+    credit: 0,
+    personId: doc.personId,
+  });
+
+  // 🧾 Haber: cuentas de retención
+  for (const detail of details) {
     journalData.lines.push({
-      accountId: accountId!,
+      accountId: detail.accountId!,
       debit: 0,
-      credit: document.taxTotal,
+      credit: detail.withheldAmount,
     });
+  }
+
+  // ✅ Validar que el asiento cuadre
+  const debit = journalData.lines.reduce((s, l) => s + (l.debit || 0), 0);
+  const credit = journalData.lines.reduce((s, l) => s + (l.credit || 0), 0);
+
+  if (Math.abs(debit - credit) > 0.01) {
+    return {
+      success: false,
+      error: `El asiento de retención no cuadra. Debe: ${debit}, Haber: ${credit}`,
+    };
   }
 
   return { success: true, data: journalData };

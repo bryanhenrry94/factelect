@@ -12,12 +12,11 @@ import { formatDate } from "@/utils/formatters";
 import { Prisma } from "@/prisma/generated/prisma";
 import {
   createJournalEntryTx,
-  getJournalEntriesDocumentData,
+  getJournalEntriesByDocument,
 } from "../accounting/journal-entry";
 import { CreateJournalEntry } from "@/lib/validations/accounting/journal_entry";
 import {
   createWithholdingTx,
-  deleteWithholding,
   updateWithholdingTx,
 } from "../withholding/withholding";
 
@@ -463,7 +462,7 @@ export const createDocumentTx = async (
       }
 
       // 5. Crear asiento contable
-      const resJournalData = await getJournalEntriesDocumentData(
+      const resJournalData = await getJournalEntriesByDocument(
         tx,
         newDocument.id
       );
@@ -485,7 +484,12 @@ export const createDocumentTx = async (
       }
 
       // Crear asiento contable
-      await createJournalEntryTx(tx, tenantId, journalData);
+      const restJournal = await createJournalEntryTx(tx, tenantId, journalData);
+      if (!restJournal.success) {
+        throw new Error(
+          restJournal.error || "Error creando el asiento contable"
+        );
+      }
     }
 
     // 4. Registros para WITHHOLDING
@@ -529,6 +533,36 @@ export const createDocumentTx = async (
           });
         }
       }
+
+      // 5. Crear asiento contable
+      const resJournalData = await getJournalEntriesByDocument(
+        tx,
+        newDocument.id
+      );
+
+      if (!resJournalData.success || !resJournalData.data) {
+        throw new Error(
+          resJournalData.error ||
+            "Error obteniendo datos para el asiento contable"
+        );
+      }
+
+      const journalData: CreateJournalEntry | null =
+        resJournalData.success && resJournalData.data
+          ? resJournalData.data
+          : null;
+
+      if (!journalData) {
+        throw new Error("Error obteniendo datos para el asiento contable");
+      }
+
+      // Crear asiento contable
+      const restJournal = await createJournalEntryTx(tx, tenantId, journalData);
+      if (!restJournal.success) {
+        throw new Error(
+          restJournal.error || "Error creando el asiento contable"
+        );
+      }
     }
 
     // Se formatea solo al final, fuera de la transacción
@@ -541,9 +575,12 @@ export const createDocumentTx = async (
     };
 
     return { success: true, data: formattedDocument };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating document:", error);
-    return { success: false, error: "Error creando el documento" };
+    return {
+      success: false,
+      error: error.message || "Error creando el documento",
+    };
   }
 };
 
@@ -800,7 +837,7 @@ export const updateDocumentTx = async (
       }
 
       // 4. Actualizar asiento contable
-      const resJournalData = await getJournalEntriesDocumentData(
+      const resJournalData = await getJournalEntriesByDocument(
         tx,
         updatedDocument.id
       );
@@ -841,7 +878,17 @@ export const updateDocumentTx = async (
       }
 
       // 4. Actualizar asiento contable
-      await createJournalEntryTx(tx, updatedDocument.tenantId, journalData);
+      const restJournal = await createJournalEntryTx(
+        tx,
+        updatedDocument.tenantId,
+        journalData
+      );
+
+      if (!restJournal.success) {
+        throw new Error(
+          restJournal.error || "Error creando el asiento contable"
+        );
+      }
     }
 
     // 4. Registros para WITHHOLDING
@@ -889,6 +936,60 @@ export const updateDocumentTx = async (
           });
         }
       }
+
+      // 4. Actualizar asiento contable
+      const resJournalData = await getJournalEntriesByDocument(
+        tx,
+        updatedDocument.id
+      );
+
+      if (!resJournalData.success || !resJournalData.data) {
+        throw new Error(
+          resJournalData.error ||
+            "Error obteniendo datos para el asiento contable"
+        );
+      }
+
+      // registrar asiento contable
+      const journalData: CreateJournalEntry | null =
+        resJournalData.success && resJournalData.data
+          ? resJournalData.data
+          : null;
+
+      if (!journalData) {
+        throw new Error("Error obteniendo datos para el asiento contable");
+      }
+
+      // Valida si el documento ya tiene un asiento contable asociado
+      const existingJournals = await tx.journalEntry.findMany({
+        where: {
+          sourceType: "DOCUMENT",
+          sourceId: updatedDocument.id,
+        },
+      });
+
+      // Si ya existe un asiento, eliminarlo antes de crear uno nuevo
+      for (const journal of existingJournals) {
+        await tx.journalEntryLine.deleteMany({
+          where: { journalEntryId: journal.id },
+        });
+        await tx.journalEntry.delete({
+          where: { id: journal.id },
+        });
+      }
+
+      // 4. Actualizar asiento contable
+      const restJournal = await createJournalEntryTx(
+        tx,
+        updatedDocument.tenantId,
+        journalData
+      );
+
+      if (!restJournal.success) {
+        throw new Error(
+          restJournal.error || "Error creando el asiento contable"
+        );
+      }
     }
 
     const formattedDocument: DocumentResponse = {
@@ -900,9 +1001,12 @@ export const updateDocumentTx = async (
     };
 
     return { success: true, data: formattedDocument };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating document:", error);
-    return { success: false, error: "Error actualizando el documento" };
+    return {
+      success: false,
+      error: error.message || "Error actualizando el documento",
+    };
   }
 };
 
