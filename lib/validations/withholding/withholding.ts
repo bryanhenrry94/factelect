@@ -3,7 +3,7 @@ import { WithholdingDetailCreateSchema } from "./withholding-detail";
 import { createDocumentFiscalInfoSchema } from "../document/document-fiscal-info";
 
 export const WithholdingSchema = z.object({
-  id: z.string().cuid(),
+  id: z.string().uuid(),
   tenantId: z.string(),
   documentId: z.string(),
   issueDate: z.date(),
@@ -38,7 +38,7 @@ export const WithholdingCreateSchema = WithholdingSchema.omit({
   tenantId: true,
   createdAt: true,
 }).extend({
-  id: z.string().cuid().optional().nullable(),
+  id: z.string().optional().nullable(),
 });
 
 export const WithholdingUpdateSchema = WithholdingSchema.partial();

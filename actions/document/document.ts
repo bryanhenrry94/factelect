@@ -171,50 +171,93 @@ export const deleteDocument = async (
   id: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    const document = await prisma.document.findUnique({
-      where: { id },
-    });
-
-    if (!document) {
-      return { success: false, error: "Documento no encontrado" };
-    }
-
-    if (document.documentType === "INVOICE") {
-      // valida si es retencion
-      const associatedWithholdings = await prisma.withholding.count({
-        where: {
-          documentId: id,
-        },
+    await prisma.$transaction(async (tx) => {
+      const document = await tx.document.findUnique({
+        where: { id },
       });
-      if (associatedWithholdings > 0) {
-        return {
-          success: false,
-          error:
-            "No se puede eliminar el documento porque tiene retenciones asociadas",
-        };
-      }
-    }
 
-    if (document.documentType === "WITHHOLDING") {
-      const withholding = await prisma.withholding.findFirst({
+      if (!document) {
+        throw new Error("NOT_FOUND");
+      }
+
+      const existingFiscal = await tx.documentFiscalInfo.findUnique({
         where: { documentId: id },
       });
 
-      if (withholding) {
-        // Elimina la retención asociada y documento de retención
-        await deleteWithholding(withholding.id);
-        return { success: true };
+      if (existingFiscal) {
+        await tx.documentFiscalInfo.delete({
+          where: { documentId: id },
+        });
       }
-    }
 
-    await prisma.document.delete({
-      where: { id },
+      // 🧾 Si es factura, validar que no tenga retenciones asociadas
+      if (document.documentType === "INVOICE") {
+        const associatedWithholdings = await tx.withholding.count({
+          where: { documentId: id },
+        });
+
+        if (associatedWithholdings > 0) {
+          throw new Error("HAS_WITHHOLDINGS");
+        }
+      }
+
+      // 📄 Si es documento de retención, eliminar primero la retención
+      if (document.documentType === "WITHHOLDING") {
+        if (document.relatedDocumentId) {
+          const baseDocument = await tx.document.findFirst({
+            where: { id: document.relatedDocumentId },
+          });
+
+          if (baseDocument) {
+            await tx.document.update({
+              where: { id: baseDocument.id },
+              data: {
+                totalWithheld: 0,
+                balance: baseDocument.total - (baseDocument.paidAmount || 0),
+              },
+            });
+          }
+        }
+
+        const withholding = await tx.withholding.findFirst({
+          where: { documentId: id },
+        });
+
+        if (withholding) {
+          await tx.withholdingDetail.deleteMany({
+            where: { withholdingId: withholding.id },
+          });
+
+          // elimina la retención (y lo que dependa de ella)
+          await tx.withholding.delete({
+            where: { id: withholding.id },
+          });
+        }
+      }
+
+      // 🗑️ Finalmente elimina el documento
+      await tx.document.delete({
+        where: { id },
+      });
     });
 
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting document:", error);
-    return { success: false, error: "Error deleting document" };
+
+    if (error.message === "NOT_FOUND") {
+      return { success: false, error: "Documento no encontrado" };
+    }
+
+    if (error.message === "HAS_WITHHOLDINGS") {
+      return {
+        success: false,
+        error:
+          "No se puede eliminar el documento porque tiene retenciones asociadas",
+      };
+    }
+
+    return { success: false, error: "Error eliminando el documento" };
   }
 };
 
@@ -910,6 +953,7 @@ export const getDocument = async (
       createdAt: document.createdAt,
       updatedAt: document.updatedAt,
       documentFiscalInfo: document.documentFiscalInfo || undefined,
+      relatedDocumentId: document.relatedDocumentId || undefined,
       person: document.person
         ? {
             id: document.person.id,

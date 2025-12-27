@@ -53,7 +53,10 @@ import InvoicePDF from "../pdf/InvoicePDF";
 import { pdf } from "@react-pdf/renderer";
 // import { WithholdingForm } from "../withholding/withholding";
 import { WithholdingCode } from "@/lib/validations/withholding/withholding-code";
-import { getWithholdingByBaseDocument } from "@/actions/withholding/withholding";
+import {
+  getWithholdingByBaseDocument,
+  getWithholdingByDocumentId,
+} from "@/actions/withholding/withholding";
 import { Withholding } from "@/lib/validations/withholding/withholding";
 import { useSession } from "next-auth/react";
 import { PersonFilter } from "@/types";
@@ -185,6 +188,14 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
   const fiscalInfo = watch("fiscalInfo");
   const entityType = watch("entityType");
   const details = watch("withholding.details");
+  const relatedId = watch("relatedDocumentId");
+
+  useEffect(() => {
+    if (relatedId) {
+      setValue("relatedDocumentId", relatedId);
+      handleChangeDocument(relatedId);
+    }
+  }, [relatedId]);
 
   useEffect(() => {
     const total = (details || []).reduce(
@@ -223,25 +234,34 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
     }
   }, [documentId]);
 
-  const handleAddPerson = () => {
-    router.push("/personas/nuevo");
-  };
-
   const loadDocument = async () => {
     try {
       const res = await getDocument(documentId!);
-      if (!res.success || !res.data)
+      if (!res.success || !res.data) {
         return notifyError("Error al cargar documento");
+      }
 
-      const fiscalRes = await getDocumentFiscalInfo(res.data.id!);
-      const resDocWithholding = await getWithholdingByBaseDocument(
-        res.data.id!
-      );
+      const resDocWithholding = await getWithholdingByDocumentId(res.data.id!);
 
+      const docsRes = await getDocuments({
+        tenantId: res.data.tenantId,
+        personId: res.data.personId,
+        documentType: res.data.documentType,
+        entityType: res.data.entityType,
+        withoutWithholding: false,
+      });
+
+      if (docsRes.success && docsRes.data) {
+        setDocuments(docsRes.data);
+      } else {
+        setDocuments([]);
+      }
+
+      // ✅ AHORA que ya tienes documentos, resetea el form
       reset({
         ...res.data,
-        relatedDocumentId: res.data.relatedDocumentId || null,
-        fiscalInfo: fiscalRes.data ?? initialFiscalInfoState,
+        relatedDocumentId: res.data.relatedDocumentId ?? "", // string, no null
+        fiscalInfo: res.data.documentFiscalInfo ?? initialFiscalInfoState,
         withholding: resDocWithholding.data,
       });
 
@@ -249,6 +269,10 @@ export const WithholdingForm: React.FC<WithholdingFormProps> = ({
     } catch {
       notifyError("Error al cargar documento");
     }
+  };
+
+  const handleAddPerson = () => {
+    router.push("/personas/nuevo");
   };
 
   const onSubmit = async (data: CreateDocument) => {

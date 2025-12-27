@@ -440,15 +440,7 @@ export default function TransactionForm({
           </TabsList>
 
           <TabsContent value="documents" className="pt-4">
-            {watch("type") === "INCOME" ? (
-              <DocumentTable />
-            ) : (
-              <Alert>
-                <AlertDescription>
-                  Los egresos no requieren documentos asociados.
-                </AlertDescription>
-              </Alert>
-            )}
+            <DocumentTable />
           </TabsContent>
         </Tabs>
 

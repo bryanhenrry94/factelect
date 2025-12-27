@@ -65,6 +65,8 @@ import {
 import { Input } from "./../ui/input";
 
 import { PersonSelectField } from "./../forms/PersonSelectField";
+import { Button } from "../ui/button";
+import { DollarSign, Save } from "lucide-react";
 
 const initialItemsState: CreateDocumentItem[] = [
   {
@@ -165,7 +167,7 @@ export const PurchaseInvoiceForm: React.FC<PurchaseInvoiceFormProps> = ({
   const {
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isSubmitting },
     control,
     watch,
   } = methods;
@@ -322,13 +324,28 @@ export const PurchaseInvoiceForm: React.FC<PurchaseInvoiceFormProps> = ({
     <FormProvider {...methods}>
       {/* {JSON.stringify(errors)} */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <HeaderActions
-          modeEdit={modeEdit}
-          handlePaymentRegister={handlePaymentRegister}
-          handleSendToSRI={handleSendToSRI}
-          handleDownloadXML={handleDownloadXML}
-          handleDownloadPDF={handleDownloadPDF}
-        />
+        <div className="mb-4 flex items-center justify-end gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="submit" disabled={isSubmitting}>
+              <Save className="mr-2 h-4 w-4" />
+              {modeEdit ? "Actualizar" : "Guardar"}
+            </Button>
+
+            {modeEdit && (
+              <>
+                {/* REGISTER PAYMENT */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handlePaymentRegister!()}
+                >
+                  <DollarSign />
+                  Pago
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
 
         {error && (
           <Alert variant="destructive">

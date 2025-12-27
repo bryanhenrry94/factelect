@@ -40,7 +40,6 @@ import { useDateRangeFilter } from "@/hooks/useDateRangeFilter";
 import { usePersonFilter } from "@/hooks/usePersonFilter";
 import { useTypeFilter } from "@/hooks/useTypeFilter";
 import { PersonInput } from "@/lib/validations/person/person";
-import { useDocumentFilter } from "@/hooks/useDocumentFilter";
 import { getDocumentTypeLabel } from "@/utils/document";
 import { $Enums } from "@/prisma/generated/prisma";
 import Link from "next/link";
@@ -238,13 +237,7 @@ export default function DocumentsPage() {
                     <TableHead>Emisión</TableHead>
                     <TableHead>Persona</TableHead>
                     <TableHead>Documento</TableHead>
-                    {/* <TableHead>Vencimiento</TableHead> */}
-                    <TableHead>Neto</TableHead>
-                    <TableHead>Impuesto</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Pagos</TableHead>
-                    <TableHead>Retención</TableHead>
-                    <TableHead>Saldo</TableHead>
+                    <TableHead>Total Retención</TableHead>
                     <TableHead className="text-center">Autorizado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
@@ -281,45 +274,26 @@ export default function DocumentsPage() {
                             </div>
                           </Link>
                         </TableCell>
-                        {/* <TableCell>
-                        {document.dueDate
-                          ? formatDate(document.dueDate?.toString())
-                          : "-"}
-                      </TableCell> */}
-                        <TableCell>
-                          {formatCurrency(document.subtotal)}
-                        </TableCell>
-                        <TableCell>
-                          {formatCurrency(document.taxTotal)}
-                        </TableCell>
                         <TableCell>{formatCurrency(document.total)}</TableCell>
-                        <TableCell>
-                          {formatCurrency(document.paidAmount)}
-                        </TableCell>
-                        <TableCell>
-                          {formatCurrency(document.totalWithheld)}
-                        </TableCell>
-                        <TableCell>
-                          {formatCurrency(document.balance)}
-                        </TableCell>
                         <TableCell className="text-center">
                           {document.documentFiscalInfo?.sriStatus ===
                             "AUTHORIZED" && <Check size={16} />}
                         </TableCell>
                         <TableCell className="text-right space-x-2">
-                          <button
-                            className="p-1 hover:bg-muted rounded"
+                          <Button
+                            size="icon"
+                            variant="ghost"
                             onClick={() => handleEdit(document.id)}
                           >
-                            <Edit size={18} />
-                          </button>
-
-                          <button
-                            className="p-1 hover:bg-destructive/20 rounded"
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
                             onClick={() => handleDelete(document.id)}
                           >
-                            <Delete size={18} />
-                          </button>
+                            <Delete className="h-4 w-4 text-destructive" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}

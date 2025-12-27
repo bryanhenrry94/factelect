@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/card";
 
 import HeaderActions from "./HeaderActions";
-import DocumentInfo from "./DocumentInfo";
 import ItemsTable from "./ItemsTable";
 import TotalsSection from "./sales/TotalsSection";
 import { PaymentMethodsTable } from "./sales/PaymentMethodsTable";
@@ -51,10 +50,7 @@ import InvoicePDF from "../pdf/InvoicePDF";
 import { pdf } from "@react-pdf/renderer";
 import { WithholdingForm } from "../withholding/withholding";
 import { WithholdingCode } from "@/lib/validations/withholding/withholding-code";
-import {
-  getWithholdingByBaseDocument,
-  getWithholdingByDocumentId,
-} from "@/actions/withholding/withholding";
+import { getWithholdingByBaseDocument } from "@/actions/withholding/withholding";
 import { Withholding } from "@/lib/validations/withholding/withholding";
 import { useSession } from "next-auth/react";
 import { PersonFilter } from "@/types";
@@ -68,17 +64,6 @@ import {
   FormMessage,
 } from "../ui/form";
 import { Input } from "../ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Button } from "../ui/button";
-import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, UserPlus } from "lucide-react";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "../ui/command";
 import { DocumentFiscalInfo } from "./DocumentFiscalInfo";
 import { PersonSelectField } from "../forms/PersonSelectField";
 
@@ -447,13 +432,15 @@ export const SalesInvoiceForm: React.FC<SalesInvoideFormProps> = ({
                   sequence: fiscalInfo?.sequence || 0,
                 }}
                 onChange={(vals) => {
-                  setValue("fiscalInfo", {
-                    ...fiscalInfo,
-                    ...vals,
-                    sriStatus: fiscalInfo?.sriStatus || "DRAFT",
-                    environment: fiscalInfo?.environment || "TEST",
-                    documentId: fiscalInfo?.documentId || "",
-                  });
+                  if (!modeEdit) {
+                    setValue("fiscalInfo", {
+                      ...fiscalInfo,
+                      ...vals,
+                      sriStatus: fiscalInfo?.sriStatus || "DRAFT",
+                      environment: fiscalInfo?.environment || "TEST",
+                      documentId: fiscalInfo?.documentId || "",
+                    });
+                  }
                 }}
               />
             </div>
