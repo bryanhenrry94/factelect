@@ -84,8 +84,12 @@ const data = {
       icon: PiggyBank,
       items: [
         {
+          title: "Nueva Factura",
+          url: "/ventas/nuevo",
+        },
+        {
           title: "Facturas",
-          url: "/documentos?type=CUSTOMER&documentType=INVOICE",
+          url: "/ventas",
         },
         {
           title: "Notas crédito/débito",

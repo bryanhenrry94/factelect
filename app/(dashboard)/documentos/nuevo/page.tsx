@@ -70,38 +70,7 @@ export default function SaleNewPage() {
       title="Nuevo Documento"
       description="Crear un nuevo documento"
     >
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/">Inicio</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator>
-            <SlashIcon />
-          </BreadcrumbSeparator>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/documentos">Documentos</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator>
-            <SlashIcon />
-          </BreadcrumbSeparator>
-          <BreadcrumbItem>
-            <BreadcrumbPage>Nuevo</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-      <div className="mt-4">
-        <DocumentForm
-          persons={persons}
-          warehouses={warehouses}
-          products={products}
-          withholdingCodes={withholdingCodes}
-        />
-      </div>
+      <h1>Nuevo Documento</h1>
     </PageContainer>
   );
 }

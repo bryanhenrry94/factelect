@@ -96,16 +96,6 @@ export default function DocumentEditPage() {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-
-      <div className="mt-4">
-        <DocumentForm
-          documentId={params.id}
-          persons={persons}
-          warehouses={warehouses}
-          products={products}
-          withholdingCodes={withholdingCodes}
-        />
-      </div>
     </PageContainer>
   );
 }

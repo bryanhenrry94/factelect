@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,21 +15,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import HeaderActions from "./HeaderActions";
-import DocumentInfo from "./DocumentInfo";
-import ItemsTable from "./ItemsTable";
-import TotalsSection from "./invoice/TotalsSection";
-import { PaymentMethodsTable } from "./invoice/PaymentMethodsTable";
+import HeaderActions from "../HeaderActions";
+import DocumentInfo from "../DocumentInfo";
+import ItemsTable from "../ItemsTable";
+import TotalsSection from "./TotalsSection";
+import { PaymentMethodsTable } from "./PaymentMethodsTable";
 
-import useTenant from "@/hooks/useTenant";
 import { notifyError, notifyInfo } from "@/lib/notifications";
 
 import {
   CreateDocument,
   CreateDocumentItem,
   createDocumentSchema,
-  Document,
-  DocumentPayment,
   Product,
 } from "@/lib/validations";
 import { PersonInput } from "@/lib/validations/person/person";
@@ -41,7 +38,6 @@ import {
   getAllProducts,
   getDocument,
   getDocumentItems,
-  getDocumentWithholding,
   getInvoiceDataForPDF,
   getPersonsByTenant,
   sendToSRI,
@@ -50,10 +46,10 @@ import {
 import { getDocumentFiscalInfo } from "@/actions/document/document-fiscal-info";
 import { getDocumentPayments } from "@/actions/document/document-payment";
 import { $Enums } from "@/prisma/generated/prisma";
-import { ConfirmDialog } from "../ConfirmDialog";
-import InvoicePDF from "../pdf/InvoicePDF";
+import { ConfirmDialog } from "../../ConfirmDialog";
+import InvoicePDF from "../../pdf/InvoicePDF";
 import { pdf } from "@react-pdf/renderer";
-import { WithholdingForm } from "../withholding/withholding";
+import { WithholdingForm } from "../../withholding/withholding";
 import { WithholdingCode } from "@/lib/validations/withholding/withholding-code";
 import {
   getWithholdingByBaseDocument,
@@ -64,6 +60,27 @@ import { useSession } from "next-auth/react";
 import { PersonFilter } from "@/types";
 import { getWarehouses } from "@/actions/inventory/warehouse";
 import { getAllWithholdingCodes } from "@/actions/withholding/withholding-code";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../../ui/form";
+import { Input } from "../../ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
+import { Button } from "../../ui/button";
+import { cn } from "@/lib/utils";
+import { Check, ChevronsUpDown, UserPlus } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "../../ui/command";
+import { DocumentFiscalInfo } from "../DocumentFiscalInfo";
+import { PersonSelectField } from "../../forms/PersonSelectField";
 
 const initialItemsState: CreateDocumentItem[] = [
   {
@@ -123,17 +140,11 @@ const initialState: CreateDocument = {
 
 interface DocumentFormProps {
   documentId?: string;
-  defaultEntityType: $Enums.EntityType;
-  defaultDocumentType: $Enums.DocumentType;
-  mode: "SALES" | "PURCHASES";
 }
 
-export default function DocumentForm({
+export const SalesInvoiceForm: React.FC<DocumentFormProps> = ({
   documentId,
-  defaultEntityType,
-  defaultDocumentType,
-  mode,
-}: DocumentFormProps) {
+}) => {
   const router = useRouter();
   const { data: session } = useSession();
 
@@ -187,6 +198,7 @@ export default function DocumentForm({
     handleSubmit,
     reset,
     formState: { errors },
+    control,
     watch,
   } = methods;
 
@@ -195,6 +207,10 @@ export default function DocumentForm({
       loadDocument();
     }
   }, [documentId]);
+
+  const handleAddPerson = () => {
+    router.push("/personas/nuevo");
+  };
 
   const loadDocument = async () => {
     try {
@@ -334,6 +350,14 @@ export default function DocumentForm({
     }
   };
 
+  // observe
+  const selectedPersonId = watch("personId");
+
+  const selectedPerson = useMemo(
+    () => persons.find((p) => p.id === selectedPersonId),
+    [persons, selectedPersonId]
+  );
+
   return (
     <FormProvider {...methods}>
       {/* {JSON.stringify(errors)} */}
@@ -356,12 +380,12 @@ export default function DocumentForm({
         <Card>
           <CardHeader>
             <CardTitle>
-              {modeEdit ? "Editar Documento" : "Nuevo Documento"}
+              {modeEdit ? "Editar Factura de Venta" : "Nueva Factura de Venta"}
             </CardTitle>
             <CardDescription>
               {modeEdit
-                ? "Modifique la información del documento."
-                : "Complete la información para crear un nuevo documento."}
+                ? "Modifique la información de la factura de venta."
+                : "Complete la información para crear una nueva factura de venta."}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -374,11 +398,61 @@ export default function DocumentForm({
                 </AlertDescription>
               </Alert>
             )}
-            <DocumentInfo
-              modeEdit={modeEdit}
-              persons={persons}
-              onChangeTab={setTab}
-            />
+
+            <div>
+              {/* ===================== DATOS GENERALES ===================== */}
+              <div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Fecha */}
+                  <FormField
+                    control={control}
+                    name="issueDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fecha de emisión</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            disabled={modeEdit}
+                            value={
+                              field.value
+                                ? new Date(field.value)
+                                    .toISOString()
+                                    .substring(0, 10)
+                                : ""
+                            }
+                            onChange={(e) =>
+                              field.onChange(new Date(e.target.value))
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* ===================== PERSONA ===================== */}
+              <div className="mt-4">
+                <PersonSelectField
+                  control={control}
+                  name="personId"
+                  label="Cliente"
+                  persons={persons}
+                  selectedPerson={selectedPerson}
+                  onAddPerson={handleAddPerson}
+                />
+              </div>
+
+              {/* ===================== INFO FISCAL ===================== */}
+              <div className="mt-4">
+                <DocumentFiscalInfo
+                  modeEdit={modeEdit}
+                  documentType={watch("documentType") || "INVOICE"}
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -393,23 +467,10 @@ export default function DocumentForm({
           <CardContent>
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList>
-                {watch("documentType") === "INVOICE" && (
-                  <TabsTrigger value="items">Productos / Servicios</TabsTrigger>
-                )}
-
-                {watch("documentType") === "WITHHOLDING" && (
-                  <TabsTrigger value="withholding">Retención</TabsTrigger>
-                )}
-
+                <TabsTrigger value="items">Productos / Servicios</TabsTrigger>
                 {/* <TabsTrigger value="accounts">Cuentas</TabsTrigger> */}
-
-                {watch("documentType") === "INVOICE" && (
-                  <TabsTrigger value="withholding">Retención</TabsTrigger>
-                )}
-
-                {watch("documentType") === "INVOICE" && (
-                  <TabsTrigger value="payments">Formas de Pago</TabsTrigger>
-                )}
+                <TabsTrigger value="withholding">Retención</TabsTrigger>
+                <TabsTrigger value="payments">Formas de Pago</TabsTrigger>
               </TabsList>
 
               <TabsContent value="items">
@@ -435,8 +496,8 @@ export default function DocumentForm({
           </CardContent>
         </Card>
 
-        {watch("documentType") === "INVOICE" && <TotalsSection />}
+        <TotalsSection />
       </form>
     </FormProvider>
   );
-}
+};

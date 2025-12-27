@@ -45,7 +45,7 @@ import { getDocumentTypeLabel } from "@/utils/document";
 import { $Enums } from "@/prisma/generated/prisma";
 import Link from "next/link";
 
-export default function DocumentsPage() {
+export default function SalesPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [documents, setDocuments] = useState<DocumentResponse[]>([]);
@@ -59,20 +59,14 @@ export default function DocumentsPage() {
   const { search, setSearch } = useSearchFilter();
   const { dateFrom, setDateFrom, dateTo, setDateTo } = useDateRangeFilter();
   const { person, setPerson } = usePersonFilter();
-  const { type, setType } = useTypeFilter();
-  const { documentType, setDocumentType } = useDocumentFilter();
 
   const loadData = async () => {
     const params = {
       tenantId: session?.user?.tenantId || "",
       search: search || undefined,
       personId: person !== "none" ? person : undefined,
-      entityType:
-        type !== "none" ? (type as "CUSTOMER" | "SUPPLIER") : undefined,
-      documentType:
-        documentType !== "none"
-          ? (documentType as $Enums.DocumentType)
-          : undefined,
+      entityType: $Enums.EntityType.CUSTOMER,
+      documentType: $Enums.DocumentType.INVOICE,
       dateFrom: dateFrom ? new Date(dateFrom) : undefined,
       dateTo: dateTo ? new Date(dateTo) : undefined,
     };
@@ -108,26 +102,20 @@ export default function DocumentsPage() {
       const response = await deleteDocument(id);
 
       if (response.success) {
-        notifyInfo("Documento eliminado correctamente");
+        notifyInfo("Factura eliminada correctamente");
         loadData();
       } else {
-        notifyError(response.error || "Error al eliminar el documento");
+        notifyError(response.error || "Error al eliminar la factura");
       }
     }
   };
 
   const handleEdit = (id: string) => {
-    router.push(`/documentos/${id}/editar`);
+    router.push(`/ventas/${id}/editar`);
   };
 
   const handleAdd = () => {
-    router.push(
-      `/documentos/nuevo?${
-        documentType !== "none"
-          ? `documentType=${documentType}`
-          : "documentType=INVOICE"
-      }`
-    );
+    router.push("/ventas/nuevo");
   };
 
   useEffect(() => {
@@ -140,19 +128,11 @@ export default function DocumentsPage() {
     if (status !== "authenticated") return;
 
     loadData();
-  }, [
-    status,
-    session?.user?.tenantId,
-    search,
-    dateFrom,
-    dateTo,
-    person,
-    type,
-    documentType,
-  ]);
+  }, [status, session?.user?.tenantId, search, dateFrom, dateTo, person]);
 
   return (
     <div className="space-y-6">
+      {/* Filtros */}
       <Card>
         <CardHeader>
           <CardTitle>Filtros</CardTitle>
@@ -168,44 +148,6 @@ export default function DocumentsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-            </Field>
-            {/* Tipo */}
-            <Field>
-              <FieldLabel>Tipo</FieldLabel>
-              <Select value={type} onValueChange={setType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tipo de transacción" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Todos</SelectItem>
-                  <SelectItem value="CUSTOMER">Cliente</SelectItem>
-                  <SelectItem value="SUPPLIER">Proveedor</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-            {/* Tipo Documento */}
-            <Field>
-              <FieldLabel>Tipo Documento</FieldLabel>
-              <Select value={documentType} onValueChange={setDocumentType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tipo de transacción" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Todos</SelectItem>
-                  <SelectItem value="INVOICE">Factura</SelectItem>
-                  <SelectItem value="PURCHASE">
-                    Liquidación de compra
-                  </SelectItem>
-                  <SelectItem value="CREDIT_NOTE">Nota de crédito</SelectItem>
-                  <SelectItem value="DEBIT_NOTE">Nota de débito</SelectItem>
-                  <SelectItem value="WITHHOLDING">
-                    Comprobante de retención
-                  </SelectItem>
-                  <SelectItem value="REMISSION_GUIDE">
-                    Guía de remisión
-                  </SelectItem>
-                </SelectContent>
-              </Select>
             </Field>
 
             {/* Persona */}
@@ -254,9 +196,9 @@ export default function DocumentsPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
-            <CardTitle>Documentos</CardTitle>
+            <CardTitle>Facturas de Venta</CardTitle>
             <CardDescription>
-              Gestiona los documentos asociados a tu organización.
+              Lista de facturas de venta creadas en el sistema.
             </CardDescription>
           </div>
           <Button onClick={handleAdd} size="sm">
@@ -281,7 +223,6 @@ export default function DocumentsPage() {
                     <TableHead>Emisión</TableHead>
                     <TableHead>Persona</TableHead>
                     <TableHead>Documento</TableHead>
-                    {/* <TableHead>Vencimiento</TableHead> */}
                     <TableHead>Neto</TableHead>
                     <TableHead>Impuesto</TableHead>
                     <TableHead>Total</TableHead>
@@ -324,11 +265,6 @@ export default function DocumentsPage() {
                             </div>
                           </Link>
                         </TableCell>
-                        {/* <TableCell>
-                        {document.dueDate
-                          ? formatDate(document.dueDate?.toString())
-                          : "-"}
-                      </TableCell> */}
                         <TableCell>
                           {formatCurrency(document.subtotal)}
                         </TableCell>
@@ -349,20 +285,21 @@ export default function DocumentsPage() {
                           {document.documentFiscalInfo?.sriStatus ===
                             "AUTHORIZED" && <Check size={16} />}
                         </TableCell>
-                        <TableCell className="text-right space-x-2">
-                          <button
-                            className="p-1 hover:bg-muted rounded"
+                        <TableCell className="flex flex-row">
+                          <Button
+                            size="icon"
+                            variant="ghost"
                             onClick={() => handleEdit(document.id)}
                           >
-                            <Edit size={18} />
-                          </button>
-
-                          <button
-                            className="p-1 hover:bg-destructive/20 rounded"
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
                             onClick={() => handleDelete(document.id)}
                           >
-                            <Delete size={18} />
-                          </button>
+                            <Delete className="h-4 w-4 text-destructive" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
